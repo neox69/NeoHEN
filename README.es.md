@@ -34,7 +34,7 @@ GPLv3.
 | Un solo fichero | `NeoHEN.elf` lleva dentro kstuff-lite, ShadowMount+, ftpsrv, nanoDNS y NeoWEB. En el primer arranque los escribe en `/data/neohen/payloads` y los lanza en orden; en los siguientes, solo los lanza. No hay que descargar, copiar ni renombrar nada. |
 | Tú decides | Un payload que sustituyas o borres se queda como lo dejaste. Un `kstuff.elf` en `/data/neohen/` sustituye al que va dentro, y si ya hay un kstuff en marcha no se toca. |
 | ShadowMount+ | Se usa el payload de su autor sin modificar, con un vigilante que comprueba su hook tras el reposo y cada 5 minutos, y puede relanzarlo. |
-| NeoWEB | Servicio HTTP en la consola (puerto 8686) para paneles: temperaturas, discos, biblioteca con carátulas, juego abierto, lanzar y cerrar. Ver [web/README.md](web/README.md). |
+| NeoWEB | Página web y servicio HTTP en la consola (puerto 8686), sin necesidad de app en el PC. Pestaña Consola: temperaturas, discos y juego abierto. Biblioteca: carátulas, lanzar y cerrar. Payloads: enviar, arrancar, parar, borrar y autoarranque. Ver [web/README.md](web/README.md). |
 | Privacidad | Los logs nunca llevan el nombre ni el identificador de la cuenta, y las IP y MAC se sustituyen. Los del original escriben nombre e identificador cada vez que se abre un menú. |
 | Partición del sistema | El icono de la Toolbox vive en memoria volátil en vez de escribirse en `/system_ex`. |
 | Descarga de trucos | Arreglado un caso en el que el botón no hacía nada al volver de otra página. |
@@ -64,7 +64,8 @@ En una PS5 CFI-7021, firmware 13.42, con kstuff-lite 1.11 y ShadowMount+
 | NeoWEB: estado, sensores, discos, biblioteca, carátulas, juego abierto | Funciona |
 | Arranque en frío: kstuff incrustado, Toolbox, los cuatro payloads arrancados solos, un juego | Funciona (0.1.0-rc2, payloads copiados a mano) |
 | "NeoHEN Toolbox" en Ajustes, `stable` por defecto | Funciona (0.1.0-rc2) |
-| Página web de NeoWEB, escritorio y móvil | Funciona |
+| Página web de NeoWEB con sus tres pestañas, escritorio y móvil | Funciona |
+| Gestor de payloads de NeoWEB: enviar, arrancar, parar, borrar, autoarranque | Funciona (posterior a 0.1.0-rc2) |
 | **Primer arranque instalando los payloads desde dentro del ELF** | **Compilado, sin probar en consola** |
 | NeoWEB: lanzar y cerrar un juego | **Sin probar** |
 | El vigilante de ShadowMount+ recuperando un hook perdido | **Sin probar** |
@@ -75,9 +76,11 @@ En una PS5 CFI-7021, firmware 13.42, con kstuff-lite 1.11 y ShadowMount+
 
 - **0.1.0-rc2** — publicada como versión preliminar. El paso que escribe los
   payloads incluidos en el primer arranque aún no se ha ejecutado en consola.
-- **NeoWEB** — la variante segura ya funciona; lo siguiente es probar
-  lanzar y cerrar en consola, una página web a juego con esa variante, y las
-  lecturas de energía, ventilador y M.2.
+- **NeoWEB** — hechas las pestañas de consola, biblioteca y payloads (el
+  gestor de payloads es posterior a la versión 0.1.0-rc2). Lo siguiente:
+  probar lanzar y cerrar en consola, y después todo lo que ofrece PS5Upload
+  (transferencia de ficheros, energía, ventilador, M.2) para sustituirlo del
+  todo.
 - **NeoAPP** — aplicación de PC sobre la variante completa de NeoWEB:
   subir juegos con transferencias reanudables, explorador de ficheros,
   biblioteca con carátulas, instalador, nombre, icono y fondo por juego, y

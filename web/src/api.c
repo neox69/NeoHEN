@@ -278,10 +278,11 @@ api_jobs_clear(http_req_t *req) {
 /* ------------------------------------------------------------ routing */
 
 /*
- * The default build is the "safe" set: it reads the console's state and can
- * launch or close a game, nothing else. Everything that writes, deletes,
- * installs, pokes memory or powers the console off is only compiled into a
- * NEOWEB_FULL build (make FULL=1).
+ * The default build is the "safe" set: it reads the console's state, can
+ * launch or close a game, and manages the payloads in NeoHEN's own payloads
+ * folder (upload, start, stop, delete, auto-start), by bare file name only.
+ * The file manager, installer, memory tools, dumper and power routes are
+ * only compiled into a NEOWEB_FULL build (make FULL=1).
  */
 static const api_route_t g_routes[] = {
   {"GET",  "/api/ping",             api_ping},
@@ -298,6 +299,14 @@ static const api_route_t g_routes[] = {
   {"POST", "/api/apps/launch",      api_apps_launch},
   {"POST", "/api/apps/kill",        api_apps_kill},
   {"GET",  "/api/apps/running",     api_apps_running},
+
+  {"GET",  "/api/payloads/list",      api_payloads_list},
+  {"PUT",  "/api/payloads/upload",    api_payloads_upload},
+  {"POST", "/api/payloads/upload",    api_payloads_upload},
+  {"POST", "/api/payloads/start",     api_payloads_start},
+  {"POST", "/api/payloads/stop",      api_payloads_stop},
+  {"POST", "/api/payloads/delete",    api_payloads_delete},
+  {"POST", "/api/payloads/autostart", api_payloads_autostart},
 
 #ifdef NEOWEB_FULL
   {"POST", "/api/sys/kill",         api_sys_kill},

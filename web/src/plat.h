@@ -32,6 +32,12 @@ void        plat_mounts(jw_t *w);
 /* process list, written as a JSON array */
 void        plat_procs(jw_t *w);
 int         plat_proc_title(pid_t pid, char *title_id, size_t size);
+/* every process with its name; stops when the callback returns non-zero */
+typedef int (*plat_proc_cb)(void *ctx, pid_t pid, const char *name);
+void        plat_proc_each(plat_proc_cb cb, void *ctx);
+
+/* hand an ELF/BIN file to the console's ELF loader */
+int         plat_payload_launch(const char *local_path);
 
 /* process memory */
 int         plat_proc_read(pid_t pid, uint64_t addr, void *buf, size_t len);

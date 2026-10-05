@@ -119,19 +119,29 @@ Para util, el cargador 9020 y reinicia SceShellUI (la Toolbox desaparece);
 kstuff y los demás payloads siguen en marcha.
 
 
-8. NeoWEB (panel y acceso remoto)
+8. NeoWEB (página web y acceso remoto)
 ----------------------------------------------------------------
-payloads/neoweb.elf es un servicio propio de NeoHEN (puerto 8686) que deja
-consultar la consola desde la red: temperaturas, discos, juegos instalados
-con su carátula y el juego abierto, y lanzar o cerrar un juego. Sirve para
-paneles domésticos y sustituye a PS5Upload, sin engancharse al menú.
+payloads/neoweb.elf es un servicio propio de NeoHEN. Abre en cualquier
+navegador de tu red:
 
-Va en su variante segura: no tiene ninguna función que borre, mueva o
-escriba ficheros, instale nada ni apague la consola. No pide contraseña.
-Si no lo quieres, borra payloads/neoweb.elf.auto_start.
+    http://<IP_DE_LA_PS5>:8686/
 
-Probado en PS5 13.42: lectura de estado, biblioteca y carátulas. Lanzar y
-cerrar juegos, sin verificar en consola.
+Tiene tres pestañas:
+  Consola     temperaturas, discos y el juego abierto, con botón de cerrar
+  Biblioteca  juegos con su carátula, buscador y botón de lanzar
+  Payloads    enviar un .elf o .bin, arrancarlo, pararlo, borrarlo y elegir
+              si arranca solo con NeoHEN
+
+También sirve los datos a paneles domésticos y sustituye a PS5Upload, sin
+engancharse al menú de la consola.
+
+No tiene explorador de ficheros, ni instalador, ni puede apagar la consola.
+Lo único que cambia es el juego en marcha y los ficheros de la carpeta de
+payloads. No pide contraseña: cualquiera de tu red puede usarla, igual que
+ya puede enviar un payload al puerto 9021. Si solo quieres la parte de
+consulta, crea un fichero vacío /data/neohen/web/readonly y todo lo que
+modifica algo quedará bloqueado. Si no quieres NeoWEB, borra
+payloads/neoweb.elf.auto_start.
 
 
 9. Estado de esta versión

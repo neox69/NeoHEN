@@ -4,6 +4,8 @@
 #include <errno.h>
 #include <ifaddrs.h>
 #include <netinet/in.h>
+#include <sys/socket.h>
+#include <fcntl.h>
 #include <signal.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -364,6 +366,78 @@ plat_procs(jw_t *w) {
     free(buf);
   }
   jw_arr_end(w);
+}
+
+void
+plat_proc_each(plat_proc_cb cb, void *ctx) {
+  size_t size = 0;
+  void *buf = proc_list(&size);
+
+  if(!buf) {
+    return;
+  }
+  for(char *ptr = buf; ptr < (char *)buf + size;) {
+    struct kinfo_proc *ki = (struct kinfo_proc *)ptr;
+    if(ki->ki_structsize <= 0) {
+      break;
+    }
+    ptr += ki->ki_structsize;
+    if(cb(ctx, ki->ki_pid, ki->ki_comm)) {
+      break;
+    }
+  }
+  free(buf);
+}
+
+/* The ELF loader (elfldr) takes a payload as a raw stream on port 9021 and
+ * runs it in a new process. From the console itself it is always reachable,
+ * including the loaders that only accept local connections. */
+int
+plat_payload_launch(const char *local_path) {
+  struct sockaddr_in addr;
+  char buf[65536];
+  ssize_t n;
+  int file, sock;
+
+  if((file = open(local_path, O_RDONLY)) < 0) {
+    plat_set_error("%s: %s", local_path, strerror(errno));
+    return -1;
+  }
+  if((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+    plat_set_error("socket: %s", strerror(errno));
+    close(file);
+    return -1;
+  }
+  memset(&addr, 0, sizeof(addr));
+  addr.sin_family = AF_INET;
+  addr.sin_port = htons(9021);
+  addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+  if(connect(sock, (struct sockaddr *)&addr, sizeof(addr))) {
+    plat_set_error("the ELF loader is not listening on port 9021 (%s)",
+                   strerror(errno));
+    close(sock);
+    close(file);
+    return -1;
+  }
+  while((n = read(file, buf, sizeof(buf))) > 0) {
+    for(char *p = buf; n > 0;) {
+      ssize_t sent = send(sock, p, (size_t)n, 0);
+      if(sent <= 0) {
+        if(sent < 0 && errno == EINTR) {
+          continue;
+        }
+        plat_set_error("sending to the ELF loader: %s", strerror(errno));
+        close(sock);
+        close(file);
+        return -1;
+      }
+      p += sent;
+      n -= sent;
+    }
+  }
+  close(sock);
+  close(file);
+  return 0;
 }
 
 int

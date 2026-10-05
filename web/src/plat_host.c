@@ -14,6 +14,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <signal.h>
+#include <sys/prctl.h>
 #include <sys/stat.h>
 #include <sys/statvfs.h>
 #include <sys/sysinfo.h>
@@ -43,6 +45,8 @@ mkdirs(const char *path) {
 
 int
 plat_init(void) {
+  /* same process name as on the console, where the payload names itself */
+  prctl(PR_SET_NAME, "neoweb.elf");
   static const char *dirs[] = {
     "/user/app", "/user/appmeta", "/user/home", "/data", "/mnt/usb0",
     "/system_data/priv/mms", "/mnt/sandbox/pfsmnt",
@@ -205,6 +209,72 @@ plat_procs(jw_t *w) {
   }
   closedir(d);
   jw_arr_end(w);
+}
+
+void
+plat_proc_each(plat_proc_cb cb, void *ctx) {
+  DIR *d = opendir("/proc");
+  struct dirent *e;
+
+  if(!d) {
+    return;
+  }
+  while((e = readdir(d))) {
+    char path[300], comm[64] = "", state = '?';
+    pid_t pid = (pid_t)atoi(e->d_name);
+    FILE *f;
+    int got;
+
+    if(pid <= 0) {
+      continue;
+    }
+    snprintf(path, sizeof(path), "/proc/%d/stat", pid);
+    if(!(f = fopen(path, "r"))) {
+      continue;
+    }
+    got = fscanf(f, "%*d (%63[^)]) %c", comm, &state);
+    fclose(f);
+    /* a killed child stays as a zombie until it is reaped: it is not running */
+    if(got < 2 || state == 'Z') {
+      continue;
+    }
+    if(cb(ctx, pid, comm)) {
+      break;
+    }
+  }
+  closedir(d);
+}
+
+/* Emulated loader: a child process named after the file that just waits, so
+ * the payload manager has a real process to find and to kill. */
+int
+plat_payload_launch(const char *local_path) {
+  const char *name = strrchr(local_path, '/');
+  struct stat st;
+  pid_t pid;
+
+  if(stat(local_path, &st)) {
+    plat_set_error("%s: %s", local_path, strerror(errno));
+    return -1;
+  }
+  name = name ? name + 1 : local_path;
+  signal(SIGCHLD, SIG_IGN); /* no zombies */
+  if((pid = fork()) < 0) {
+    plat_set_error("fork: %s", strerror(errno));
+    return -1;
+  }
+  if(!pid) {
+    /* PR_SET_PDEATHSIG would fire when the request thread that forked us
+     * ends, so watch the server process instead. */
+    pid_t server = getppid();
+    prctl(PR_SET_NAME, name);
+    while(getppid() == server) {
+      sleep(1);
+    }
+    _exit(0);
+  }
+  LOG_INFO("[emu] payload %s started as pid %d", name, pid);
+  return 0;
 }
 
 int
