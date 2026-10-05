@@ -9,7 +9,7 @@ set(D_CWD "${CMAKE_CURRENT_SOURCE_DIR}")
 onion_output_dirs()
 set(D_SRC ${D_CWD}/source)
 
-set(PROJECT_NAME OnionHEN)
+set(PROJECT_NAME ${ONION_PAYLOAD_NAME})
 add_executable(${PROJECT_NAME})
 set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "${PROJECT_NAME}.elf")
 

@@ -15,6 +15,7 @@ along with this program; see the file COPYING. If not, see
 <http://www.gnu.org/licenses/>.  */
 
 // Include files
+#include <onion/brand.h>
 #include <cstdint>
 #include <onion/ucred.h>
 #include <onion/net.h>
@@ -254,8 +255,8 @@ int main() {
   /* Raw elfldr uploads default to "payload.elf"; publish our stable name. */
   (void)syscall(SYS_thr_set_name, -1, "onion_daemon.elf");
 
-  onion_log_configure("OnionHEN", "/data/OnionHEN/OnionHEN.log");
-  onion_log_configure_crash("/data/OnionHEN/OnionHEN_crash.log");
+  onion_log_configure("OnionHEN", ONION_DATA_DIR "/OnionHEN.log");
+  onion_log_configure_crash(ONION_DATA_DIR "/OnionHEN_crash.log");
   /* Real linked kernel export (not a dlsym function-pointer variable). */
   onion_notify_set_send(reinterpret_cast<onion_notify_send_fn>(
       sceKernelSendNotificationRequest));

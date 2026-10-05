@@ -1,3 +1,4 @@
+#include <onion/brand.h>
 #include "cheats/sync/cheat_sync_engine.hpp"
 
 #include "cheats/sync/zip_archive.hpp"
@@ -104,7 +105,7 @@ SyncStatus download_archive(IHttpTransport &http, const char *url,
   HttpRequest req;
   req.url = url;
   req.method = "GET";
-  req.user_agent = "OnionHEN";
+  req.user_agent = ONION_BRAND_NAME;
   req.host_allow = host;
   req.status_min = 200;
   req.status_max = 299;

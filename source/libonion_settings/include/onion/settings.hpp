@@ -16,6 +16,8 @@ along with this program; see the file COPYING. If not, see
 
 #pragma once
 
+#include <onion/brand.h>
+
 // ---------------------------------------------------------------------------
 // Single product config schema for daemon / util / shellui.
 //
@@ -45,8 +47,8 @@ extern "C++" {
 namespace onion {
 
 // Canonical filesystem paths.
-inline constexpr const char *kConfigPathPrimary = "/data/OnionHEN/config.ini";
-inline constexpr const char *kConfigPathShellui = "/user/data/OnionHEN/config.ini";
+inline constexpr const char *kConfigPathPrimary = ONION_DATA_DIR "/config.ini";
+inline constexpr const char *kConfigPathShellui = ONION_USER_DATA_DIR "/config.ini";
 
 // Semantic config schema. This schema starts at version 1.
 inline constexpr int kSettingsSchemaVersion = 1;

@@ -1,5 +1,6 @@
 /* Copyright (C) 2026 OnionHEN / LightningMods */
 
+#include <onion/brand.h>
 #include "bootstrap_assets.h"
 
 #include <onion/fs.h>
@@ -31,10 +32,10 @@ static const EmbeddedIcon kEmbeddedIcons[] = {
 };
 
 bool bootstrap_assets_write(void) {
-  mkdir("/data/OnionHEN", 0777);
-  mkdir("/data/OnionHEN/assets", 0777);
+  mkdir(ONION_DATA_DIR, 0777);
+  mkdir(ONION_DATA_DIR "/assets", 0777);
   mkdir("/user/data", 0777);
-  mkdir("/user/data/OnionHEN", 0777);
+  mkdir(ONION_USER_DATA_DIR, 0777);
 
   const bool startup_icon_ready = write_file_atomic(
       ONION_NOTIFY_ICON_PATH, sicon_start, sicon_size);
@@ -42,7 +43,7 @@ bool bootstrap_assets_write(void) {
   for (size_t i = 0; i < sizeof(kEmbeddedIcons) / sizeof(kEmbeddedIcons[0]);
        ++i) {
     char path[256];
-    snprintf(path, sizeof(path), "/data/OnionHEN/assets/%s.png",
+    snprintf(path, sizeof(path), ONION_DATA_DIR "/assets/%s.png",
              kEmbeddedIcons[i].name);
     (void)write_file_atomic(path, kEmbeddedIcons[i].data,
                             *kEmbeddedIcons[i].size);

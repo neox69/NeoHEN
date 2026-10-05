@@ -14,6 +14,8 @@
 
 #pragma once
 
+#include <onion/brand.h>
+
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -22,8 +24,8 @@
 extern "C" {
 #endif
 
-#define ONIONHEN_USER_DATA_DIR "/user/data/OnionHEN"
-#define ONIONHEN_CACHED_ELF "/user/data/OnionHEN/onionhen.elf"
+#define ONIONHEN_USER_DATA_DIR ONION_USER_DATA_DIR
+#define ONIONHEN_CACHED_ELF ONION_USER_DATA_DIR "/onionhen.elf"
 
 /** Create /user/data/OnionHEN (and parents). False if it cannot exist. */
 bool bootstrap_cache_prepare_dir(void);
