@@ -91,13 +91,31 @@ jobs:
           export LD_LIBRARY_PATH="${RUNNER_TEMP}/keystone/lib"
           make -C source/util/tests test KEYSTONE_PREFIX="${RUNNER_TEMP}/keystone" -j"$(nproc)"
 
+      - name: Build NeoHEN Web
+        run: |
+          set -euo pipefail
+          export PATH="/usr/lib/llvm-18/bin:${PS5_PAYLOAD_SDK}/bin:${PATH}"
+          make -C web
+          test -f web/neoweb.elf
+
+      - name: NeoHEN Web tests (host emulator)
+        run: |
+          set -euo pipefail
+          make -C web host
+          python3 web/tests/test_safe.py
+          rm -rf web/build
+          make -C web host FULL=1
+          python3 web/tests/test_api.py
+          rm -rf web/build
+
       - name: Stage artifact
         run: |
           set -euo pipefail
           rm -rf dist && mkdir dist
           cp build/bin/NeoHEN.elf dist/
+          cp web/neoweb.elf dist/
           version="$(sed -n 's/.*ONIONHEN_VERSION "\(.*\)".*/\1/p' build/generated/include/onion/version.h)"
-          scripts/release/make_install_zip.sh build/bin/NeoHEN.elf "${version%%+*}" dist
+          scripts/release/make_install_zip.sh build/bin/NeoHEN.elf "${version%%+*}" dist web/neoweb.elf
           {
             echo "version=${version}"
             echo "branch=${GITHUB_REF_NAME}"
@@ -107,7 +125,7 @@ jobs:
             echo "build_type=Release"
             echo "status=compiled; not verified on a console"
           } > dist/BUILD_INFO.txt
-          (cd dist && sha256sum NeoHEN.elf NeoHEN-*.zip BUILD_INFO.txt > SHA256SUMS)
+          (cd dist && sha256sum NeoHEN.elf neoweb.elf NeoHEN-*.zip BUILD_INFO.txt > SHA256SUMS)
           cat dist/SHA256SUMS
 
       - name: Sanitize branch name for the artifact
