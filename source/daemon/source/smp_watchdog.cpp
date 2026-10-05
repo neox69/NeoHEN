@@ -89,6 +89,7 @@ bool relaunch() {
 
 void *watchdog_thread(void *) {
   Problem last = Problem::None;
+  bool reported_ok = false;
   int relaunches = 0;
   time_t last_relaunch = 0;
   int countdown = kFirstCheckSeconds;
@@ -112,8 +113,15 @@ void *watchdog_thread(void *) {
 
     const Problem problem = check();
     if (problem == Problem::None) {
-      if (last != Problem::None)
+      if (last != Problem::None) {
         LOG_INFO("smp watchdog: ShadowMount+ healthy again");
+      } else if (resume_check || !reported_ok) {
+        /* Once per boot and after each Rest Mode, so a log shows it ran. */
+        LOG_INFO("smp watchdog: ShadowMount+ %s%s",
+                 smp_running() ? "ok" : "not installed",
+                 resume_check ? " (after Rest Mode)" : "");
+      }
+      reported_ok = true;
       last = problem;
       continue;
     }

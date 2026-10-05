@@ -57,6 +57,13 @@ bool onion_proc_is_alive(pid_t pid);
  */
 pid_t onion_proc_tracer(pid_t pid);
 
+/**
+ * Diagnostics for onion_proc_tracer() returning -1: the size the kernel
+ * reports for pid's kinfo_proc (0 if the query failed) and the size this
+ * build was compiled with.
+ */
+void onion_proc_kinfo_sizes(pid_t pid, size_t *kernel_size, size_t *build_size);
+
 /** ki_comm of pid into out (NUL-terminated); false if unknown. */
 bool onion_proc_name(pid_t pid, char *out, size_t out_size);
 

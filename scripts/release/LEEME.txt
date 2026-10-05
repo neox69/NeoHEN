@@ -60,18 +60,17 @@ NeoHEN espera a que deje libre SceShellUI antes de cargar la Toolbox.
 
 4. Después del reposo
 ----------------------------------------------------------------
-Por defecto (rest_mode.toolbox_after_resume=manual) NeoHEN NO recarga la
-Toolbox al despertar, porque recargarla hacía que el menú se reiniciara y
-quedara bloqueado cerca de un minuto. Para recuperarla, desde un PC en la
-misma red:
-
-  python3 neohen_ctl.py toolbox <IP_DE_LA_PS5>
-
-(neohen_ctl.py está en la carpeta scripts del repositorio.)
+Por defecto (rest_mode.toolbox_after_resume=stable) NeoHEN espera a que el
+menú lleve 30 segundos estable tras despertar y entonces recarga la Toolbox
+sola. Recargarla antes, como hacía OnionHEN a los 10 segundos, reiniciaba
+el menú y lo dejaba bloqueado cerca de un minuto.
 
 Otros modos en /data/neohen/config.ini, sección [rest_mode]:
-  stable    recarga cuando el menú lleva stable_seconds (30) estable
+  manual    no la recarga hasta que se pida desde un PC en la misma red:
+              python3 neohen_ctl.py toolbox <IP_DE_LA_PS5>
   original  el comportamiento de OnionHEN
+
+Los cambios en config.ini se aplican sin reiniciar NeoHEN.
 
 ShadowMount+: NeoHEN comprueba tras el reposo y cada 5 minutos que sigue
 vivo y que su log no indica que perdió el hook ([shadowmount]
@@ -115,14 +114,17 @@ kstuff y los demás payloads siguen en marcha.
 
 8. Estado de esta versión
 ----------------------------------------------------------------
-Probado en consola (PS5 13.42), con OnionHEN v0.9.0-beta1, base de NeoHEN:
-arranque, Toolbox, ShadowMount+, tres juegos (incluido uno AMPR) y salida
-de reposo (con el fallo del menú que esta versión evita por defecto).
+Probado en consola (PS5 13.42) con NeoHEN 0.1.0-rc1, cargado sobre un
+kstuff-lite 1.11 ya en marcha: arranque, marca e icono, Toolbox desde la
+tarjeta y desde Ajustes, descarga de trucos, tres juegos con ShadowMount+
+(uno AMPR), reposo con un juego suspendido en los modos manual y stable, y
+recarga de la Toolbox desde el PC.
 
-Sin verificar en consola: todo lo nuevo de NeoHEN (marca, icono en
-/system_tmp, kstuff fuera del ELF, arranque automático de payloads, modos
-de reposo, vigilante de ShadowMount+, espera por ps5upload, arreglo de la
-descarga de trucos). Los pasos de prueba están en docs/PRUEBAS-CONSOLA.md.
+Sin verificar en consola: la carga única en frío con el arranque
+automático de payloads, el vigilante de ShadowMount+ cuando de verdad
+pierde el hook, la espera por ps5upload, y lo nuevo de esta versión
+(nombre en Ajustes, modo stable por defecto). Los pasos de prueba están en
+docs/PRUEBAS-CONSOLA.md.
 
 
 Créditos

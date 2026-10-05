@@ -134,7 +134,8 @@ int main(void) {
 
     unlink(ONION_DATA_DIR "/" ONION_BRAND_NAME "_util_crash.log");
 
-    LOG_INFO("=========== starting OnionHEN Utilities... ===========");
+    LOG_INFO("=========== starting " ONION_BRAND_NAME
+             " Utilities... ===========");
 
     LoadSettings();
 

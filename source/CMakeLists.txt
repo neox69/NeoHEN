@@ -65,10 +65,17 @@ set(ONION_ISSUES_URL "https://github.com/aydencharles/onionHEN/issues" CACHE STR
 	"Issue tracker shown in crash notifications")
 set(ONION_PAYLOAD_NAME "OnionHEN" CACHE STRING
 	"Final payload file name, without the .elf extension")
+set(ONION_SETTINGS_LABEL "OnionHEN Tools" CACHE STRING
+	"Toolbox row in Settings; exactly 14 ASCII characters")
+string(LENGTH "${ONION_SETTINGS_LABEL}" _onion_settings_label_len)
+if(NOT _onion_settings_label_len EQUAL 14)
+	message(FATAL_ERROR "ONION_SETTINGS_LABEL must be exactly 14 characters")
+endif()
 add_compile_definitions(
 	ONION_BRAND_NAME="${ONION_BRAND_NAME}"
 	ONION_DIR_NAME="${ONION_DIR_NAME}"
 	ONION_DIR_NAME_LOWER="${ONION_DIR_NAME_LOWER}"
+	ONION_SETTINGS_LABEL="${ONION_SETTINGS_LABEL}"
 )
 # kstuff is embedded by default. Forks that ship it separately turn this off:
 # the bootstrapper then loads ${ONION_DATA_DIR}/kstuff.elf only and never

@@ -74,7 +74,7 @@ static int test_defaults_and_serialize_keys(void) {
                                  "# Available values: true, false\n"
                                  "enabled=false\n") != std::string::npos);
   /* NeoHEN safe defaults and rc1 sections. */
-  TEST_ASSERT_TRUE(text.find("toolbox_after_resume=manual\n") !=
+  TEST_ASSERT_TRUE(text.find("toolbox_after_resume=stable\n") !=
                    std::string::npos);
   TEST_ASSERT_TRUE(text.find("stable_seconds=30\n") != std::string::npos);
   TEST_ASSERT_TRUE(text.find("[shadowmount]\n") != std::string::npos);
@@ -264,7 +264,7 @@ static int test_partial_ini_keeps_defaults(void) {
   TEST_ASSERT_TRUE(!out.overlay_enabled);
   TEST_ASSERT_TRUE(out.overlay_background);
   TEST_ASSERT_TRUE(!out.app_jailbreak_enabled);
-  TEST_ASSERT_EQ_INT(onion::kRestToolboxManual, out.rest_toolbox_mode);
+  TEST_ASSERT_EQ_INT(onion::kRestToolboxStable, out.rest_toolbox_mode);
   TEST_ASSERT_EQ_INT(onion::kSmpWatchdogNotify, out.smp_watchdog);
   TEST_ASSERT_TRUE(!out.diag_kstuff_tables);
   TEST_ASSERT_TRUE(out.shellui_wait_for_tracer);
@@ -685,7 +685,7 @@ static int test_neohen_rc1_keys(void) {
   fclose(f);
   onion::Settings def{};
   TEST_ASSERT_TRUE(onion::settings_load_file(path.c_str(), &def));
-  TEST_ASSERT_EQ_INT(onion::kRestToolboxManual, def.rest_toolbox_mode);
+  TEST_ASSERT_EQ_INT(onion::kRestToolboxStable, def.rest_toolbox_mode);
   TEST_ASSERT_EQ_INT(onion::kSmpWatchdogNotify, def.smp_watchdog);
   unlink(path.c_str());
   return 0;

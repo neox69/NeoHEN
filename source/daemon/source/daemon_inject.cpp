@@ -194,8 +194,11 @@ bool toolbox_wait_untraced(pid_t pid) {
       if (!isProcessAlive(pid))
         return false;
       /* kinfo layout unknown: cannot tell, keep the original behaviour. */
-      LOG_DEBUG("shellui: tracer state unknown for pid=%d",
-                static_cast<int>(pid));
+      size_t kernel_size = 0, build_size = 0;
+      onion_proc_kinfo_sizes(pid, &kernel_size, &build_size);
+      LOG_INFO("shellui: tracer state unknown for pid=%d "
+               "(kinfo_proc kernel=%zu build=%zu)",
+               static_cast<int>(pid), kernel_size, build_size);
       return true;
     }
     if (tracer == 0 || tracer == getpid()) {

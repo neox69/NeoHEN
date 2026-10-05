@@ -210,6 +210,19 @@ extern "C" pid_t onion_proc_tracer(pid_t pid) {
   return ki.ki_tracer > 0 ? static_cast<pid_t>(ki.ki_tracer) : 0;
 }
 
+extern "C" void onion_proc_kinfo_sizes(pid_t pid, size_t *kernel_size,
+                                       size_t *build_size) {
+  if (build_size)
+    *build_size = sizeof(struct kinfo_proc);
+  if (!kernel_size)
+    return;
+  *kernel_size = 0;
+  int mib[] = {CTL_KERN, KERN_PROC, KERN_PROC_PID, static_cast<int>(pid)};
+  size_t len = 0;
+  if (pid > 0 && sysctl(mib, 4, nullptr, &len, nullptr, 0) == 0)
+    *kernel_size = len;
+}
+
 extern "C" bool onion_proc_name(pid_t pid, char *out, size_t out_size) {
   struct kinfo_proc ki;
   if (!out || out_size == 0 || !kinfo_for_pid(pid, &ki))

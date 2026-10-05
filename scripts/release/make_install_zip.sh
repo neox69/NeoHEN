@@ -18,7 +18,7 @@ sed "s/@VERSION@/${VERSION}/" "${ROOT}/scripts/release/LEEME.txt" > "${DIR}/LEEM
 cp "${ROOT}/scripts/neohen_ctl.py" "${DIR}/neohen_ctl.py"
 
 # Default config.ini, printed by the settings code itself.
-c++ -std=c++20 -O1 -w \
+c++ -std=c++20 -O1 -w -DNDEBUG \
   -DONION_BRAND_NAME='"NeoHEN"' -DONION_DIR_NAME='"neohen"' \
   -DONION_DIR_NAME_LOWER='"neohen"' -DONION_HIDE_UNTESTED=1 \
   -I"${ROOT}/source/include" -I"${ROOT}/source/libonion_settings/include" \
