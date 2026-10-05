@@ -46,6 +46,11 @@ max_bytes=786432
 # show_title_ids displays app Title IDs on the PS5 home screen.
 # Available values: true, false
 show_title_ids=false
+# system_ex_icon also writes the Toolbox icon to /system_ex/vsh_asset,
+# a persistent system partition. When false the icon is kept in volatile
+# memory and disappears on reboot.
+# Available values: true, false
+system_ex_icon=false
 
 [game_menu]
 # show_onionhen_options adds OnionHEN entries to the game options menu.

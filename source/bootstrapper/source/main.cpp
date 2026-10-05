@@ -60,7 +60,7 @@ int main(void) {
     return -1;
 
   LOG_DEBUG("Writing embedded assets ...");
-  bootstrap_notify_starting(bootstrap_assets_write());
+  bootstrap_notify_starting(bootstrap_assets_write(config.system_ex_icon));
   LOG_DEBUG("   Written!");
 
   bootstrap_filesystem_disable_updates();
