@@ -62,8 +62,10 @@ On a PS5 CFI-7021, firmware 13.42, with kstuff-lite 1.11 and ShadowMount+
 | Toolbox reload from a PC (`neohen_ctl.py toolbox`) | Works (0.1.0-rc1) |
 | Switching from a running OnionHEN without a reboot | Works (0.1.0-rc1) |
 | NeoWEB: state, sensors, disks, library, covers, running game | Works |
-| One load on a cold boot with payload autostart | **Not tested** |
-| 0.1.0-rc2 changes (Settings label, `stable` as default) | **Compiled, not tested on a console** |
+| Cold boot: embedded kstuff, Toolbox, the four payloads auto-started, a game | Works (0.1.0-rc2, payloads copied by hand) |
+| "NeoHEN Toolbox" in Settings, `stable` as default | Works (0.1.0-rc2) |
+| NeoWEB web page, desktop and phone | Works |
+| **First boot installing the payloads from inside the ELF** | **Compiled, not tested on a console** |
 | NeoWEB: launch and close a game | **Not tested** |
 | ShadowMount+ watchdog recovering a lost hook | **Not tested** |
 | Applying a cheat, PKG install, overlay, app jailbreak | **Not tested** |
@@ -71,7 +73,8 @@ On a PS5 CFI-7021, firmware 13.42, with kstuff-lite 1.11 and ShadowMount+
 
 ## In progress
 
-- **0.1.0-rc2** — compiled; waiting for a cold-boot test on the console.
+- **0.1.0-rc2** — published as a pre-release. The step that writes the
+  bundled payloads on first boot has not been run on a console yet.
 - **NeoWEB** — the safe build is running; next are launch and close on a
   console, a web page that matches the safe build, and power, fan and M.2
   readings.
@@ -91,14 +94,18 @@ cause unknown.
 
 ## Download
 
-There is no public binary release yet; the first one will follow the
-cold-boot test of 0.1.0-rc2. Until then:
+**[Releases](../../releases)** — get `NeoHEN.elf` from the latest one. It is
+the only file you need.
 
-- Every branch is built by GitHub Actions. Open the
-  [Actions tab](../../actions), pick the latest green run of the branch you
-  want and download its artifact (GitHub asks you to be signed in). It
-  contains `NeoHEN.elf`, a zip with it and its notes, and `SHA256SUMS`.
-- Or build it yourself, see [Build](#build).
+`0.1.0-rc2` is a pre-release. Everything in it was seen working on the
+console except one step: writing the bundled payloads to `/data/neohen` on
+the very first boot. That code is compiled and reviewed but had not been run
+on a console when the release was published. It should work; if it does not,
+copy the four payloads to `/data/neohen/payloads` by hand (the tested way)
+and please open an issue with `/data/neohen/NeoHEN.log`.
+
+Every branch is also built by GitHub Actions; the artifacts are in the
+[Actions tab](../../actions) (GitHub asks you to be signed in).
 
 ## Install
 

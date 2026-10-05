@@ -62,8 +62,10 @@ En una PS5 CFI-7021, firmware 13.42, con kstuff-lite 1.11 y ShadowMount+
 | Recargar la Toolbox desde un PC (`neohen_ctl.py toolbox`) | Funciona (0.1.0-rc1) |
 | Pasar desde un OnionHEN en marcha sin reiniciar | Funciona (0.1.0-rc1) |
 | NeoWEB: estado, sensores, discos, biblioteca, carátulas, juego abierto | Funciona |
-| Carga única en frío con arranque automático de payloads | **Sin probar** |
-| Cambios de 0.1.0-rc2 (nombre en Ajustes, `stable` por defecto) | **Compilado, sin probar en consola** |
+| Arranque en frío: kstuff incrustado, Toolbox, los cuatro payloads arrancados solos, un juego | Funciona (0.1.0-rc2, payloads copiados a mano) |
+| "NeoHEN Toolbox" en Ajustes, `stable` por defecto | Funciona (0.1.0-rc2) |
+| Página web de NeoWEB, escritorio y móvil | Funciona |
+| **Primer arranque instalando los payloads desde dentro del ELF** | **Compilado, sin probar en consola** |
 | NeoWEB: lanzar y cerrar un juego | **Sin probar** |
 | El vigilante de ShadowMount+ recuperando un hook perdido | **Sin probar** |
 | Aplicar un truco, instalar PKG, superposición, app jailbreak | **Sin probar** |
@@ -71,7 +73,8 @@ En una PS5 CFI-7021, firmware 13.42, con kstuff-lite 1.11 y ShadowMount+
 
 ## En desarrollo
 
-- **0.1.0-rc2** — compilada; pendiente de una prueba en frío en la consola.
+- **0.1.0-rc2** — publicada como versión preliminar. El paso que escribe los
+  payloads incluidos en el primer arranque aún no se ha ejecutado en consola.
 - **NeoWEB** — la variante segura ya funciona; lo siguiente es probar
   lanzar y cerrar en consola, una página web a juego con esa variante, y las
   lecturas de energía, ventilador y M.2.
@@ -92,14 +95,19 @@ kstuff ya estaba desactivado, por una causa aún sin identificar.
 
 ## Descarga
 
-Todavía no hay una versión pública en binario; la primera llegará tras la
-prueba en frío de la 0.1.0-rc2. Mientras tanto:
+**[Releases](../../releases)** — descarga `NeoHEN.elf` de la última. Es el
+único fichero que hace falta.
 
-- GitHub Actions compila cada rama. Abre la pestaña
-  [Actions](../../actions), elige la última ejecución en verde de la rama que
-  quieras y descarga su artefacto (GitHub pide haber iniciado sesión). Trae
-  `NeoHEN.elf`, un zip con él y sus notas, y `SHA256SUMS`.
-- O compílalo tú, ver [Compilar](#compilar).
+La `0.1.0-rc2` es una versión preliminar. Todo lo que lleva se ha visto
+funcionar en consola salvo un paso: escribir los payloads incluidos en
+`/data/neohen` en el primer arranque. Ese código está compilado y revisado,
+pero no se había ejecutado en una consola cuando se publicó. Debería
+funcionar; si no, copia los cuatro payloads a mano en
+`/data/neohen/payloads` (la forma probada) y abre una incidencia adjuntando
+`/data/neohen/NeoHEN.log`.
+
+GitHub Actions compila además cada rama; los artefactos están en la pestaña
+[Actions](../../actions) (GitHub pide haber iniciado sesión).
 
 ## Instalación
 
