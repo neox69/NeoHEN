@@ -379,6 +379,50 @@ int parse_cheats_mirror(const char *s, int def) {
   return def;
 }
 
+int parse_rest_toolbox_mode(const char *s, int def) {
+  if (streq_ci(s, "manual"))
+    return kRestToolboxManual;
+  if (streq_ci(s, "stable"))
+    return kRestToolboxStable;
+  if (streq_ci(s, "original"))
+    return kRestToolboxOriginal;
+  return def;
+}
+
+const char *rest_toolbox_mode_name(int v) {
+  switch (v) {
+  case kRestToolboxStable:
+    return "stable";
+  case kRestToolboxOriginal:
+    return "original";
+  case kRestToolboxManual:
+  default:
+    return "manual";
+  }
+}
+
+int parse_smp_watchdog(const char *s, int def) {
+  if (streq_ci(s, "off"))
+    return kSmpWatchdogOff;
+  if (streq_ci(s, "notify"))
+    return kSmpWatchdogNotify;
+  if (streq_ci(s, "relaunch"))
+    return kSmpWatchdogRelaunch;
+  return def;
+}
+
+const char *smp_watchdog_name(int v) {
+  switch (v) {
+  case kSmpWatchdogOff:
+    return "off";
+  case kSmpWatchdogRelaunch:
+    return "relaunch";
+  case kSmpWatchdogNotify:
+  default:
+    return "notify";
+  }
+}
+
 const char *cheats_mirror_name(int v) {
   switch (v) {
   case kCheatsMirrorGithub:
@@ -752,6 +796,21 @@ bool apply_parser(IniParser *parser, Settings *out) {
       ini_get(parser, "rest_mode.resume_reinject_delay_seconds"),
       static_cast<int>(out->rest_mode_delay_seconds), kRestModeDelayMinSeconds,
       kRestModeDelayMaxSeconds));
+  out->rest_toolbox_mode = parse_rest_toolbox_mode(
+      ini_get(parser, "rest_mode.toolbox_after_resume"), out->rest_toolbox_mode);
+  out->rest_stable_seconds = parse_int_range(
+      ini_get(parser, "rest_mode.stable_seconds"), out->rest_stable_seconds,
+      kRestStableMinSeconds, kRestStableMaxSeconds);
+  out->smp_watchdog = parse_smp_watchdog(ini_get(parser, "shadowmount.watchdog"),
+                                         out->smp_watchdog);
+  out->smp_watchdog_interval_seconds = parse_int_range(
+      ini_get(parser, "shadowmount.watchdog_interval_seconds"),
+      out->smp_watchdog_interval_seconds, kSmpWatchdogMinSeconds,
+      kSmpWatchdogMaxSeconds);
+  out->diag_kstuff_tables = parse_bool(
+      ini_get(parser, "diagnostics.kstuff_tables"), out->diag_kstuff_tables);
+  out->shellui_wait_for_tracer = parse_bool(
+      ini_get(parser, "shellui.wait_for_tracer"), out->shellui_wait_for_tracer);
   out->cheats_mirror = parse_cheats_mirror(ini_get(parser, "cheats.mirror"),
                                            out->cheats_mirror);
   out->app_jailbreak_enabled =
@@ -921,6 +980,38 @@ std::string settings_serialize(const Settings &in) {
   b += "resume_reinject_delay_seconds=" +
        std::to_string(static_cast<unsigned long long>(in.rest_mode_delay_seconds)) +
        "\n";
+  b += "# toolbox_after_resume chooses what happens to the Toolbox after Rest\n";
+  b += "# Mode. manual waits until you request it (PC: neohen_ctl.py toolbox);\n";
+  b += "# stable injects once a new SceShellUI has stayed up stable_seconds;\n";
+  b += "# original is the OnionHEN v0.9.0-beta1 behaviour.\n";
+  b += "# Available values: manual, stable, original\n";
+  b += "toolbox_after_resume=" +
+       std::string(rest_toolbox_mode_name(in.rest_toolbox_mode)) + "\n";
+  b += "# stable_seconds: 10 through 300.\n";
+  b += "stable_seconds=" + std::to_string(in.rest_stable_seconds) + "\n";
+  b += "\n";
+  b += "[shadowmount]\n";
+  b += "# watchdog checks after Rest Mode and every interval that the\n";
+  b += "# ShadowMount+ hook is still installed (from its debug.log).\n";
+  b += "# off: never; notify: show a notification; relaunch: also start\n";
+  b += "# payloads/shadowmountplus.elf again.\n";
+  b += "# Available values: off, notify, relaunch\n";
+  b += "watchdog=" + std::string(smp_watchdog_name(in.smp_watchdog)) + "\n";
+  b += "# watchdog_interval_seconds: 30 through 3600.\n";
+  b += "watchdog_interval_seconds=" +
+       std::to_string(in.smp_watchdog_interval_seconds) + "\n";
+  b += "\n";
+  b += "[diagnostics]\n";
+  b += "# kstuff_tables logs kstuff's PS5/PS4 syscall-table switches at start,\n";
+  b += "# on game start and 30 s later. Read-only kernel reads.\n";
+  b += "# Available values: true, false\n";
+  b += "kstuff_tables=" + bool_text(in.diag_kstuff_tables) + "\n";
+  b += "\n";
+  b += "[shellui]\n";
+  b += "# wait_for_tracer waits (and notifies) while another tool such as\n";
+  b += "# ps5upload is tracing SceShellUI, instead of injecting the Toolbox.\n";
+  b += "# Available values: true, false\n";
+  b += "wait_for_tracer=" + bool_text(in.shellui_wait_for_tracer) + "\n";
   b += "\n";
   b += "[cheats]\n";
   b += "# mirror selects the git host for online cheat catalogs.\n";
