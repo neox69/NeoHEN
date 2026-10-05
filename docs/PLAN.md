@@ -89,8 +89,10 @@ en 13.42, eso pasa a ser lo primero y lo demás queda en espera.
 |---|---|---|---|
 | 1 | Entorno de compilación; `v0.9.0-beta1` compila | — | **Compilado** (OnionHEN.elf, con kstuff-lite v1.11 real) |
 | 2 | Marca centralizada + valores de NeoHEN + kstuff fuera del ELF + icono fuera de `/system_ex` | `centralize-branding`, `neohen/base` | **Compilado** (NeoHEN.elf). **Probado**: catálogos de idioma idénticos byte a byte con los valores por defecto; 467 tests de host pasan. **Sin verificar en consola** |
-| 3 | `docs/PLAN.md` y `docs/PRUEBAS-CONSOLA.md` | `neohen/docs` | Hecho |
-| 4 | Herramienta de PC: `.ffpfsc`, `.ffpkg`, `.exfat` (Python + MkPFS, UTF-8 forzado), con tests reales | `neohen/pc-tool` | Pendiente |
+| 3 | `docs/PLAN.md` y `docs/PRUEBAS-CONSOLA.md` | `neohen/docs` | Hecho; bloque 0 **probado en consola por el usuario: arranca en 13.42** |
+| — | Compilación automática (`NeoHEN.elf` como artefacto por rama, sin releases) | en `neohen/base` | **Compilado en GitHub Actions** (SDK oficial + dependencias en caché + tests de host) |
+| — | Iconos de NeoHEN (§13) | `neohen/icons` | Script y ruta configurable listos; **faltan los originales en `branding/`** |
+| 4 | Herramienta de PC: `.ffpfsc`, `.ffpkg`, `.exfat` (Python + MkPFS, UTF-8 forzado), con tests reales | `neohen/pc-tool` | **Probado con tests** (23; cada imagen se relee con otra implementación). Imágenes **sin verificar en consola**. Ver `tools/pc/README.md` |
 | 5 | Servidor web como plugin, con tests en el emulador (§7) | `neohen/web` | Pendiente |
 | 6 | Arranque seguro (fichero en USB primero; combinación de botones después de comprobar que el bootstrapper puede leer el mando) e informe de diagnóstico (zip con firmware, versiones, configuración y logs) | `neohen/safe-boot` | Pendiente |
 | 7 | Superposición: inicializar `Data[8]` en `calc_usage`, validar Cur/Prev por núcleo, ocultar lo que no se lea. Desactivada por defecto. También como PR a OnionHEN | `neohen/overlay` | Pendiente |
@@ -214,6 +216,34 @@ PS5_PAYLOAD_SDK=/opt/ps5-payload-sdk ./scripts/build-neohen.sh --release
 ```
 
 Tests de host: `cd source/util/tests && KEYSTONE_PREFIX=<keystone> make test`.
+
+## 13. Imágenes e identidad gráfica
+
+Originales del usuario (no se modifican): `branding/neohen-icon.png` (emblema
+en color, 1254×1254, fondo oscuro), `branding/neohen-icon-mono.png` (emblema
+blanco, 1254×1254, transparente), `branding/neohen-splash.png` (logotipo
+horizontal, 1672×941). Se generan con `tools/branding/make_icons.py`.
+
+Inventario de OnionHEN (leído en el código):
+
+| Imagen | Tamaño y formato | Dónde se usa | NeoHEN |
+|---|---|---|---|
+| `source/bootstrapper/assets/onionhen_sicon.png` | 128×128 PNG RGBA, 5,9 KB | Un solo fichero para: icono de los avisos de arranque (`/user/data/<dir>/onionhen.png`), tarjeta de la barra superior de inicio (`/system_tmp/neohen/icon______.png`), su estado enfocado («invertido», el hook copia la misma imagen) y el icono de la entrada en Ajustes | `neohen_sicon.png`, 128×128 RGBA: emblema en color recortado con la forma del mono, sobre transparente (se ve en la barra oscura y en el resaltado blanco). Ruta vía `ONION_STARTUP_ICON` |
+| `source/bootstrapper/assets/icons/icon_xml_*.svg` → 64×64 PNG | 64×64 RGBA (uno 512×512) | Iconos de cada sección de la Toolbox (ajustes, ventilador, juegos…), glifos blancos genéricos | Se quedan: no son de marca |
+| `icon_xml_author_avatar`, `icon_xml_donator_*` | 64×64 RGBA | Autor y donantes de OnionHEN en Acerca de | Se quedan (atribución) |
+| `assets/logo.png` | 1024×1024 RGBA | README | `assets/neohen-logo.png` 512×512 y `assets/neohen-splash.png` 1280 de ancho |
+| `assets/screenshot_0*.png` | ~1650×930 | README de OnionHEN | Capturas propias cuando NeoHEN arranque |
+
+HomeUI: la ruta va en un hueco fijo de 33 bytes, que es independiente del
+tamaño de la imagen. Lo único probado en consola es el icono de OnionHEN,
+128×128 RGBA de 5,9 KB. El script exige 128×128 RGBA y como mucho 32 KiB.
+Que HomeUI lea el fichero desde `/system_tmp` está **sin verificar en
+consola**.
+
+Paleta: azul eléctrico `#4DA3FF`, violeta `#8E7BFF`, fondo `#0B0F1A`. La
+Toolbox se dibuja con las páginas de Ajustes del sistema y **no admite
+colores propios**. La paleta se aplicará a la interfaz web (bloque 5) y a la
+superposición (bloque 7), que dibuja sus propios widgets.
 
 ## Créditos
 
