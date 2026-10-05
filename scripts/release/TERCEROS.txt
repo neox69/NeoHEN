@@ -1,0 +1,55 @@
+Software de terceros incluido con NeoHEN / Third-party software shipped with NeoHEN
+====================================================================================
+
+NeoHEN arranca estos programas, pero no son suyos. Son los binarios que
+publican sus autores, sin modificar. Gracias a todos ellos.
+
+NeoHEN starts these programs but does not own them. They are their authors'
+release binaries, unmodified. Thanks to all of them.
+
+
+En la carpeta payloads / In the payloads folder
+-----------------------------------------------
+
+ShadowMount+ 1.7beta2          payloads/shadowmountplus.elf
+  drakmor y colaboradores
+  Licencia / License: GPL-3.0
+  Código / Source: https://github.com/drakmor/ShadowMountPlus
+  Binario / Binary: https://github.com/drakmor/ShadowMountPlus/releases/tag/1.7beta2
+  SHA-256: 3f716a7b2220c7e87e87452ae05cad689ef842d3beb4cdad6c526cb6dfc2b6b5
+
+ftpsrv v0.21.1                 payloads/ftpsrv.elf
+  John Törnblom y colaboradores (ps5-payload-dev)
+  Licencia / License: GPL-3.0
+  Código / Source: https://github.com/ps5-payload-dev/ftpsrv
+  Binario / Binary: https://github.com/ps5-payload-dev/ftpsrv/releases/tag/v0.21.1
+  SHA-256: 7d4b31c83eae4e056580482a3a074e1db25922efc74ac1e439473b45d71a5938
+
+nanoDNS 0.4                    payloads/nanodns.elf
+  drakmor
+  Licencia / License: GPL-3.0
+  Código / Source: https://github.com/drakmor/nanoDNS
+  Binario / Binary: https://github.com/drakmor/nanoDNS/releases/tag/0.4
+  SHA-256: fcfb7d47c3b295560ea1603dc015f7c4950353ef0faca16428bd425680ef1fc5
+
+
+Dentro de NeoHEN.elf / Inside NeoHEN.elf
+----------------------------------------
+
+kstuff-lite v1.11
+  EchoStretch, sleirsgoevy y colaboradores
+  Código / Source: https://github.com/EchoStretch/kstuff-lite
+  Binario / Binary: https://github.com/EchoStretch/kstuff-lite/releases/tag/v1.11
+  Su repositorio no declara una licencia. Se incluye como lo hacen OnionHEN
+  y etaHEN; si sus autores lo piden, se retirará.
+  Its repository declares no license. It is included the way OnionHEN and
+  etaHEN include it; it will be removed if its authors ask.
+
+OnionHEN (aydencharles y colaboradores) y etaHEN (LightningMods y
+colaboradores), GPL-3.0: la base de NeoHEN. Con ellos vienen libhijacker
+(astrelsky), NineS (buzzer-re) y el SDK de ps5-payload-dev.
+OnionHEN and etaHEN, GPL-3.0: the base of NeoHEN. With them come libhijacker,
+NineS and the ps5-payload-dev SDK.
+
+
+El código de NeoHEN y de NeoHEN Web: https://github.com/neox69/NeoHEN (GPL-3.0)

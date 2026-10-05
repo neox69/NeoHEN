@@ -31,7 +31,7 @@ GPLv3.
 |---|---|
 | Reposo | La Toolbox vuelve sola cuando el menú lleva 30 s estable. El original la reinyecta a los 10 s de despertar, y en 13.42 eso reiniciaba el menú y lo dejaba bloqueado cerca de un minuto. Tres modos: `stable` (por defecto), `manual` y `original`. |
 | Una sola carga | `NeoHEN.elf` arranca kstuff, ShadowMount+, FTP, nanoDNS y NeoHEN Web desde `/data/neohen/payloads`, en orden, y avisa en pantalla del fichero que falte. |
-| kstuff | No va dentro. Se carga desde `/data/neohen/kstuff.elf`, y se salta si ya hay uno en marcha. |
+| Todo incluido | El zip de instalación ya trae ShadowMount+, ftpsrv y nanoDNS (los binarios de sus autores, con versión y hash fijados) y NeoHEN Web; kstuff-lite va dentro de `NeoHEN.elf`. No hay que descargar ni renombrar nada. Un `kstuff.elf` en `/data/neohen/` sustituye al que va dentro, y si ya hay un kstuff en marcha no se toca. |
 | ShadowMount+ | Se usa el payload de su autor sin modificar, con un vigilante que comprueba su hook tras el reposo y cada 5 minutos, y puede relanzarlo. |
 | NeoHEN Web | Servicio HTTP en la consola (puerto 8686) para paneles: temperaturas, discos, biblioteca con carátulas, juego abierto, lanzar y cerrar. Ver [web/README.md](web/README.md). |
 | Privacidad | Los logs nunca llevan el nombre ni el identificador de la cuenta, y las IP y MAC se sustituyen. Los del original escriben nombre e identificador cada vez que se abre un menú. |
@@ -102,24 +102,36 @@ prueba en frío de la 0.1.0-rc2. Mientras tanto:
 
 ## Instalación
 
-NeoHEN no incluye kstuff, ShadowMount+, el servidor FTP ni nanoDNS: son de
-otros autores y se descargan de sus repositorios.
+Una vez:
 
 1. Copia por FTP la carpeta `data/neohen` del zip de instalación a
    `/data/neohen` en la consola.
-2. Añade estos ficheros, con exactamente estos nombres:
 
-   | Fichero | Qué es |
-   |---|---|
-   | `/data/neohen/kstuff.elf` | [kstuff-lite](https://github.com/EchoStretch/kstuff-lite) |
-   | `/data/neohen/payloads/shadowmountplus.elf` | [ShadowMount+](https://github.com/drakmor/ShadowMountPlus) |
-   | `/data/neohen/payloads/ftpsrv.elf` | [ftpsrv](https://github.com/ps5-payload-dev/ftpsrv) |
-   | `/data/neohen/payloads/nanodns.elf` | [nanoDNS](https://github.com/drakmor/nanoDNS) |
+En cada arranque:
 
-3. ¿No quieres alguno? Borra su fichero `.auto_start`.
+1. Lanza el exploit hasta tener un cargador de ELF escuchando en el puerto
+   9021.
+2. Envíale `NeoHEN.elf`. Nada más.
 
-En cada arranque: lanza el exploit hasta tener un cargador de ELF escuchando
-en el puerto 9021 y envíale `NeoHEN.elf`. Nada más.
+NeoHEN arranca entonces por su cuenta kstuff, la Toolbox, ShadowMount+, el
+servidor FTP, nanoDNS y NeoHEN Web.
+
+El zip incluye, sin modificar y con su propia licencia GPL-3.0:
+
+| Fichero | Qué es | Versión |
+|---|---|---|
+| `payloads/shadowmountplus.elf` | [ShadowMount+](https://github.com/drakmor/ShadowMountPlus) | 1.7beta2 |
+| `payloads/ftpsrv.elf` | [ftpsrv](https://github.com/ps5-payload-dev/ftpsrv) | v0.21.1 |
+| `payloads/nanodns.elf` | [nanoDNS](https://github.com/drakmor/nanoDNS) | 0.4 |
+
+y [kstuff-lite](https://github.com/EchoStretch/kstuff-lite) v1.11 dentro de
+`NeoHEN.elf`. Son las versiones con las que se ha probado NeoHEN; los hashes
+exactos están en `scripts/release/payloads.lock` y en el `TERCEROS.txt` del
+zip.
+
+- ¿No quieres alguno? Borra su fichero `.auto_start`.
+- ¿Quieres otra versión? Sustituye el `.elf` manteniendo el nombre. Para
+  kstuff, deja un `kstuff.elf` en `/data/neohen/`.
 
 No cargues a la vez etaHEN, OnionHEN ni CheatRunner. El zip de instalación
 trae una guía más completa (`LEEME.txt`).
@@ -206,7 +218,9 @@ Los créditos completos del proyecto original están en
 ## Licencia
 
 GPLv3, igual que OnionHEN y etaHEN. Ver [LICENSE](LICENSE). Los componentes
-de terceros conservan sus licencias; kstuff, ShadowMount+, ftpsrv y nanoDNS
-no se redistribuyen aquí.
+de terceros conservan sus licencias. ShadowMount+, ftpsrv y nanoDNS son
+GPL-3.0 y se redistribuyen sin modificar, con su código enlazado más arriba.
+kstuff-lite no declara licencia; se incluye como lo hacen OnionHEN y etaHEN,
+y se retirará si sus autores lo piden.
 
 NeoHEN es para homebrew en consolas de tu propiedad. Se ofrece sin garantía.
