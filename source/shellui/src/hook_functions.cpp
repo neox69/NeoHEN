@@ -19,6 +19,8 @@ along with this program; see the file COPYING. If not, see
 #include "settings_bundle_patch.hpp"
 #include "toolbox_i18n.hpp"
 #include <onion/platform.h>
+#include <onion/settings.hpp>
+#include <onion/topnav_icon.h>
 #include "detour.h"
 #include <climits>
 #include <msg.hpp>
@@ -192,9 +194,10 @@ MonoString * CxmlUri_Hook(MonoObject * Instance, MonoString * uri) {
    * hooks are ready.
    */
   if (uri_string.find("icon_setting") != std::string::npos) {
-    LOG_DEBUG("CxmlUri_Hook: intercepted Settings icon -> "
-              "/system_ex/vsh_asset/onionhen.png");
-    return mono_str_ui("/system_ex/vsh_asset/onionhen.png");
+    char icon[ONION_TOPNAV_ICON_PATH_LEN + 1];
+    onion_topnav_icon_path(g_settings.system_ex_icon, icon);
+    LOG_DEBUG("CxmlUri_Hook: intercepted Settings icon -> %s", icon);
+    return mono_str_ui(icon);
   }
   if (uri_string.rfind("//usb") != std::string::npos || uri_string.rfind("//data") != std::string::npos || uri_string.rfind("//user//data") != std::string::npos){
     //replace // with//

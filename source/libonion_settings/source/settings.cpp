@@ -743,6 +743,8 @@ bool apply_parser(IniParser *parser, Settings *out) {
       parse_max_bytes(ini_get(parser, "logging.max_bytes"), out->log_max_bytes);
   out->display_tids = parse_bool(
       ini_get(parser, "home_screen.show_title_ids"), out->display_tids);
+  out->system_ex_icon = parse_bool(
+      ini_get(parser, "home_screen.system_ex_icon"), out->system_ex_icon);
   out->onionhen_game_opts =
       parse_bool(ini_get(parser, "game_menu.show_onionhen_options"),
                  out->onionhen_game_opts);
@@ -901,6 +903,11 @@ std::string settings_serialize(const Settings &in) {
   b += "# show_title_ids displays app Title IDs on the PS5 home screen.\n";
   b += "# Available values: true, false\n";
   b += "show_title_ids=" + bool_text(in.display_tids) + "\n";
+  b += "# system_ex_icon also writes the Toolbox icon to /system_ex/vsh_asset,\n";
+  b += "# a persistent system partition. When false the icon is kept in\n";
+  b += "# volatile memory and disappears on reboot.\n";
+  b += "# Available values: true, false\n";
+  b += "system_ex_icon=" + bool_text(in.system_ex_icon) + "\n";
   b += "\n";
   b += "[game_menu]\n";
   b += "# show_onionhen_options adds OnionHEN entries to the game options menu.\n";

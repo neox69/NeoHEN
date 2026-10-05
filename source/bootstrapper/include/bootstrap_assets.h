@@ -8,7 +8,7 @@ extern "C" {
 #endif
 
 /** Materialize embedded assets and report whether the startup icon is ready. */
-bool bootstrap_assets_write(void);
+bool bootstrap_assets_write(bool system_ex_icon);
 
 #ifdef __cplusplus
 }

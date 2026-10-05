@@ -127,6 +127,7 @@ TEST_C_SRCS := \
 	test_ready.c \
 	test_platform_fs.c \
 	test_bootstrap_cache.c \
+	test_topnav_icon.c \
 	test_platform_log.c \
 	test_platform_net.c \
 	test_platform_notify.c \

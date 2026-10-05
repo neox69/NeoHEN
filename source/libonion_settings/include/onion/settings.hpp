@@ -298,6 +298,9 @@ struct Settings {
 
   // [home_screen], [game_menu]
   bool display_tids = false;
+  // Copy the top-nav icon to /system_ex/vsh_asset (persistent). Off: the
+  // icon lives in the volatile runtime directory.
+  bool system_ex_icon = false;
   bool onionhen_game_opts = true;
 
   // [cooling]

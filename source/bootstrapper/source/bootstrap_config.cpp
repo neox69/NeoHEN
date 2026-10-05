@@ -62,5 +62,6 @@ bool bootstrap_config_load(BootstrapConfig *config) {
 
   config->firmware_version = version.version;
   config->kstuff_autoload = settings.kstuff_autoload;
+  config->system_ex_icon = settings.system_ex_icon;
   return true;
 }

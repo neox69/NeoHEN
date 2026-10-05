@@ -24,6 +24,10 @@ along with this program; see the file COPYING. If not, see
 #include "hooked_funcs.hpp"
 #include "ipc.hpp"
 #include <sha1.hpp>
+#include <onion/settings.hpp>
+#include <onion/topnav_icon.h>
+
+extern onion::Settings g_settings;
 
 #include <atomic>
 #include <stddef.h>
@@ -49,8 +53,16 @@ constexpr size_t kHbcSourceHashOffset = 0x0c;
 constexpr size_t kHbcSourceHashSize = 20;
 constexpr size_t kHbcFileLengthOffset = 0x20;
 constexpr size_t kHbcFooterSha1Size = 20;
-constexpr const char *kOnionHenTopNavIconPath =
-    "/system_ex/vsh_asset/onionhen.png";
+/* Volatile runtime path by default; /system_ex only with system_ex_icon. */
+static const char *onion_hen_top_nav_icon_path() {
+  static char path[ONION_TOPNAV_ICON_PATH_LEN + 1];
+  static bool ready = false;
+  if (!ready) {
+    onion_topnav_icon_path(g_settings.system_ex_icon, path);
+    ready = true;
+  }
+  return path;
+}
 
 static const unsigned char kLegacyOldIconOrder[] = {
     '[', '"', 'F', 'p', 's', '"', ',', '"', 'S', 'e', 'a', 'r', 'c', 'h',
@@ -451,10 +463,8 @@ static const unsigned char kOldCustomIconUri[] = {
     'h', 'o', 'm', 'e', 'u', 'i', ' ', 'A', 'p', 'p', 'l',
     'i', 'c', 'a', 't', 'i', 'o', 'n', 'E', 'r', 'r', 'o',
     'r', 'E', 'v', 'e', 'n', 't', ' ', 't', 'e', 's', 't'};
-static const unsigned char kNewCustomIconUri[] = {
-    '/', 's', 'y', 's', 't', 'e', 'm', '_', 'e', 'x', '/',
-    'v', 's', 'h', '_', 'a', 's', 's', 'e', 't', '/', 'o',
-    'n', 'i', 'o', 'n', 'h', 'e', 'n', '.', 'p', 'n', 'g'};
+static_assert(sizeof(kOldCustomIconUri) == ONION_TOPNAV_ICON_PATH_LEN,
+              "top-nav icon path must replace the stock string in place");
 static const unsigned char kOldTopNavLinkUri[] = {
     'T', 'r', 'i', 'g', 'g', 'e', 'r', ' ',
     'A', 'p', 'p', 'E', 'r', 'r', 'o', 'r'};
@@ -623,16 +633,28 @@ static bool source_bytes_at(const SourceBundleView &bundle, size_t offset,
          bytes_equal(bundle.data + offset, expected, len);
 }
 
+/* The source prefixes spell the legacy icon path; swap in the selected one
+ * (same length, so the block layout is unchanged). */
+static std::string source_prefix_with_icon(const SourcePatchStrategy &strategy) {
+  std::string prefix(strategy.new_app_error_source_prefix,
+                     strategy.new_source_prefix_size);
+  const size_t at = prefix.find(ONION_TOPNAV_ICON_LEGACY_PATH);
+  if (at != std::string::npos)
+    prefix.replace(at, ONION_TOPNAV_ICON_PATH_LEN,
+                   onion_hen_top_nav_icon_path(), ONION_TOPNAV_ICON_PATH_LEN);
+  return prefix;
+}
+
 static bool source_is_target(const SourceBundleView &bundle,
                              const SourceHomeUiProfile &profile) {
   const SourcePatchStrategy &strategy = *profile.strategy;
+  const std::string prefix = source_prefix_with_icon(strategy);
   const size_t source_offset = profile.offsets.app_error_source;
   if (!range_contains(bundle.size, source_offset,
                       strategy.source_block_size) ||
       !source_bytes_at(
           bundle, source_offset,
-          reinterpret_cast<const unsigned char *>(
-              strategy.new_app_error_source_prefix),
+          reinterpret_cast<const unsigned char *>(prefix.data()),
           strategy.new_source_prefix_size)) {
     return false;
   }
@@ -685,8 +707,8 @@ static void apply_source(const SourceBundleView &bundle,
                          const SourceHomeUiProfile &profile) {
   const SourcePatchStrategy &strategy = *profile.strategy;
   unsigned char *target = bundle.data + profile.offsets.app_error_source;
-  memcpy(target, strategy.new_app_error_source_prefix,
-         strategy.new_source_prefix_size);
+  const std::string prefix = source_prefix_with_icon(strategy);
+  memcpy(target, prefix.data(), strategy.new_source_prefix_size);
   memset(target + strategy.new_source_prefix_size, ' ',
          strategy.source_block_size - strategy.new_source_prefix_size);
 }
@@ -904,7 +926,7 @@ static bool is_homeui_top_nav_icon_source(MonoObject *source) {
     return false;
   }
 
-  return Mono_to_String(text).find(kOnionHenTopNavIconPath) !=
+  return Mono_to_String(text).find(onion_hen_top_nav_icon_path()) !=
          std::string::npos;
 }
 
@@ -1201,7 +1223,9 @@ void patch_homeui_top_nav(unsigned char *buffer, int *size_ptr,
        bytes.old_custom_icon_value, nullptr, nullptr,
        bytes.new_custom_icon_value, kObjectTableValueSize},
       {"custom icon uri", profile->offsets.custom_icon_uri, kOldCustomIconUri,
-       nullptr, nullptr, kNewCustomIconUri, sizeof(kOldCustomIconUri)},
+       nullptr, nullptr,
+       reinterpret_cast<const unsigned char *>(onion_hen_top_nav_icon_path()),
+       sizeof(kOldCustomIconUri)},
       {"top-nav link uri", profile->offsets.top_nav_link_uri,
        kOldTopNavLinkUri, kLegacyBlankTopNavLinkUri,
        kLegacyPaddedTopNavLinkUri,

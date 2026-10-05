@@ -4,7 +4,9 @@
 #include "bootstrap_assets.h"
 
 #include <onion/fs.h>
+#include <onion/log.h>
 #include <onion/notify.h>
+#include <onion/topnav_icon.h>
 
 #include <stdint.h>
 #include <stdio.h>
@@ -31,7 +33,7 @@ static const EmbeddedIcon kEmbeddedIcons[] = {
 #undef ONION_ICON
 };
 
-bool bootstrap_assets_write(void) {
+bool bootstrap_assets_write(bool system_ex_icon) {
   mkdir(ONION_DATA_DIR, 0777);
   mkdir(ONION_DATA_DIR "/assets", 0777);
   mkdir("/user/data", 0777);
@@ -49,8 +51,15 @@ bool bootstrap_assets_write(void) {
                             *kEmbeddedIcons[i].size);
   }
 
-  mkdir("/system_ex/vsh_asset", 0777);
-  (void)write_file_atomic("/system_ex/vsh_asset/onionhen.png", sicon_start,
-                          sicon_size);
+  char topnav_icon[ONION_TOPNAV_ICON_PATH_LEN + 1];
+  onion_topnav_icon_path(system_ex_icon, topnav_icon);
+  if (system_ex_icon) {
+    LOG_WARN("home_screen.system_ex_icon=true: writing %s", topnav_icon);
+    mkdir("/system_ex/vsh_asset", 0777);
+  } else {
+    mkdir(ONION_RUNTIME_DIR, 0777);
+  }
+  if (!write_file_atomic(topnav_icon, sicon_start, sicon_size))
+    LOG_WARN("top-nav icon not written: %s", topnav_icon);
   return startup_icon_ready;
 }
