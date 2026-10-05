@@ -10,6 +10,9 @@
 #ifndef ONIONHEN_KSTUFF_ELF
 #define ONIONHEN_KSTUFF_ELF "../assets/kstuff.elf"
 #endif
+#ifndef ONIONHEN_SICON_PNG
+#define ONIONHEN_SICON_PNG "../assets/onionhen_sicon.png"
+#endif
 #ifndef ONIONHEN_ICON_ASSET_DIR
 #define ONIONHEN_ICON_ASSET_DIR "../assets"
 #endif
@@ -56,7 +59,7 @@ __asm__(".intel_syntax noprefix\n"
         ".type   sicon_start, @object\n"
         ".align  16\n"
         "sicon_start:\n"
-        ".incbin \"../assets/onionhen_sicon.png\"\n"
+        ".incbin \"" ONIONHEN_SICON_PNG "\"\n"
         "sicon_end:\n"
         ".global sicon_size\n"
         ".type   sicon_size, @object\n"
