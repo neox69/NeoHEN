@@ -2,6 +2,7 @@
 
 #include <onion/brand.h>
 #include <onion/log.h>
+#include <onion/log_redact.h>
 
 #include <fcntl.h>
 #include <errno.h>
@@ -365,6 +366,9 @@ static size_t format_record(char *out, size_t out_size, onion_log_level level,
       used = out_size - 1; /* vsnprintf truncated; it still NUL-terminated */
     }
   }
+
+  /* Never write IP or MAC addresses: logs end up in public issues. */
+  used = onion_log_redact(out, used);
 
   /* Exactly one trailing newline, whether or not the caller supplied one. */
   while (used > 0 && (out[used - 1] == '\n' || out[used - 1] == '\r')) {
