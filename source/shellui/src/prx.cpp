@@ -753,7 +753,7 @@ int main(int argc, char const* argv[]) {
    * the vsh process is its own decision — until then an unhandled fault in
    * ShellUI is simply not captured.
    */
-  onion_log_configure("ShellUI", ONION_USER_DATA_DIR "/OnionHEN.log");
+  onion_log_configure("ShellUI", ONION_USER_DATA_DIR "/" ONION_BRAND_NAME ".log");
 
   if (!resolve_native_symbols(pid))
     return -1;

@@ -33,8 +33,8 @@ int main(void) {
    * so this first call may not open. It is re-applied once the directory
    * exists; until then records still reach klog, stdout and the remote log.
    */
-  onion_log_configure("Bootstrapper", ONION_DATA_DIR "/OnionHEN.log");
-  onion_log_configure_crash(ONION_DATA_DIR "/OnionHEN_crash.log");
+  onion_log_configure("Bootstrapper", ONION_DATA_DIR "/" ONION_BRAND_NAME ".log");
+  onion_log_configure_crash(ONION_DATA_DIR "/" ONION_BRAND_NAME "_crash.log");
 
   BootstrapConfig config{};
   if (!bootstrap_config_load(&config))
@@ -54,8 +54,8 @@ int main(void) {
   LOG_DEBUG("============== Spawner (Bootstrapper) Started =================");
   bootstrap_filesystem_create_directories();
   /* The directory exists now, so this pass is the one that sticks. */
-  onion_log_configure("Bootstrapper", ONION_DATA_DIR "/OnionHEN.log");
-  onion_log_configure_crash(ONION_DATA_DIR "/OnionHEN_crash.log");
+  onion_log_configure("Bootstrapper", ONION_DATA_DIR "/" ONION_BRAND_NAME ".log");
+  onion_log_configure_crash(ONION_DATA_DIR "/" ONION_BRAND_NAME "_crash.log");
   if (!bootstrap_filesystem_mount_system())
     return -1;
 

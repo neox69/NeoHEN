@@ -366,7 +366,7 @@
     "notify.mount.system_ex": "/system_ex のマウントに失敗しました\nこの表示が出たら本体を再起動してください",
     "notify.mount.system": "/system のマウントに失敗しました\nこの表示が出たら本体を再起動してください",
     "notify.crash.resolved": "致命的なエラーから復旧しました\n\n心配はいりません",
-    "notify.crash.main": "{brand} がクラッシュしました……\n\n{data_dir}/OnionHEN_crash.log を GitHub Issue に添付してください：{issues_url}",
+    "notify.crash.main": "{brand} がクラッシュしました……\n\n{data_dir}/{brand}_crash.log を GitHub Issue に添付してください：{issues_url}",
     "notify.stack.shutdown": "{brand} の構成要素を停止しました（util + ShellUI + daemon。Kstuff は稼働したままです）",
     "notify.fan.open_failed": "ファン設定を開けませんでした！",
     "notify.fan.set_failed": "ファン回転数を設定できませんでした！",

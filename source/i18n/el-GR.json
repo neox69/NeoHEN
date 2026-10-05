@@ -366,7 +366,7 @@
     "notify.mount.system_ex": "αποτυχία προσάρτησης /system_ex\nαν το βλέπετε αυτό, επανεκκινήστε",
     "notify.mount.system": "αποτυχία προσάρτησης /system\nαν το βλέπετε αυτό, επανεκκινήστε",
     "notify.crash.resolved": "Το μοιραίο σφάλμα επιλύθηκε επιτυχώς\n\nδεν έχετε λόγο ανησυχίας",
-    "notify.crash.main": "Το {brand} κατέρρευσε ...\n\nΕπισυνάψτε το {data_dir}/OnionHEN_crash.log σε ένα ζήτημα GitHub: {issues_url}",
+    "notify.crash.main": "Το {brand} κατέρρευσε ...\n\nΕπισυνάψτε το {data_dir}/{brand}_crash.log σε ένα ζήτημα GitHub: {issues_url}",
     "notify.stack.shutdown": "Η στοίβα {brand} τερματίστηκε (util + ShellUI + daemon· το kstuff παραμένει)",
     "notify.fan.open_failed": "Αδυναμία ανοίγματος ρυθμίσεων ανεμιστήρα!",
     "notify.fan.set_failed": "Αδυναμία ορισμού ταχύτητας ανεμιστήρα!",
