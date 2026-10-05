@@ -366,7 +366,7 @@
     "notify.mount.system_ex": "не удалось смонтировать /system_ex\nесли видите это — перезагрузите консоль",
     "notify.mount.system": "не удалось смонтировать /system\nесли видите это — перезагрузите консоль",
     "notify.crash.resolved": "Фатальная ошибка устранена\n\nбеспокоиться не о чем",
-    "notify.crash.main": "{brand} аварийно завершился…\n\nПриложите {data_dir}/OnionHEN_crash.log к обращению на GitHub: {issues_url}",
+    "notify.crash.main": "{brand} аварийно завершился…\n\nПриложите {data_dir}/{brand}_crash.log к обращению на GitHub: {issues_url}",
     "notify.stack.shutdown": "Стек {brand} остановлен (util + ShellUI + daemon; Kstuff продолжает работать)",
     "notify.fan.open_failed": "Не удалось открыть настройки вентилятора.",
     "notify.fan.set_failed": "Не удалось задать скорость вентилятора.",

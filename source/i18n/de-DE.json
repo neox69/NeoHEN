@@ -366,7 +366,7 @@
     "notify.mount.system_ex": "/system_ex konnte nicht eingehängt werden\nErscheint dieser Hinweis, Konsole neu starten",
     "notify.mount.system": "/system konnte nicht eingehängt werden\nErscheint dieser Hinweis, Konsole neu starten",
     "notify.crash.resolved": "Der schwerwiegende Fehler wurde behoben\n\nEs besteht kein Grund zur Sorge",
-    "notify.crash.main": "{brand} ist abgestürzt …\n\nBitte {data_dir}/OnionHEN_crash.log an einen GitHub-Issue anhängen: {issues_url}",
+    "notify.crash.main": "{brand} ist abgestürzt …\n\nBitte {data_dir}/{brand}_crash.log an einen GitHub-Issue anhängen: {issues_url}",
     "notify.stack.shutdown": "{brand}-Stapel beendet (util + ShellUI + daemon; Kstuff bleibt aktiv)",
     "notify.fan.open_failed": "Lüftereinstellungen konnten nicht geöffnet werden!",
     "notify.fan.set_failed": "Lüfterdrehzahl konnte nicht gesetzt werden!",

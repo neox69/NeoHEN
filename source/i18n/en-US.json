@@ -366,7 +366,7 @@
     "notify.mount.system_ex": "failed to mount /system_ex\nif you see this reboot",
     "notify.mount.system": "failed to mount /system\nif you see this reboot",
     "notify.crash.resolved": "The Fatal error has been successfully resolved\n\nyou have nothing to worry about",
-    "notify.crash.main": "{brand} has crashed ...\n\nPlease attach {data_dir}/OnionHEN_crash.log to a GitHub issue: {issues_url}",
+    "notify.crash.main": "{brand} has crashed ...\n\nPlease attach {data_dir}/{brand}_crash.log to a GitHub issue: {issues_url}",
     "notify.stack.shutdown": "{brand} stack shutdown (util + ShellUI + daemon; kstuff remains)",
     "notify.fan.open_failed": "Unable to Open Fan Settings!",
     "notify.fan.set_failed": "Unable to Set Fan Speed!",

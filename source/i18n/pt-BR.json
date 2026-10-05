@@ -366,7 +366,7 @@
     "notify.mount.system_ex": "falha ao montar /system_ex\nse esta mensagem aparecer, reinicie o console",
     "notify.mount.system": "falha ao montar /system\nse esta mensagem aparecer, reinicie o console",
     "notify.crash.resolved": "O erro fatal foi recuperado\n\nnão há com o que se preocupar",
-    "notify.crash.main": "O {brand} travou…\n\nAnexe {data_dir}/OnionHEN_crash.log a uma issue no GitHub: {issues_url}",
+    "notify.crash.main": "O {brand} travou…\n\nAnexe {data_dir}/{brand}_crash.log a uma issue no GitHub: {issues_url}",
     "notify.stack.shutdown": "Pilha {brand} encerrada (util + ShellUI + daemon; o Kstuff continua ativo)",
     "notify.fan.open_failed": "Não foi possível abrir os ajustes da ventoinha!",
     "notify.fan.set_failed": "Não foi possível definir a velocidade da ventoinha!",

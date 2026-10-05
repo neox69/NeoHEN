@@ -366,7 +366,7 @@
     "notify.mount.system_ex": "فشل تركيب /system_ex\nإذا رأيت هذا فأعد التشغيل",
     "notify.mount.system": "فشل تركيب /system\nإذا رأيت هذا فأعد التشغيل",
     "notify.crash.resolved": "تم حل الخطأ الفادح بنجاح\n\nلا داعي للقلق",
-    "notify.crash.main": "تعطل {brand}...\n\nيرجى إرفاق {data_dir}/OnionHEN_crash.log ببلاغ مشكلة على GitHub: {issues_url}",
+    "notify.crash.main": "تعطل {brand}...\n\nيرجى إرفاق {data_dir}/{brand}_crash.log ببلاغ مشكلة على GitHub: {issues_url}",
     "notify.stack.shutdown": "تم إيقاف مكدس {brand} (util + ShellUI + daemon؛ يبقى kstuff)",
     "notify.fan.open_failed": "تعذّر فتح إعدادات المروحة!",
     "notify.fan.set_failed": "تعذّر تعيين سرعة المروحة!",
