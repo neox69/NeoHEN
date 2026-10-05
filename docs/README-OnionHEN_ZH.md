@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/logo.png" alt="OnionHEN" height="128" width="128"/>
+  <img src="../assets/logo.png" alt="OnionHEN" height="128" width="128"/>
 </p>
 
 <p align="center">
@@ -43,15 +43,15 @@
 </p>
 
 <p align="center">
-  <img src="assets/screenshot_01.png" alt="OnionHEN 主界面入口"/>
+  <img src="../assets/screenshot_01.png" alt="OnionHEN 主界面入口"/>
 </p>
 
 <p align="center">
-  <img src="assets/screenshot_02.png" alt="OnionHEN 游戏监视条"/>
+  <img src="../assets/screenshot_02.png" alt="OnionHEN 游戏监视条"/>
 </p>
 
 <p align="center">
-  <img src="assets/screenshot_03.png" alt="OnionHEN Toolbox"/>
+  <img src="../assets/screenshot_03.png" alt="OnionHEN Toolbox"/>
 </p>
 
 <br>
@@ -358,7 +358,7 @@ OnionHEN 在下面两处读写同一份配置：
 
 | 支付宝（国内） | 微信（国内） |
 | --- | --- |
-| <img src="assets/donation_alipay_cn.JPG" width="200" alt="支付宝"/> | <img src="assets/donation_wechat_cn.JPG" width="200" alt="微信"/> |
+| <img src="../assets/donation_alipay_cn.JPG" width="200" alt="支付宝"/> | <img src="../assets/donation_wechat_cn.JPG" width="200" alt="微信"/> |
 
 如果 OnionHEN 对你有用，欢迎支持后续开发。谢谢。
 

@@ -1,10 +1,10 @@
-# Build NeoHEN.elf on every push to a neohen/* branch and keep it as a
+# Build NeoHEN.elf on every push to neohen-main or a neohen/* branch and keep it as a
 # workflow artifact (Actions run page -> Artifacts). No releases, no tags.
 name: neohen-build
 
 on:
   push:
-    branches: ['neohen/**']
+    branches: ['neohen/**', 'neohen-main']
   workflow_dispatch:
 
 concurrency:
