@@ -14,6 +14,7 @@ You should have received a copy of the GNU General Public License
 along with this program; see the file COPYING. If not, see
 <http://www.gnu.org/licenses/>.  */
 
+#include <onion/brand.h>
 #include "ipc.hpp"
 #include "cheats/cheat_service.hpp"
 #include "util_language.h"
@@ -105,10 +106,10 @@ int main(void) {
     sceNetCtlInit();
     sceUserServiceInitialize(NULL);
     onion_log_configure(
-        "OnionHEN utils", "/data/OnionHEN/OnionHEN_util_daemon.log");
+        "OnionHEN utils", ONION_DATA_DIR "/OnionHEN_util_daemon.log");
     /* The faulthandler path writes here; without it a util crash would only
      * reach klog and the util log, never the file users are asked to attach. */
-    onion_log_configure_crash("/data/OnionHEN/OnionHEN_crash.log");
+    onion_log_configure_crash(ONION_DATA_DIR "/OnionHEN_crash.log");
     /* Real linked kernel export (not a dlsym function-pointer variable). */
     onion_notify_set_send(reinterpret_cast<onion_notify_send_fn>(
         sceKernelSendNotificationRequest));
@@ -131,7 +132,7 @@ int main(void) {
     /* pt_* / code-cave require PTRACE_AUTHID (not DEBUG_AUTHID). */
     set_ucred_to_ptrace();
 
-    unlink("/data/OnionHEN/OnionHEN_util_crash.log");
+    unlink(ONION_DATA_DIR "/OnionHEN_util_crash.log");
 
     LOG_INFO("=========== starting OnionHEN Utilities... ===========");
 

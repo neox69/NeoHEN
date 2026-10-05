@@ -17,6 +17,8 @@
 
 #pragma once
 
+#include <onion/brand.h>
+
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -30,7 +32,7 @@ extern "C" {
 
 /* Notification service reads this user-visible path. Config/payload stay
  * under /data/OnionHEN. */
-#define ONION_NOTIFY_ICON_PATH "/user/data/OnionHEN/onionhen.png"
+#define ONION_NOTIFY_ICON_PATH ONION_USER_DATA_DIR "/onionhen.png"
 
 /** Kernel/userland toast send — matches sceKernelSendNotificationRequest. */
 typedef int32_t (*onion_notify_send_fn)(int32_t device, void *req, size_t size,

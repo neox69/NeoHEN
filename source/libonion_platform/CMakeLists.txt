@@ -39,6 +39,7 @@ add_custom_command(
     --locales-dir "${I18N_DIR}"
     --catalog notifications
     --output "${NOTIFY_I18N_CATALOG}"
+    ${ONION_I18N_BRAND_ARGS}
   DEPENDS
     "${I18N_DIR}/generate_catalog.py"
     ${I18N_LOCALE_JSON}

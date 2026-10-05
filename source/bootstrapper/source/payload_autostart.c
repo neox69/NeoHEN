@@ -1,5 +1,6 @@
 /* Copyright (C) 2026 OnionHEN / LightningMods */
 
+#include <onion/brand.h>
 #include "payload_autostart.h"
 
 #include "bootstrap_notify.h"
@@ -29,13 +30,13 @@ typedef struct PayloadList {
 } PayloadList;
 
 static const char *const kPayloadDirectories[] = {
-    "/mnt/usb0/onionhen/payloads", "/mnt/usb0/OnionHEN/payloads",
-    "/mnt/usb1/onionhen/payloads", "/mnt/usb1/OnionHEN/payloads",
-    "/mnt/usb2/onionhen/payloads", "/mnt/usb2/OnionHEN/payloads",
-    "/mnt/usb3/onionhen/payloads", "/mnt/usb3/OnionHEN/payloads",
-    "/user/data/OnionHEN/payloads",
-    "/user/data/onionhen/payloads", "/data/OnionHEN/payloads",
-    "/data/onionhen/payloads",
+    "/mnt/usb0/" ONION_DIR_NAME_LOWER "/payloads", "/mnt/usb0/" ONION_DIR_NAME "/payloads",
+    "/mnt/usb1/" ONION_DIR_NAME_LOWER "/payloads", "/mnt/usb1/" ONION_DIR_NAME "/payloads",
+    "/mnt/usb2/" ONION_DIR_NAME_LOWER "/payloads", "/mnt/usb2/" ONION_DIR_NAME "/payloads",
+    "/mnt/usb3/" ONION_DIR_NAME_LOWER "/payloads", "/mnt/usb3/" ONION_DIR_NAME "/payloads",
+    ONION_USER_DATA_DIR "/payloads",
+    "/user/data/" ONION_DIR_NAME_LOWER "/payloads", ONION_DATA_DIR "/payloads",
+    "/data/" ONION_DIR_NAME_LOWER "/payloads",
 };
 
 static void payload_list_destroy(PayloadList *list) {

@@ -1,5 +1,6 @@
 /* Copyright (C) 2025 OnionHEN / LightningMods */
 
+#include <onion/brand.h>
 #include <onion/log.h>
 
 #include <fcntl.h>
@@ -32,7 +33,7 @@ void klog_printf(const char *fmt, ...);
  * g_lock covers everything below it.
  */
 static pthread_mutex_t g_lock = PTHREAD_MUTEX_INITIALIZER;
-static char g_tag[LOG_TAG_MAX] = "OnionHEN";
+static char g_tag[LOG_TAG_MAX] = ONION_BRAND_NAME;
 static char g_log_path[LOG_PATH_MAX] = "";
 static int g_fd = -1;
 static char g_crash_path[LOG_PATH_MAX] = "";

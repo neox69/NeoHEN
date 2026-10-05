@@ -1,4 +1,5 @@
 /* Copyright (C) 2025 OnionHEN / LightningMods — OnPress misc (kstuff, account, credits) */
+#include <onion/brand.h>
 #include "onpress.hpp"
 #include "account_activator.h"
 #include "progress_dialog.hpp"
@@ -14,12 +15,12 @@ OnPressResult onpress_kstuff_autoload(OnPressContext &ctx) {
 
   g_settings.kstuff_autoload = enabled;
   if (enabled) {
-    unlink("/user/data/OnionHEN/no_kstuff");
-    unlink("/data/OnionHEN/no_kstuff");
+    unlink(ONION_USER_DATA_DIR "/no_kstuff");
+    unlink(ONION_DATA_DIR "/no_kstuff");
     notify("notify.kstuff.next_boot_on");
   } else {
-    touch_file("/user/data/OnionHEN/no_kstuff");
-    touch_file("/data/OnionHEN/no_kstuff");
+    touch_file(ONION_USER_DATA_DIR "/no_kstuff");
+    touch_file(ONION_DATA_DIR "/no_kstuff");
     notify("notify.kstuff.next_boot_off");
   }
   return OnPressResult::Handled;
@@ -54,7 +55,7 @@ static OnPressResult id_download_cheats(OnPressContext &ctx) {
 
 OnPressResult onpress_delete_kstuff(OnPressContext &ctx) {
   (void)ctx;
-  unlink("/user/data/OnionHEN/kstuff.elf");
+  unlink(ONION_USER_DATA_DIR "/kstuff.elf");
   notify("notify.kstuff.deleted");
   return OnPressResult::Handled;
 }

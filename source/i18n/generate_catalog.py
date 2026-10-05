@@ -23,6 +23,9 @@ PRINTF_CONVERSION = re.compile(
     r"(?:hh|h|ll|l|j|z|t|L)?([diuoxXfFeEgGaAcspn%])"
 )
 DUPLICATED_INTERNAL_SPACE = re.compile(r"\S {2,}\S")
+# Branding placeholders, substituted at build time (see source/include/onion/brand.h).
+PLACEHOLDER = re.compile(r"\{([A-Za-z_]+)\}")
+BRAND_PLACEHOLDERS = ("brand", "data_dir", "issues_url")
 
 REQUIRED_TOKENS = {
     "toolbox": {
@@ -40,7 +43,7 @@ REQUIRED_TOKENS = {
         "notify.kstuff.deleted": ("Kstuff",),
         "notify.crash.main": (
             "OnionHEN_crash.log",
-            "https://github.com/aydencharles/onionHEN/issues",
+            "{issues_url}",
         ),
     },
 }
@@ -219,11 +222,33 @@ def validate_locales(locales: list[dict[str, Any]]) -> None:
                     )
         for section in SECTIONS:
             for key, value in locale[section].items():
+                unknown = [
+                    name
+                    for name in PLACEHOLDER.findall(value)
+                    if name not in BRAND_PLACEHOLDERS
+                ]
+                if unknown:
+                    raise SystemExit(
+                        f"error: unknown placeholder(s) {unknown} in "
+                        f"{section}.{key} in {locale['path'].name}"
+                    )
                 if DUPLICATED_INTERNAL_SPACE.search(value):
                     raise SystemExit(
                         f"error: duplicated internal space in {section}.{key} "
                         f"in {locale['path'].name}"
                     )
+
+
+def apply_branding(locales: list[dict[str, Any]], values: dict[str, str]) -> None:
+    def replace(match: re.Match[str]) -> str:
+        return values[match.group(1)]
+
+    for locale in locales:
+        for section in SECTIONS:
+            locale[section] = {
+                key: PLACEHOLDER.sub(replace, value)
+                for key, value in locale[section].items()
+            }
 
 
 def generate(catalog: str, locales: list[dict[str, Any]]) -> str:
@@ -275,11 +300,26 @@ def main() -> None:
         "--catalog", required=True, choices=("toolbox", "notifications")
     )
     parser.add_argument("--output", required=True, type=Path)
+    parser.add_argument("--brand", default="OnionHEN",
+                        help="product name for {brand}")
+    parser.add_argument("--data-dir", default="/data/OnionHEN",
+                        help="data directory for {data_dir}")
+    parser.add_argument("--issues-url",
+                        default="https://github.com/aydencharles/onionHEN/issues",
+                        help="issue tracker for {issues_url}")
     args = parser.parse_args()
 
     explicit = [path for path in (args.en_us, args.zh_cn) if path]
     locales = discover_locales(args.locales_dir, explicit)
     validate_locales(locales)
+    apply_branding(
+        locales,
+        {
+            "brand": args.brand,
+            "data_dir": args.data_dir,
+            "issues_url": args.issues_url,
+        },
+    )
     content = generate(args.catalog, locales)
 
     args.output.parent.mkdir(parents=True, exist_ok=True)

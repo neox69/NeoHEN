@@ -4,6 +4,8 @@
  */
 #pragma once
 
+#include <onion/brand.h>
+
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -11,7 +13,7 @@
 #if defined(ONION_HOST_TEST)
 #define ONION_SYSTEM_TMP_ROOT "/tmp/onionhen"
 #else
-#define ONION_SYSTEM_TMP_ROOT "/system_tmp/onionhen"
+#define ONION_SYSTEM_TMP_ROOT ONION_RUNTIME_DIR
 #endif
 
 #define ONION_SYSTEM_TMP_IPC_ROOT ONION_SYSTEM_TMP_ROOT "/ipc"
