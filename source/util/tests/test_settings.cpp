@@ -72,7 +72,15 @@ static int test_defaults_and_serialize_keys(void) {
                                  "When false,\n"
                                  "# OnionHEN does not register either listener.\n"
                                  "# Available values: true, false\n"
-                                 "enabled=true\n") != std::string::npos);
+                                 "enabled=false\n") != std::string::npos);
+  /* NeoHEN safe defaults and rc1 sections. */
+  TEST_ASSERT_TRUE(text.find("toolbox_after_resume=manual\n") !=
+                   std::string::npos);
+  TEST_ASSERT_TRUE(text.find("stable_seconds=30\n") != std::string::npos);
+  TEST_ASSERT_TRUE(text.find("[shadowmount]\n") != std::string::npos);
+  TEST_ASSERT_TRUE(text.find("watchdog=notify\n") != std::string::npos);
+  TEST_ASSERT_TRUE(text.find("kstuff_tables=false\n") != std::string::npos);
+  TEST_ASSERT_TRUE(text.find("wait_for_tracer=true\n") != std::string::npos);
   TEST_ASSERT_TRUE(text.find("edge=top") != std::string::npos);
   TEST_ASSERT_TRUE(text.find("align=center") != std::string::npos);
   TEST_ASSERT_TRUE(text.find("font_size=medium") != std::string::npos);
@@ -143,6 +151,12 @@ static int test_full_schema_roundtrip(void) {
   in.debug_app_jb_msg = true;
   in.display_tids = true;
   in.system_ex_icon = true;
+  in.rest_toolbox_mode = onion::kRestToolboxStable;
+  in.rest_stable_seconds = 45;
+  in.smp_watchdog = onion::kSmpWatchdogRelaunch;
+  in.smp_watchdog_interval_seconds = 600;
+  in.diag_kstuff_tables = true;
+  in.shellui_wait_for_tracer = false;
   in.onionhen_game_opts = false;
   in.rest_mode_delay_seconds = 15;
   in.enable_fan_speed = true;
@@ -184,7 +198,13 @@ static int test_full_schema_roundtrip(void) {
   TEST_ASSERT_TRUE(out.debug_app_jb_msg == in.debug_app_jb_msg);
   TEST_ASSERT_TRUE(out.display_tids == in.display_tids);
   TEST_ASSERT_TRUE(out.system_ex_icon == in.system_ex_icon);
-  TEST_ASSERT_TRUE(out.onionhen_game_opts == in.onionhen_game_opts);
+  TEST_ASSERT_EQ_INT(in.rest_toolbox_mode, out.rest_toolbox_mode);
+  TEST_ASSERT_EQ_INT(in.rest_stable_seconds, out.rest_stable_seconds);
+  TEST_ASSERT_EQ_INT(in.smp_watchdog, out.smp_watchdog);
+  TEST_ASSERT_EQ_INT(in.smp_watchdog_interval_seconds,
+                     out.smp_watchdog_interval_seconds);
+  TEST_ASSERT_TRUE(out.diag_kstuff_tables == in.diag_kstuff_tables);
+  TEST_ASSERT_TRUE(out.shellui_wait_for_tracer == in.shellui_wait_for_tracer);  TEST_ASSERT_TRUE(out.onionhen_game_opts == in.onionhen_game_opts);
   TEST_ASSERT_EQ_U64(in.rest_mode_delay_seconds, out.rest_mode_delay_seconds);
   TEST_ASSERT_TRUE(out.enable_fan_speed == in.enable_fan_speed);
   TEST_ASSERT_EQ_INT(in.fan_threshold, out.fan_threshold);
@@ -241,9 +261,13 @@ static int test_partial_ini_keeps_defaults(void) {
   TEST_ASSERT_EQ_INT(onion::kStartupOpenNone, out.startup_open_after_load);
   TEST_ASSERT_TRUE(out.show_boot_thanks);
   TEST_ASSERT_EQ_INT(77, out.fan_threshold);
-  TEST_ASSERT_TRUE(out.overlay_enabled);
+  TEST_ASSERT_TRUE(!out.overlay_enabled);
   TEST_ASSERT_TRUE(out.overlay_background);
-  TEST_ASSERT_TRUE(out.app_jailbreak_enabled);
+  TEST_ASSERT_TRUE(!out.app_jailbreak_enabled);
+  TEST_ASSERT_EQ_INT(onion::kRestToolboxManual, out.rest_toolbox_mode);
+  TEST_ASSERT_EQ_INT(onion::kSmpWatchdogNotify, out.smp_watchdog);
+  TEST_ASSERT_TRUE(!out.diag_kstuff_tables);
+  TEST_ASSERT_TRUE(out.shellui_wait_for_tracer);
   TEST_ASSERT_TRUE(out.kstuff_autoload);
   TEST_ASSERT_EQ_U64(10, out.rest_mode_delay_seconds);
   TEST_ASSERT_EQ_INT(onion::kCheatsMirrorAuto, out.cheats_mirror);
@@ -629,6 +653,44 @@ static int test_language_new_locales_roundtrip(void) {
   return 0;
 }
 
+static int test_neohen_rc1_keys(void) {
+  std::string path = temp_ini_path();
+  TEST_ASSERT_TRUE(!path.empty());
+  FILE *f = fopen(path.c_str(), "w");
+  TEST_ASSERT_TRUE(f != nullptr);
+  fputs("[meta]\nschema_version=1\n"
+        "\n[rest_mode]\ntoolbox_after_resume=Stable\nstable_seconds=5\n"
+        "\n[shadowmount]\nwatchdog=relaunch\nwatchdog_interval_seconds=99999\n"
+        "\n[diagnostics]\nkstuff_tables=true\n"
+        "\n[shellui]\nwait_for_tracer=false\n",
+        f);
+  fclose(f);
+  onion::Settings out{};
+  TEST_ASSERT_TRUE(onion::settings_load_file(path.c_str(), &out));
+  TEST_ASSERT_EQ_INT(onion::kRestToolboxStable, out.rest_toolbox_mode);
+  /* Out-of-range values keep the previous value. */
+  TEST_ASSERT_EQ_INT(onion::kRestStableDefaultSeconds, out.rest_stable_seconds);
+  TEST_ASSERT_EQ_INT(onion::kSmpWatchdogRelaunch, out.smp_watchdog);
+  TEST_ASSERT_EQ_INT(onion::kSmpWatchdogDefaultSeconds,
+                     out.smp_watchdog_interval_seconds);
+  TEST_ASSERT_TRUE(out.diag_kstuff_tables);
+  TEST_ASSERT_TRUE(!out.shellui_wait_for_tracer);
+
+  f = fopen(path.c_str(), "w");
+  TEST_ASSERT_TRUE(f != nullptr);
+  fputs("[meta]\nschema_version=1\n"
+        "\n[rest_mode]\ntoolbox_after_resume=bogus\n"
+        "\n[shadowmount]\nwatchdog=maybe\n",
+        f);
+  fclose(f);
+  onion::Settings def{};
+  TEST_ASSERT_TRUE(onion::settings_load_file(path.c_str(), &def));
+  TEST_ASSERT_EQ_INT(onion::kRestToolboxManual, def.rest_toolbox_mode);
+  TEST_ASSERT_EQ_INT(onion::kSmpWatchdogNotify, def.smp_watchdog);
+  unlink(path.c_str());
+  return 0;
+}
+
 static int test_v0_0_10_config_keeps_kstuff_autoload(void) {
   std::string path = temp_ini_path();
   TEST_ASSERT_TRUE(!path.empty());
@@ -814,6 +876,7 @@ extern "C" int test_settings_suite(void) {
   failures += onion_test_run("settings_language_ar", test_language_ar_roundtrip);
   failures += onion_test_run("settings_language_new_locales",
                              test_language_new_locales_roundtrip);
+  failures += onion_test_run("settings_neohen_rc1_keys", test_neohen_rc1_keys);
   failures += onion_test_run("settings_v0_0_10_kstuff_autoload",
                              test_v0_0_10_config_keeps_kstuff_autoload);
   failures += onion_test_run("settings_clamp_fan_threshold",

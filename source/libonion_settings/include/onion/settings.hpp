@@ -258,6 +258,20 @@ inline constexpr int kFanAutomaticThresholdCelsius = 77;
 inline constexpr int kRestModeDelayMinSeconds = 0;
 inline constexpr int kRestModeDelayMaxSeconds = 255;
 inline constexpr int kRestModeDelayDefaultSeconds = 10;
+/* What the daemon does about the Toolbox after Rest Mode resume. */
+inline constexpr int kRestToolboxManual = 0;   /* wait for an explicit request */
+inline constexpr int kRestToolboxStable = 1;   /* inject once ShellUI is stable */
+inline constexpr int kRestToolboxOriginal = 2; /* OnionHEN v0.9.0-beta1 logic */
+inline constexpr int kRestStableMinSeconds = 10;
+inline constexpr int kRestStableMaxSeconds = 300;
+inline constexpr int kRestStableDefaultSeconds = 30;
+/* ShadowMount+ hook watchdog. */
+inline constexpr int kSmpWatchdogOff = 0;
+inline constexpr int kSmpWatchdogNotify = 1;
+inline constexpr int kSmpWatchdogRelaunch = 2;
+inline constexpr int kSmpWatchdogMinSeconds = 30;
+inline constexpr int kSmpWatchdogMaxSeconds = 3600;
+inline constexpr int kSmpWatchdogDefaultSeconds = 300;
 inline constexpr int clamp_fan_threshold(int celsius) {
   if (celsius < kFanThresholdMinCelsius)
     return kFanThresholdMinCelsius;
@@ -289,10 +303,29 @@ struct Settings {
   // [rest_mode]
   // Extra seconds after Rest Mode trophy SPRX are ready, before Toolbox inject.
   uint64_t rest_mode_delay_seconds = kRestModeDelayDefaultSeconds;
+  // Toolbox after resume: manual (default), stable or original.
+  int rest_toolbox_mode = kRestToolboxManual;
+  // stable mode: seconds a new SceShellUI must stay up before injection.
+  int rest_stable_seconds = kRestStableDefaultSeconds;
+
+  // [shadowmount]
+  // Watch the ShadowMount+ hook after resume and periodically.
+  int smp_watchdog = kSmpWatchdogNotify;
+  int smp_watchdog_interval_seconds = kSmpWatchdogDefaultSeconds;
+
+  // [diagnostics]
+  // Log kstuff's sysentvec toggles (read-only kernel reads).
+  bool diag_kstuff_tables = false;
+
+  // [shellui]
+  // Before injecting, wait while another process (e.g. ps5upload) traces
+  // SceShellUI instead of attaching a second tracer.
+  bool shellui_wait_for_tracer = true;
 
   // [cheats], [app_jailbreak]
   int cheats_mirror = kCheatsMirrorAuto;
-  bool app_jailbreak_enabled = true;
+  // Untested on 13.42 in NeoHEN: off by default.
+  bool app_jailbreak_enabled = false;
   bool debug_app_jb_msg = false;
   AppJailbreakAllowlist app_jailbreak_allowlist{};
 
@@ -309,7 +342,8 @@ struct Settings {
 
   // [overlay]
   /** Master visibility switch for the complete ShellUI game monitor bar. */
-  bool overlay_enabled = true;
+  // Off until the CPU usage calculation is fixed (see docs/PLAN.md).
+  bool overlay_enabled = false;
   /** Show the translucent background panel behind the game monitor bar. */
   bool overlay_background = true;
   bool overlay_ram = true;
