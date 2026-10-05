@@ -70,6 +70,8 @@ bool cmd_enable_toolbox();
 void toolbox_on_new_shellui(pid_t pid);
 /** Reconcile the current ShellUI after the WORKING power-state transition. */
 void toolbox_on_resume();
+/** NeoHEN: log kstuff sysentvec toggles when diagnostics.kstuff_tables. */
+void kstuff_diag_start();
 
 void *IPC_loop(void *args);
 /** LAN TCP :9048 — PC can trigger BREW_SHUTDOWN_STACK without Unix socket. */
