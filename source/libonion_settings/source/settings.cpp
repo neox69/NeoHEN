@@ -841,6 +841,11 @@ bool apply_parser(IniParser *parser, Settings *out) {
                       kFanThresholdMaxCelsius);
   out->overlay_enabled =
       parse_bool(ini_get(parser, "overlay.enabled"), out->overlay_enabled);
+#ifdef ONION_HIDE_UNTESTED
+  /* The overlay is hidden in this build; never enable it from a config
+   * copied from another install. */
+  out->overlay_enabled = false;
+#endif
   out->overlay_background = parse_bool(
       ini_get(parser, "overlay.background"), out->overlay_background);
   out->overlay_pos =

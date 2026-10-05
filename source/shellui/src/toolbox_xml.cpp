@@ -613,7 +613,7 @@ void generate_cheats_xml(std::string& new_xml, std::string& not_open_tid,
 
 namespace {
 
-constexpr const char* kIconPkg =
+[[maybe_unused]] constexpr const char* kIconPkg =
     ONION_USER_DATA_DIR "/assets/icon_xml_package.png";
 constexpr const char* kIconGame = ONION_USER_DATA_DIR "/assets/icon_xml_game.png";
 constexpr const char* kIconCheats =
@@ -632,7 +632,7 @@ constexpr const char* kIconDebug =
     ONION_USER_DATA_DIR "/assets/icon_xml_debug.png";
 constexpr const char* kIconAbout =
     ONION_USER_DATA_DIR "/assets/icon_xml_about.png";
-constexpr const char* kIconOverlay =
+[[maybe_unused]] constexpr const char* kIconOverlay =
     ONION_USER_DATA_DIR "/assets/icon_xml_overlay.png";
 constexpr const char* kIconTitleId =
     ONION_USER_DATA_DIR "/assets/icon_xml_title_id.png";
@@ -674,6 +674,7 @@ std::string toolbox_val(const char* id, const char* fallback = "0") {
   return v.empty() ? fallback : v;
 }
 
+#ifndef ONION_HIDE_UNTESTED
 void append_toolbox_pkg_group(ps5ui::Group& g) {
   g.link("id_game_package_installer", toolbox_i18n::tr("pkg.installer"),
          "PkgInstaller/data/pkginstaller.xml",
@@ -682,6 +683,7 @@ void append_toolbox_pkg_group(ps5ui::Group& g) {
             "Addcontent/data/addcontent.xml",
             toolbox_i18n::tr("pkg.add_content.sub"));
 }
+#endif
 
 void append_toolbox_payloads_group(ps5ui::Group& g) {
   g.link("id_payloads", toolbox_i18n::tr("payloads.link"), "payloads.xml",
@@ -728,6 +730,16 @@ void append_toolbox_network_group(ps5ui::Group& g) {
 }
 
 void append_toolbox_display_group(ps5ui::Group& g) {
+#ifdef ONION_HIDE_UNTESTED
+  /* Overlay hidden until its CPU usage calculation is fixed. */
+  g.toggle("id_disp_titleids", toolbox_i18n::tr("disp_tids"),
+           toolbox_on("id_disp_titleids"), toolbox_i18n::tr("disp_tids.sub"),
+           std::nullopt, kIconTitleId)
+      .toggle("id_custom_game_opts", toolbox_i18n::tr("game_opts.toggle"),
+              toolbox_on("id_custom_game_opts"),
+              toolbox_i18n::tr("game_opts.toggle.sub"), std::nullopt,
+              kIconMenuOption);
+#else
   g.group(
        "id_overlay_opts", toolbox_i18n::tr("overlay.group"),
        [](ps5ui::Group& o) {
@@ -782,6 +794,7 @@ void append_toolbox_display_group(ps5ui::Group& g) {
               toolbox_on("id_custom_game_opts"),
               toolbox_i18n::tr("game_opts.toggle.sub"), std::nullopt,
               kIconMenuOption);
+#endif
 }
 
 void append_toolbox_account_group(ps5ui::Group& g) {
@@ -1066,14 +1079,19 @@ void append_toolbox_about_group(ps5ui::Group& g) {
 
 void generate_toolbox_xml(std::string& new_xml) {
   ps5ui::Page page("id_debug_settings", toolbox_i18n::tr("root.title"));
+#ifdef ONION_HIDE_UNTESTED
+  /* PKG installation is untested on 13.42 in NeoHEN: hidden. */
+  page.root_focus("id_group_payloads");
+#else
   page.root_focus("id_group_pkg");
+  page.group(
+      "id_group_pkg", toolbox_i18n::tr("group.pkg"),
+      [](ps5ui::Group& g) { append_toolbox_pkg_group(g); },
+      toolbox_i18n::tr("group.pkg.sub"), kIconPkg,
+      "id_game_package_installer");
+#endif
 
   page.group(
-          "id_group_pkg", toolbox_i18n::tr("group.pkg"),
-          [](ps5ui::Group& g) { append_toolbox_pkg_group(g); },
-          toolbox_i18n::tr("group.pkg.sub"), kIconPkg,
-          "id_game_package_installer")
-      .group(
           "id_group_payloads", toolbox_i18n::tr("group.payloads"),
           [](ps5ui::Group& g) { append_toolbox_payloads_group(g); },
           toolbox_i18n::tr("group.payloads.sub"), kIconPlugins, "id_payloads")
@@ -1093,7 +1111,11 @@ void generate_toolbox_xml(std::string& new_xml) {
           "id_group_display", toolbox_i18n::tr("group.display"),
           [](ps5ui::Group& g) { append_toolbox_display_group(g); },
           toolbox_i18n::tr("group.display.sub"), kIconMonitor,
+#ifdef ONION_HIDE_UNTESTED
+          "id_disp_titleids")
+#else
           "id_overlay_opts")
+#endif
       .group(
           "id_group_system", toolbox_i18n::tr("group.system"),
           [](ps5ui::Group& g) { append_toolbox_system_group(g); },

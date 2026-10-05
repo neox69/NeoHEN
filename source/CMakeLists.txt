@@ -70,6 +70,11 @@ add_compile_definitions(
 # the bootstrapper then loads ${ONION_DATA_DIR}/kstuff.elf only and never
 # carries a kstuff binary of its own.
 option(ONION_EMBED_KSTUFF "Embed kstuff.elf in the bootstrapper" ON)
+# Hide Toolbox entries not yet verified on a console (overlay, PKG install).
+option(ONION_HIDE_UNTESTED "Hide untested Toolbox features" OFF)
+if(ONION_HIDE_UNTESTED)
+	add_compile_definitions(ONION_HIDE_UNTESTED=1)
+endif()
 if(NOT ONION_EMBED_KSTUFF)
 	add_compile_definitions(ONION_EXTERNAL_KSTUFF=1)
 endif()
