@@ -71,12 +71,29 @@ jobs:
           test -x "${PS5_PAYLOAD_SDK}/bin/prospero-cmake"
           scripts/ci/build_ps5_deps.sh "${tmp}/deps"
 
+      - name: Build NeoHEN Web
+        run: |
+          set -euo pipefail
+          export PATH="/usr/lib/llvm-18/bin:${PS5_PAYLOAD_SDK}/bin:${PATH}"
+          make -C web
+          test -f web/neoweb.elf
+
+      # What NeoHEN carries inside and installs on first boot: the pinned
+      # third-party payloads plus NeoHEN Web.
+      - name: Collect bundled payloads
+        run: |
+          set -euo pipefail
+          scripts/release/fetch_payloads.sh "${RUNNER_TEMP}/bundle"
+          cp web/neoweb.elf "${RUNNER_TEMP}/bundle/neoweb.elf"
+          ls -l "${RUNNER_TEMP}/bundle"
+
       - name: Build NeoHEN
         run: |
           set -euo pipefail
           # The version gets a -dirty suffix when the tree is not clean: show why.
           git status --porcelain --untracked-files=normal | head -20
           export PATH="/usr/lib/llvm-18/bin:${PS5_PAYLOAD_SDK}/bin:${PATH}"
+          export ONION_BUNDLE_DIR="${RUNNER_TEMP}/bundle"
           ./scripts/build-neohen.sh --release --jobs "$(nproc)"
           test -f build/bin/NeoHEN.elf
 
@@ -90,13 +107,6 @@ jobs:
           ln -sf "${kdir}/libkeystone.so" "${RUNNER_TEMP}/keystone/lib/libkeystone.so.0"
           export LD_LIBRARY_PATH="${RUNNER_TEMP}/keystone/lib"
           make -C source/util/tests test KEYSTONE_PREFIX="${RUNNER_TEMP}/keystone" -j"$(nproc)"
-
-      - name: Build NeoHEN Web
-        run: |
-          set -euo pipefail
-          export PATH="/usr/lib/llvm-18/bin:${PS5_PAYLOAD_SDK}/bin:${PATH}"
-          make -C web
-          test -f web/neoweb.elf
 
       - name: NeoHEN Web tests (host emulator)
         run: |
@@ -113,9 +123,8 @@ jobs:
           set -euo pipefail
           rm -rf dist && mkdir dist
           cp build/bin/NeoHEN.elf dist/
-          cp web/neoweb.elf dist/
           version="$(sed -n 's/.*ONIONHEN_VERSION "\(.*\)".*/\1/p' build/generated/include/onion/version.h)"
-          scripts/release/make_install_zip.sh build/bin/NeoHEN.elf "${version%%+*}" dist web/neoweb.elf
+          scripts/release/make_install_zip.sh build/bin/NeoHEN.elf "${version%%+*}" dist
           {
             echo "version=${version}"
             echo "branch=${GITHUB_REF_NAME}"
@@ -125,7 +134,7 @@ jobs:
             echo "build_type=Release"
             echo "status=compiled; not verified on a console"
           } > dist/BUILD_INFO.txt
-          (cd dist && sha256sum NeoHEN.elf neoweb.elf NeoHEN-*.zip BUILD_INFO.txt > SHA256SUMS)
+          (cd dist && sha256sum NeoHEN.elf NeoHEN-*.zip BUILD_INFO.txt > SHA256SUMS)
           cat dist/SHA256SUMS
 
       - name: Sanitize branch name for the artifact

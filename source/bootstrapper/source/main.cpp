@@ -23,6 +23,7 @@ along with this program; see the file COPYING. If not, see
 #include "bootstrap_runtime.h"
 #include "launch_pipeline.h"
 #include "payload_autostart.h"
+#include "bundled_payloads.h"
 
 #include <onion/conflict.h>
 #include <onion/log.h>
@@ -70,6 +71,7 @@ int main(void) {
   if (launch_result != 0)
     return launch_result;
 
+  bootstrap_bundled_payloads_install();
   bootstrap_payload_autostart();
   LOG_DEBUG("============== Spawner (Bootstrapper) Finished =================");
   return 0;

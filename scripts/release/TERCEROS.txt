@@ -8,8 +8,9 @@ NeoHEN starts these programs but does not own them. They are their authors'
 release binaries, unmodified. Thanks to all of them.
 
 
-En la carpeta payloads / In the payloads folder
------------------------------------------------
+Dentro de NeoHEN.elf, instalados en /data/neohen/payloads
+Inside NeoHEN.elf, installed to /data/neohen/payloads
+---------------------------------------------------------
 
 ShadowMount+ 1.7beta2          payloads/shadowmountplus.elf
   drakmor y colaboradores
@@ -33,8 +34,8 @@ nanoDNS 0.4                    payloads/nanodns.elf
   SHA-256: fcfb7d47c3b295560ea1603dc015f7c4950353ef0faca16428bd425680ef1fc5
 
 
-Dentro de NeoHEN.elf / Inside NeoHEN.elf
-----------------------------------------
+También dentro de NeoHEN.elf / Also inside NeoHEN.elf
+-----------------------------------------------------
 
 kstuff-lite v1.11
   EchoStretch, sleirsgoevy y colaboradores
