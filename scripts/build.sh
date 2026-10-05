@@ -289,6 +289,15 @@ clean_build_artifacts() {
   ok "old build outputs removed"
 }
 
+# Optional branding overrides for forks (see source/include/onion/brand.h).
+PAYLOAD_NAME="${ONION_PAYLOAD_NAME:-OnionHEN}"
+BRAND_ARGS=()
+for var in ONION_BRAND_NAME ONION_DIR_NAME ONION_DIR_NAME_LOWER ONION_ISSUES_URL ONION_PAYLOAD_NAME; do
+  if [[ -n "${!var:-}" ]]; then
+    BRAND_ARGS+=("-D${var}=${!var}")
+  fi
+done
+
 configure() {
   log "Configure (${BUILD_TYPE})"
   mkdir -p "${BUILD}"
@@ -299,7 +308,8 @@ configure() {
     -G Ninja \
     -DCMAKE_BUILD_TYPE="${BUILD_TYPE}" \
     -DONIONHEN_KSTUFF_ELF="${CACHE}/kstuff.elf" \
-    -DPS5_PAYLOAD_SDK="${PS5_PAYLOAD_SDK}"
+    -DPS5_PAYLOAD_SDK="${PS5_PAYLOAD_SDK}" \
+    ${BRAND_ARGS[@]+"${BRAND_ARGS[@]}"}
   ok "configured -> ${BUILD}"
 }
 
@@ -428,15 +438,15 @@ main() {
     # Phase 5 — final payload (OnionHEN.elf embeds lzma bootstrapper)
     log "Phase 5/5: unpacker (OnionHEN.elf)"
     # Target project name is OnionHEN (see unpacker/CMakeLists.txt)
-    if cmake --build "${BUILD}" -j"${JOBS}" --target OnionHEN 2>/dev/null; then
+    if cmake --build "${BUILD}" -j"${JOBS}" --target "${PAYLOAD_NAME}" 2>/dev/null; then
       ok "OnionHEN target built"
     else
-      build_targets unpacker 2>/dev/null || build_targets OnionHEN
+      build_targets unpacker 2>/dev/null || build_targets "${PAYLOAD_NAME}"
     fi
-    if [[ -f "${BIN}/OnionHEN.elf" ]]; then
-      ok "final payload: ${BIN}/OnionHEN.elf"
+    if [[ -f "${BIN}/${PAYLOAD_NAME}.elf" ]]; then
+      ok "final payload: ${BIN}/${PAYLOAD_NAME}.elf"
     else
-      warn "OnionHEN.elf not found under bin/ — check unpacker target name/output"
+      warn "${PAYLOAD_NAME}.elf not found under bin/ — check unpacker target name/output"
       ls -la "${BIN}" || true
     fi
   fi

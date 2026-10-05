@@ -1,3 +1,4 @@
+#include <onion/brand.h>
 #include "cheats/sync/http_transport_ps5.hpp"
 
 #include <onion/log.h>
@@ -252,7 +253,7 @@ SyncStatus Ps5HttpTransport::perform(
   curl_easy_setopt(curl, CURLOPT_URL, url);
   curl_easy_setopt(curl, CURLOPT_USERAGENT,
                    req.user_agent && req.user_agent[0] ? req.user_agent
-                                                       : "OnionHEN");
+                                                       : ONION_BRAND_NAME);
   curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
   curl_easy_setopt(curl, CURLOPT_MAXREDIRS, 3L);
   curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L);

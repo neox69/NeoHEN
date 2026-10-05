@@ -14,6 +14,7 @@ You should have received a copy of the GNU General Public License
 along with this program; see the file COPYING. If not, see
 <http://www.gnu.org/licenses/>.  */
 
+#include <onion/brand.h>
 #include "detour.h"
 #include "debug_settings_route_runtime.hpp"
 #include "dynamic_ui_runtime.hpp"
@@ -752,7 +753,7 @@ int main(int argc, char const* argv[]) {
    * the vsh process is its own decision — until then an unhandled fault in
    * ShellUI is simply not captured.
    */
-  onion_log_configure("ShellUI", "/user/data/OnionHEN/OnionHEN.log");
+  onion_log_configure("ShellUI", ONION_USER_DATA_DIR "/OnionHEN.log");
 
   if (!resolve_native_symbols(pid))
     return -1;

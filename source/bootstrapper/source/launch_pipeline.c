@@ -1,5 +1,6 @@
 /* Copyright (C) 2026 OnionHEN / LightningMods */
 
+#include <onion/brand.h>
 #include "launch_pipeline.h"
 
 #include "bootstrap_notify.h"
@@ -175,8 +176,8 @@ static void launch_kstuff(LaunchContext *context, uint32_t firmware_version,
             context->loader_port);
   size_t override_size = 0;
   uint8_t *override_elf = NULL;
-  if (if_exists("/data/OnionHEN/kstuff.elf"))
-    override_elf = onion_payload_read_file("/data/OnionHEN/kstuff.elf",
+  if (if_exists(ONION_DATA_DIR "/kstuff.elf"))
+    override_elf = onion_payload_read_file(ONION_DATA_DIR "/kstuff.elf",
                                            &override_size);
 
   const uint8_t *elf = override_elf ? override_elf : kstuff_start;

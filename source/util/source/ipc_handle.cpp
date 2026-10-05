@@ -2,6 +2,7 @@
  * Util daemon IPC command dispatch.
  * Transport (listen/accept/thread) stays in msg.cpp.
  */
+#include <onion/brand.h>
 #include <onion/platform.h>
 #include <onion/payload.h>
 #include <onion/proc_query.h>
@@ -199,7 +200,7 @@ void handleIPC(clientArgs *client, std::string &inputStr,
     }
     const std::string request_id = std::to_string(
         static_cast<unsigned long long>(g_cheat_request_id.fetch_add(1)));
-    std::string shm_path = "/user/data/OnionHEN/" + title_id + "_cheats_" +
+    std::string shm_path = ONION_USER_DATA_DIR "/" + title_id + "_cheats_" +
                            request_id;
 
     onion::cheats::CheatRequest request;

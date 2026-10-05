@@ -45,6 +45,33 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${ONIONHEN_OUT_BIN})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${ONIONHEN_OUT_LIB})
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${ONIONHEN_OUT_LIB})
 
+# ---------------------------------------------------------------------------
+# Branding. The defaults reproduce OnionHEN; forks override these cache
+# variables instead of editing paths and strings throughout the tree.
+# C/C++ code reads them through <onion/brand.h>, locale strings through the
+# {brand} / {data_dir} / {issues_url} placeholders.
+# ---------------------------------------------------------------------------
+set(ONION_BRAND_NAME "OnionHEN" CACHE STRING
+	"Product name shown in the Toolbox, notifications and logs")
+set(ONION_DIR_NAME "OnionHEN" CACHE STRING
+	"Data directory name: /data/<name> and /mnt/usbN/<name>")
+set(ONION_DIR_NAME_LOWER "onionhen" CACHE STRING
+	"Lower-case directory name: runtime state and legacy paths")
+set(ONION_ISSUES_URL "https://github.com/aydencharles/onionHEN/issues" CACHE STRING
+	"Issue tracker shown in crash notifications")
+set(ONION_PAYLOAD_NAME "OnionHEN" CACHE STRING
+	"Final payload file name, without the .elf extension")
+add_compile_definitions(
+	ONION_BRAND_NAME="${ONION_BRAND_NAME}"
+	ONION_DIR_NAME="${ONION_DIR_NAME}"
+	ONION_DIR_NAME_LOWER="${ONION_DIR_NAME_LOWER}"
+)
+set(ONION_I18N_BRAND_ARGS
+	--brand "${ONION_BRAND_NAME}"
+	--data-dir "/data/${ONION_DIR_NAME}"
+	--issues-url "${ONION_ISSUES_URL}"
+)
+
 include_directories(BEFORE "${ONIONHEN_GENERATED_INCLUDE_DIR}")
 # First-party shared contracts — not SYSTEM, so warnings in them are visible.
 include_directories("${PROJECT_ROOT}/include")
