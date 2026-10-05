@@ -33,7 +33,7 @@ jobs:
           set -euo pipefail
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            build-essential ca-certificates clang-18 cmake curl file git \
+            build-essential ca-certificates clang-18 cmake curl file git zip \
             librsvg2-bin lld-18 llvm-18 ninja-build pkg-config python3 \
             python3-certifi python3-pip python3-pyelftools unzip xz-utils
           sudo ln -sf /usr/lib/llvm-18/bin/llvm-config /usr/local/bin/llvm-config
@@ -94,7 +94,10 @@ jobs:
           set -euo pipefail
           rm -rf dist && mkdir dist
           cp build/bin/NeoHEN.elf dist/
+          version="$(sed -n 's/.*ONIONHEN_VERSION "\(.*\)".*/\1/p' build/generated/include/onion/version.h)"
+          scripts/release/make_install_zip.sh build/bin/NeoHEN.elf "${version%%+*}" dist
           {
+            echo "version=${version}"
             echo "branch=${GITHUB_REF_NAME}"
             echo "commit=${GITHUB_SHA}"
             echo "built=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
@@ -102,7 +105,7 @@ jobs:
             echo "build_type=Release"
             echo "status=compiled; not verified on a console"
           } > dist/BUILD_INFO.txt
-          (cd dist && sha256sum NeoHEN.elf BUILD_INFO.txt > SHA256SUMS)
+          (cd dist && sha256sum NeoHEN.elf NeoHEN-*.zip BUILD_INFO.txt > SHA256SUMS)
           cat dist/SHA256SUMS
 
       - name: Sanitize branch name for the artifact
