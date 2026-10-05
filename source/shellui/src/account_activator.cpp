@@ -72,9 +72,11 @@ Activator::Activator(bool skip_userservice_init) : currentUser{}
 
     GetAccountType(currentUser.account_number, currentUser.AccountType);
 
-    LOG_DEBUG("Current user => %s", currentUser.Username.c_str());
+    /* Never log the user name or the account ID: logs are attached to
+     * public issues. Whether an ID exists is all a bug report needs. */
     LOG_DEBUG("Account register number => %d", currentUser.account_number);
-    LOG_DEBUG("User Account ID => %lx", currentUser.accountID);
+    LOG_DEBUG("Account ID present => %s",
+              currentUser.accountID != 0 ? "yes" : "no");
     LOG_DEBUG("AccountType => %s", currentUser.AccountType);
     LOG_DEBUG("Account Flags => %d", GetAccountFlags(currentUser.account_number));
     

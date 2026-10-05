@@ -366,7 +366,7 @@
     "notify.mount.system_ex": "kunne ikke montere /system_ex\nhvis du ser dette, skal du genstarte",
     "notify.mount.system": "kunne ikke montere /system\nhvis du ser dette, skal du genstarte",
     "notify.crash.resolved": "Den fatale fejl er løst\n\ndu behøver ikke bekymre dig",
-    "notify.crash.main": "{brand} er gået ned ...\n\nVedhæft {data_dir}/OnionHEN_crash.log til et GitHub-issue: {issues_url}",
+    "notify.crash.main": "{brand} er gået ned ...\n\nVedhæft {data_dir}/{brand}_crash.log til et GitHub-issue: {issues_url}",
     "notify.stack.shutdown": "{brand}-stakken er lukket (util + ShellUI + daemon; kstuff bliver)",
     "notify.fan.open_failed": "Kunne ikke åbne blæserindstillinger!",
     "notify.fan.set_failed": "Kunne ikke indstille blæserhastighed!",

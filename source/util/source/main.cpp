@@ -106,10 +106,10 @@ int main(void) {
     sceNetCtlInit();
     sceUserServiceInitialize(NULL);
     onion_log_configure(
-        "OnionHEN utils", ONION_DATA_DIR "/OnionHEN_util_daemon.log");
+        ONION_BRAND_NAME " utils", ONION_DATA_DIR "/" ONION_BRAND_NAME "_util_daemon.log");
     /* The faulthandler path writes here; without it a util crash would only
      * reach klog and the util log, never the file users are asked to attach. */
-    onion_log_configure_crash(ONION_DATA_DIR "/OnionHEN_crash.log");
+    onion_log_configure_crash(ONION_DATA_DIR "/" ONION_BRAND_NAME "_crash.log");
     /* Real linked kernel export (not a dlsym function-pointer variable). */
     onion_notify_set_send(reinterpret_cast<onion_notify_send_fn>(
         sceKernelSendNotificationRequest));
@@ -132,7 +132,7 @@ int main(void) {
     /* pt_* / code-cave require PTRACE_AUTHID (not DEBUG_AUTHID). */
     set_ucred_to_ptrace();
 
-    unlink(ONION_DATA_DIR "/OnionHEN_util_crash.log");
+    unlink(ONION_DATA_DIR "/" ONION_BRAND_NAME "_util_crash.log");
 
     LOG_INFO("=========== starting OnionHEN Utilities... ===========");
 

@@ -366,7 +366,7 @@
     "notify.mount.system_ex": "a /system_ex csatolása sikertelen\nha ezt látja, indítsa újra",
     "notify.mount.system": "a /system csatolása sikertelen\nha ezt látja, indítsa újra",
     "notify.crash.resolved": "A végzetes hiba sikeresen megoldódott\n\nnincs mitől tartania",
-    "notify.crash.main": "Az {brand} összeomlott ...\n\nCsatolja a {data_dir}/OnionHEN_crash.log fájlt egy GitHub-issue-hoz: {issues_url}",
+    "notify.crash.main": "Az {brand} összeomlott ...\n\nCsatolja a {data_dir}/{brand}_crash.log fájlt egy GitHub-issue-hoz: {issues_url}",
     "notify.stack.shutdown": "{brand}-verem leállítva (util + ShellUI + daemon; a kstuff megmarad)",
     "notify.fan.open_failed": "A ventillátorbeállítások nem nyithatók meg!",
     "notify.fan.set_failed": "A ventillátorsebesség nem állítható!",

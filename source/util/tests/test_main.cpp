@@ -21,6 +21,7 @@ extern "C" int test_settings_suite(void);
 extern "C" int test_ready_suite(void);
 extern "C" int test_platform_fs_suite(void);
 extern "C" int test_bootstrap_cache_suite(void);
+extern "C" int test_log_redact_suite(void);
 extern "C" int test_topnav_icon_suite(void);
 extern "C" int test_platform_log_suite(void);
 extern "C" int test_platform_net_suite(void);
@@ -78,6 +79,7 @@ int main() {
   failures += test_ready_suite();
   failures += test_platform_fs_suite();
   failures += test_bootstrap_cache_suite();
+  failures += test_log_redact_suite();
   failures += test_topnav_icon_suite();
   failures += test_platform_log_suite();
   failures += test_platform_net_suite();

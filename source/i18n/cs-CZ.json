@@ -366,7 +366,7 @@
     "notify.mount.system_ex": "připojení /system_ex selhalo\npokud toto vidíte, restartujte",
     "notify.mount.system": "připojení /system selhalo\npokud toto vidíte, restartujte",
     "notify.crash.resolved": "Fatální chyba byla úspěšně vyřešena\n\nnemáte se čeho bát",
-    "notify.crash.main": "{brand} spadlo ...\n\nPřiložte {data_dir}/OnionHEN_crash.log k hlášení na GitHub: {issues_url}",
+    "notify.crash.main": "{brand} spadlo ...\n\nPřiložte {data_dir}/{brand}_crash.log k hlášení na GitHub: {issues_url}",
     "notify.stack.shutdown": "Zásobník {brand} vypnut (util + ShellUI + daemon; kstuff zůstává)",
     "notify.fan.open_failed": "Nelze otevřít nastavení ventilátoru!",
     "notify.fan.set_failed": "Nelze nastavit otáčky ventilátoru!",

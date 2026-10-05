@@ -366,7 +366,7 @@
     "notify.mount.system_ex": "montarea /system_ex a eșuat\ndacă vedeți asta, reporniți",
     "notify.mount.system": "montarea /system a eșuat\ndacă vedeți asta, reporniți",
     "notify.crash.resolved": "Eroarea fatală a fost rezolvată cu succes\n\nnu aveți de ce să vă faceți griji",
-    "notify.crash.main": "{brand} s-a oprit brusc ...\n\nAtașați {data_dir}/OnionHEN_crash.log la o problemă GitHub: {issues_url}",
+    "notify.crash.main": "{brand} s-a oprit brusc ...\n\nAtașați {data_dir}/{brand}_crash.log la o problemă GitHub: {issues_url}",
     "notify.stack.shutdown": "Stiva {brand} oprită (util + ShellUI + daemon; kstuff rămâne)",
     "notify.fan.open_failed": "Nu s-au putut deschide setările ventilatorului!",
     "notify.fan.set_failed": "Nu s-a putut seta viteza ventilatorului!",
