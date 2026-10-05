@@ -132,11 +132,12 @@ jobs:
           set -euo pipefail
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            exfat-fuse exfatprogs fuse3 makefs python3-pip
-          sudo python3 -m pip install --break-system-packages \
-            -r tools/pc/requirements.txt
+            exfat-fuse exfatprogs fuse3 makefs python3-venv
+          # A venv avoids clashing with Debian's own python3-cryptography.
+          sudo python3 -m venv /opt/pcvenv
+          sudo /opt/pcvenv/bin/pip install -r tools/pc/requirements.txt
 
       # Root lets the exFAT test mount the image read-only through a loop
       # device and exfat-fuse, an exFAT reader independent of MkPFS.
       - name: PC tool tests
-        run: sudo python3 -m unittest discover -s tools/pc/tests -v
+        run: sudo /opt/pcvenv/bin/python -m unittest discover -s tools/pc/tests -v
