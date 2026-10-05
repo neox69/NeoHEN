@@ -366,7 +366,7 @@
     "notify.mount.system_ex": "nie udało się zamontować /system_ex\njeśli to widzisz, uruchom konsolę ponownie",
     "notify.mount.system": "nie udało się zamontować /system\njeśli to widzisz, uruchom konsolę ponownie",
     "notify.crash.resolved": "Błąd krytyczny został naprawiony\n\nnie ma powodu do niepokoju",
-    "notify.crash.main": "{brand} uległ awarii…\n\nDołącz {data_dir}/OnionHEN_crash.log do zgłoszenia GitHub: {issues_url}",
+    "notify.crash.main": "{brand} uległ awarii…\n\nDołącz {data_dir}/{brand}_crash.log do zgłoszenia GitHub: {issues_url}",
     "notify.stack.shutdown": "Stos {brand} zatrzymany (util + ShellUI + daemon; Kstuff działa dalej)",
     "notify.fan.open_failed": "Nie udało się otworzyć ustawień wentylatora.",
     "notify.fan.set_failed": "Nie udało się ustawić prędkości wentylatora.",

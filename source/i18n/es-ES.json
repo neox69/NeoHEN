@@ -366,7 +366,7 @@
     "notify.mount.system_ex": "fallo al montar /system_ex\nsi ve este mensaje, reinicie la consola",
     "notify.mount.system": "fallo al montar /system\nsi ve este mensaje, reinicie la consola",
     "notify.crash.resolved": "El error fatal se ha recuperado\n\nno hay de qué preocuparse",
-    "notify.crash.main": "{brand} se ha cerrado de forma inesperada…\n\nAdjunte {data_dir}/OnionHEN_crash.log a una incidencia de GitHub: {issues_url}",
+    "notify.crash.main": "{brand} se ha cerrado de forma inesperada…\n\nAdjunte {data_dir}/{brand}_crash.log a una incidencia de GitHub: {issues_url}",
     "notify.stack.shutdown": "Pila {brand} detenida (util + ShellUI + daemon; Kstuff sigue activo)",
     "notify.fan.open_failed": "No se pudieron abrir los ajustes del ventilador.",
     "notify.fan.set_failed": "No se pudo ajustar la velocidad del ventilador.",

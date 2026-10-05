@@ -366,7 +366,7 @@
     "notify.mount.system_ex": "/system_ex bağlanamadı\nbunu görürseniz yeniden başlatın",
     "notify.mount.system": "/system bağlanamadı\nbunu görürseniz yeniden başlatın",
     "notify.crash.resolved": "Ölümcül hata giderildi\n\nendişelenmenize gerek yok",
-    "notify.crash.main": "{brand} çöktü ...\n\n{data_dir}/OnionHEN_crash.log dosyasını bir GitHub sorununa ekleyin: {issues_url}",
+    "notify.crash.main": "{brand} çöktü ...\n\n{data_dir}/{brand}_crash.log dosyasını bir GitHub sorununa ekleyin: {issues_url}",
     "notify.stack.shutdown": "{brand} yığını kapatıldı (util + ShellUI + daemon; kstuff kalır)",
     "notify.fan.open_failed": "Fan ayarları açılamadı!",
     "notify.fan.set_failed": "Fan hızı ayarlanamadı!",

@@ -20,6 +20,7 @@ add_library(${PROJECT_NAME} STATIC
   source/fs.c
   source/tree.c
   source/log.c
+  source/log_redact.c
   source/net.c
   source/notify.c
   source/notify_i18n.c

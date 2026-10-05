@@ -366,7 +366,7 @@
     "notify.mount.system_ex": "không gắn được /system_ex\nnếu thấy thông báo này hãy khởi động lại",
     "notify.mount.system": "không gắn được /system\nnếu thấy thông báo này hãy khởi động lại",
     "notify.crash.resolved": "Lỗi nghiêm trọng đã được khắc phục\n\nbạn không cần lo",
-    "notify.crash.main": "{brand} đã crash ...\n\nĐính kèm {data_dir}/OnionHEN_crash.log vào GitHub issue: {issues_url}",
+    "notify.crash.main": "{brand} đã crash ...\n\nĐính kèm {data_dir}/{brand}_crash.log vào GitHub issue: {issues_url}",
     "notify.stack.shutdown": "Đã tắt ngăn xếp {brand} (util + ShellUI + daemon; kstuff vẫn còn)",
     "notify.fan.open_failed": "Không mở được cài đặt quạt!",
     "notify.fan.set_failed": "Không đặt được tốc độ quạt!",

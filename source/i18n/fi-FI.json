@@ -366,7 +366,7 @@
     "notify.mount.system_ex": "/system_ex:n liittäminen epäonnistui\njos näet tämän, käynnistä uudelleen",
     "notify.mount.system": "/system:n liittäminen epäonnistui\njos näet tämän, käynnistä uudelleen",
     "notify.crash.resolved": "Vakava virhe on korjattu\n\nsinun ei tarvitse huolehtia",
-    "notify.crash.main": "{brand} on kaatunut ...\n\nLiitä {data_dir}/OnionHEN_crash.log GitHub-ongelmaan: {issues_url}",
+    "notify.crash.main": "{brand} on kaatunut ...\n\nLiitä {data_dir}/{brand}_crash.log GitHub-ongelmaan: {issues_url}",
     "notify.stack.shutdown": "{brand}-pino sammutettu (util + ShellUI + daemon; kstuff jää)",
     "notify.fan.open_failed": "Tuulettimen asetuksia ei voitu avata!",
     "notify.fan.set_failed": "Tuulettimen nopeutta ei voitu asettaa!",

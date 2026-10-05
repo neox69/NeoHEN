@@ -366,7 +366,7 @@
     "notify.mount.system_ex": "kunne ikke montere /system_ex\nhvis du ser dette, start på nytt",
     "notify.mount.system": "kunne ikke montere /system\nhvis du ser dette, start på nytt",
     "notify.crash.resolved": "Den fatale feilen er løst\n\ndu trenger ikke bekymre deg",
-    "notify.crash.main": "{brand} har krasjet ...\n\nLegg ved {data_dir}/OnionHEN_crash.log i et GitHub-issue: {issues_url}",
+    "notify.crash.main": "{brand} har krasjet ...\n\nLegg ved {data_dir}/{brand}_crash.log i et GitHub-issue: {issues_url}",
     "notify.stack.shutdown": "{brand}-stakken er stengt (util + ShellUI + daemon; kstuff blir)",
     "notify.fan.open_failed": "Kunne ikke åpne vifteinnstillinger!",
     "notify.fan.set_failed": "Kunne ikke angi viftehastighet!",

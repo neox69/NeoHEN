@@ -366,7 +366,7 @@
     "notify.mount.system_ex": "gagal memasang /system_ex\njika Anda melihat ini, boot ulang",
     "notify.mount.system": "gagal memasang /system\njika Anda melihat ini, boot ulang",
     "notify.crash.resolved": "Kesalahan fatal telah berhasil diatasi\n\nAnda tidak perlu khawatir",
-    "notify.crash.main": "{brand} telah crash ...\n\nLampirkan {data_dir}/OnionHEN_crash.log ke isu GitHub: {issues_url}",
+    "notify.crash.main": "{brand} telah crash ...\n\nLampirkan {data_dir}/{brand}_crash.log ke isu GitHub: {issues_url}",
     "notify.stack.shutdown": "Tumpukan {brand} dimatikan (util + ShellUI + daemon; kstuff tetap)",
     "notify.fan.open_failed": "Tidak dapat membuka pengaturan kipas!",
     "notify.fan.set_failed": "Tidak dapat mengatur kecepatan kipas!",
