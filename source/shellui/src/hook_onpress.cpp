@@ -131,7 +131,23 @@ int OnPress_Hook(MonoObject *Instance, MonoObject *element, MonoObject *e) {
               static_cast<unsigned>(g_ui.active_page), ctx.id.c_str(),
               ctx.value.c_str());
 
-  const OnPressResult result = dispatch_toolbox_press(domain, ctx);
+  OnPressResult result = dispatch_toolbox_press(domain, ctx);
+  if (result == OnPressResult::NotMine && domain != toolbox::OnPressDomain::Root &&
+      ctx.id.rfind("id_", 0) == 0) {
+    /*
+     * The Settings back button pops pages without loading a resource, so
+     * active_page can still name a child page (e.g. Cheats) while the user is
+     * back on the Toolbox root. Root ids are unique; try them before letting a
+     * Toolbox button fall through to the stock handler and do nothing.
+     */
+    result = dispatch_toolbox_press(toolbox::OnPressDomain::Root, ctx);
+    if (result != OnPressResult::NotMine)
+      LOG_DEBUG("[LM HOOK] %s handled by root after stale page=%u",
+                ctx.id.c_str(), static_cast<unsigned>(g_ui.active_page));
+  }
+  if (result == OnPressResult::NotMine)
+    LOG_DEBUG("[LM HOOK] no Toolbox handler for Id=%s page=%u",
+              ctx.id.c_str(), static_cast<unsigned>(g_ui.active_page));
 
   if (result == OnPressResult::Consumed) {
     // Fully owned by OnionHEN (dynamic XML). Skip stock SettingPage.OnPressed.
