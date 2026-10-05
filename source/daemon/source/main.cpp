@@ -22,6 +22,7 @@ along with this program; see the file COPYING. If not, see
 #include <onion/proc_query.h>
 #include <onion/platform.h>
 #include "daemon_ops.hpp"
+#include "smp_watchdog.hpp"
 #include <stdio.h>
 #include <stdarg.h>
 #include <stddef.h>
@@ -187,6 +188,7 @@ void start_worker_threads(pthread_t* app_jailbreak_thr, pthread_t* msg_thr) {
   pthread_detach(language_thr);
   pthread_t resume_thr = nullptr;
   pthread_create(&resume_thr, nullptr, resume_recovery_thread, nullptr);
+  onion::daemon::smp::watchdog_start();
   pthread_detach(resume_thr);
 }
 

@@ -7,6 +7,7 @@
 
 #include "daemon_ops.hpp"
 #include "daemon_power_state.hpp"
+#include "smp_watchdog.hpp"
 #include "plugin_ipc_server.hpp"
 #include "plugin_manager_runtime.hpp"
 #include "sprx_plugin_manager_runtime.hpp"
@@ -66,6 +67,7 @@ void *resume_recovery_thread(void *args) noexcept {
 
       /* NOTE_EXEC remains authoritative; this is only compensation. */
       toolbox_on_resume();
+      onion::daemon::smp::watchdog_on_resume();
     }
     usleep(100 * 1000);
   }
