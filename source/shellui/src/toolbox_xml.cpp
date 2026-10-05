@@ -26,6 +26,7 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <cstdio>
+#include <cerrno>
 #include <cstring>
 #include <cstdlib>
 #include <unordered_map>
@@ -296,7 +297,13 @@ static bool payloads_model(ps5ui::Node& model) {
   for (const auto& directory : kPayloadDirs) {
     DIR* dir = opendir(directory.c_str());
     if (!dir) {
-      LOG_ERROR("Failed to open directory: %s", directory.c_str());
+      /* Most candidate folders (USB slots, lower-case spelling) normally do
+       * not exist; only report real failures as errors. */
+      if (errno == ENOENT || errno == ENOTDIR)
+        LOG_DEBUG("payload folder not present: %s", directory.c_str());
+      else
+        LOG_ERROR("Failed to open directory %s: %s", directory.c_str(),
+                  strerror(errno));
       continue;
     }
     while (struct dirent* entry = readdir(dir))
