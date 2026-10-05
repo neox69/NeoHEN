@@ -294,3 +294,99 @@ Líneas que busco:
   original se liberó).
 - `Toolbox online for SceShellUI pid=`.
 - Ningún `top-nav icon not written`.
+
+---
+
+## Bloque 2 — NeoHEN 0.1.0-rc1 (rama `neohen/release`)
+
+Sustituye al bloque 1: esta versión lleva todo lo de `neohen/base` e
+`neohen/icons` más lo nuevo. Descarga: artefacto `NeoHEN-neohen-release-<commit>`
+en la pestaña Actions del fork. Dentro: `NeoHEN.elf`, `NeoHEN-0.1.0-rc1.zip`,
+`BUILD_INFO.txt` y `SHA256SUMS`.
+
+Estado: compilado; tests de host pasan; **nada de lo nuevo verificado en
+consola**.
+
+### Preparación (una vez, por FTP)
+
+1. Descomprime el zip y copia su `data/neohen` a `/data/neohen` en la consola.
+2. Copia con estos nombres exactos:
+   - `/data/neohen/kstuff.elf` ← tu kstuff-lite 1.11 (opcional si lo cargas tú antes)
+   - `/data/neohen/payloads/shadowmountplus.elf` ← ShadowMount+ 1.7beta2
+   - `/data/neohen/payloads/ftpsrv.elf` ← ftpsrv 0.21.1
+   - `/data/neohen/payloads/nanodns.elf` ← nanoDNS 0.4
+3. Para esta prueba, edita `/data/neohen/config.ini`:
+   - `[logging] level=debug`, `max_bytes=2m`
+   - `[diagnostics] kstuff_tables=true` (para el autopausado de kstuff)
+4. Para tu panel doméstico y no cargues ps5upload salvo en la prueba 9.
+
+### Procedimiento A — en frío (recomendado)
+
+1. Arranque en frío. Exploit (elfldr en 9021).
+2. **Solo** envía `NeoHEN.elf` al 9021. Nada más: ni nanoDNS, ni ftpsrv, ni
+   kstuff (salvo que no hayas copiado `kstuff.elf`).
+3. Espera ~40 s.
+
+### Procedimiento B — desde el OnionHEN cargado ahora
+
+1. Cierra cualquier juego.
+2. `python3 neohen_ctl.py shutdown <IP>` (o `scripts/shutdown_onion.py`).
+   Espera a que vuelva el inicio sin la tarjeta de OnionHEN (ya comprobaste
+   que SceShellUI se reinicia bien en 13.42).
+3. Comprueba desde el PC que 9048 y 9020 no responden.
+4. Envía `NeoHEN.elf` al 9021. kstuff, ShadowMount+, ftpsrv y nanoDNS ya
+   están en marcha: NeoHEN detecta kstuff y no carga otro; el
+   autoarranque salta los payloads que ya se están ejecutando solo si los
+   lanzó NeoHEN. ShadowMount+ y ftpsrv cargados por ti **se volverán a
+   lanzar**: ShadowMount+ sustituye a su instancia anterior; ftpsrv puede
+   fallar por puerto ocupado (inofensivo). Si prefieres evitarlo, en este
+   procedimiento borra antes los `.auto_start` de esos tres.
+
+### Pruebas en el mismo arranque (de menor a mayor riesgo)
+
+1. **Carga única.** Avisos esperados, en orden: inicio de NeoHEN (icono «N»),
+   y en el log `Auto-start: waiting N s for kstuff to settle` seguido de
+   `Auto-start payload: .../shadowmountplus.elf`, `ftpsrv.elf`,
+   `nanodns.elf`. Ningún aviso «Falta …». FTP y DNS funcionan.
+2. **Icono y Toolbox.** Tarjeta «N» en la barra de inicio (con dibujo), la
+   Toolbox se abre desde la tarjeta y desde Ajustes. Acerca de: «★ NeoHEN
+   0.1.0-rc1+…» y la línea de OnionHEN en Linaje. No aparecen ni la
+   superposición ni «Instalación de paquetes».
+3. **Tres juegos**: Syberia (`.ffpfsc`), Stellar Blade (AMPR) y
+   ProsperoEden. Abrir, jugar un poco, cerrar. Con `kstuff_tables=true` el
+   log tendrá líneas `kstuff diag: ps5 sysentvec=… ps4 sysentvec=…`: anota
+   qué valores salen al arrancar, al abrir el juego y a los 25 s.
+4. **Trucos.** Toolbox → Juegos → Trucos → atrás → «Descargar trucos».
+   Debe salir confirmación y luego «Descargando trucos…» y «Trucos
+   actualizados» o un error con motivo. En el log:
+   `id_download_cheats handled by root after stale page=10`.
+5. **Reposo, modo manual (por defecto).** Reposo 1 min, despertar, esperar
+   60 s sin tocar. Esperado: el menú no se bloquea, aviso «la Toolbox no se
+   recarga tras el reposo…». Luego `python3 neohen_ctl.py toolbox <IP>`: la
+   Toolbox vuelve. Log: `rest: manual mode, Toolbox not re-injected`.
+6. **Vigilante de ShadowMount+.** Tras el reposo anterior, a los 60 s: si
+   ShadowMount+ está bien, nada en pantalla; log sin `smp watchdog:`. Prueba
+   forzada (opcional): mata ShadowMount+ por FTP/ps5upload no; mejor
+   cambia `[shadowmount] watchdog=relaunch`, `watchdog_interval_seconds=60`
+   y espera; solo actúa si falta el proceso o su log dice que perdió el
+   hook.
+7. **Reposo, modo stable.** `[rest_mode] toolbox_after_resume=stable` en
+   `/data/neohen/config.ini`, pide la Toolbox para que relea la config (o
+   reinicia la Toolbox con `neohen_ctl.py`), reposo, despertar, esperar 90 s.
+   Esperado: `rest: stable mode waiting 30 s`, si SceShellUI cambia
+   `rest: SceShellUI changed`, y luego `stable for 30 s, activating
+   Toolbox`. Menú usable en todo momento.
+8. **Reposo, modo original** (el último de los tres; reproduce el fallo):
+   `toolbox_after_resume=original`, reposo, despertar. Esperado: lo mismo
+   que con OnionHEN (menú bloqueado ~1 min). Sirve para confirmar que el
+   fallo depende del modo.
+9. **(Opcional, mayor riesgo) ps5upload.** Con la Toolbox cargada, lanza
+   ps5upload y luego `neohen_ctl.py toolbox <IP>` tras un reinicio de
+   SceShellUI. Esperado: aviso «SceShellUI está en uso por …» y espera, en
+   vez de inyectar.
+
+### Logs a recoger
+
+`/data/neohen/NeoHEN.log` (y `.1` … `.3`), `NeoHEN_crash.log`,
+`NeoHEN_util_daemon.log`, `/data/shadowmount/debug.log`, listado de
+`/system_tmp/neohen/` y `/system_tmp/neohen/ready/`.
