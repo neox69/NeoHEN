@@ -1,0 +1,132 @@
+NeoHEN @VERSION@
+================================================================
+
+NeoHEN es un HEN para PS5 basado en OnionHEN (aydencharles y
+colaboradores), que a su vez deriva de etaHEN (LightningMods y
+colaboradores). Licencia GPLv3. Código: https://github.com/neox69/NeoHEN
+
+Versión candidata: probada en PS5 13.42 solo en parte. Lee "Estado" antes
+de usarla.
+
+
+1. Qué hay en este zip
+----------------------------------------------------------------
+  NeoHEN.elf                          el payload que se envía al 9021
+  data/neohen/config.ini              configuración por defecto
+  data/neohen/payloads/*.auto_start   marcan qué payloads arrancan solos
+  data/neohen/payloads/*.json         orden (prioridad) de arranque
+  LEEME.txt                           este fichero
+
+NeoHEN NO incluye kstuff, ShadowMount+, el servidor FTP ni nanoDNS: son de
+otros autores y se descargan de sus repositorios.
+
+
+2. Instalación (una vez)
+----------------------------------------------------------------
+Copia por FTP la carpeta data/neohen del zip a /data/neohen en la consola,
+y añade estos ficheros con EXACTAMENTE estos nombres:
+
+  /data/neohen/kstuff.elf                       kstuff-lite (EchoStretch)
+  /data/neohen/payloads/shadowmountplus.elf     ShadowMount+ (drakmor)
+  /data/neohen/payloads/ftpsrv.elf              servidor FTP (ftpsrv)
+  /data/neohen/payloads/nanodns.elf             nanoDNS
+
+Si ya los tienes en pldmgr (/data/pldmgr/payloads/...), cópialos de allí
+cambiándoles el nombre. Si ya tienes kstuff cargado al enviar NeoHEN, no
+hace falta kstuff.elf: NeoHEN lo detecta y no carga otro.
+
+Si falta alguno de los cuatro, NeoHEN lo avisa en pantalla con el nombre y
+la carpeta, y sigue con el resto.
+
+¿No quieres alguno? Borra su fichero .auto_start y no se arrancará ni se
+avisará de que falta.
+
+
+3. Uso (cada arranque)
+----------------------------------------------------------------
+  1. Exploit, con un elfldr escuchando en el puerto 9021.
+  2. Envía NeoHEN.elf al 9021. Nada más.
+
+NeoHEN arranca, en este orden: kstuff (/data/neohen/kstuff.elf), su
+cargador privado (9020), la Toolbox en el menú, y luego ShadowMount+, FTP
+y nanoDNS (esperando 10 s desde que kstuff está listo).
+
+La Toolbox se abre desde la tarjeta "N" de la barra superior de inicio o
+desde Ajustes.
+
+No cargues a la vez etaHEN, OnionHEN ni CheatRunner. Si usas ps5upload,
+NeoHEN espera a que deje libre SceShellUI antes de cargar la Toolbox.
+
+
+4. Después del reposo
+----------------------------------------------------------------
+Por defecto (rest_mode.toolbox_after_resume=manual) NeoHEN NO recarga la
+Toolbox al despertar, porque recargarla hacía que el menú se reiniciara y
+quedara bloqueado cerca de un minuto. Para recuperarla, desde un PC en la
+misma red:
+
+  python3 neohen_ctl.py toolbox <IP_DE_LA_PS5>
+
+(neohen_ctl.py está en la carpeta scripts del repositorio.)
+
+Otros modos en /data/neohen/config.ini, sección [rest_mode]:
+  stable    recarga cuando el menú lleva stable_seconds (30) estable
+  original  el comportamiento de OnionHEN
+
+ShadowMount+: NeoHEN comprueba tras el reposo y cada 5 minutos que sigue
+vivo y que su log no indica que perdió el hook ([shadowmount]
+watchdog=notify, avisa). Con watchdog=relaunch lo relanza solo (máximo 3
+veces por arranque).
+
+
+5. Desactivado u oculto en esta versión (no probado en 13.42)
+----------------------------------------------------------------
+  - Superposición (FPS/CPU/GPU): oculta y forzada a apagada.
+  - Instalación de .pkg desde la Toolbox: oculta.
+  - Cargador de SPRX por juego: oculto.
+  - app_jailbreak: desactivado. Para activarlo:
+      [app_jailbreak]
+      enabled=true
+  - Lectura de las tablas de kstuff para diagnóstico: desactivada
+      [diagnostics]
+      kstuff_tables=true
+
+Para volver a ver la superposición y la instalación de .pkg hay que
+compilar NeoHEN con ONION_HIDE_UNTESTED=OFF.
+
+
+6. Logs y privacidad
+----------------------------------------------------------------
+Logs en /data/neohen/: NeoHEN.log, NeoHEN_crash.log,
+NeoHEN_util_daemon.log, NeoHEN_util_crash.log.
+
+NeoHEN no escribe tu nombre de usuario ni tu ID de cuenta, y sustituye
+direcciones IP y MAC por <ip> y <mac>. Aun así, revisa un log antes de
+publicarlo.
+
+
+7. Apagar NeoHEN sin reiniciar la consola
+----------------------------------------------------------------
+  python3 neohen_ctl.py shutdown <IP_DE_LA_PS5>
+
+Para util, el cargador 9020 y reinicia SceShellUI (la Toolbox desaparece);
+kstuff y los demás payloads siguen en marcha.
+
+
+8. Estado de esta versión
+----------------------------------------------------------------
+Probado en consola (PS5 13.42), con OnionHEN v0.9.0-beta1, base de NeoHEN:
+arranque, Toolbox, ShadowMount+, tres juegos (incluido uno AMPR) y salida
+de reposo (con el fallo del menú que esta versión evita por defecto).
+
+Sin verificar en consola: todo lo nuevo de NeoHEN (marca, icono en
+/system_tmp, kstuff fuera del ELF, arranque automático de payloads, modos
+de reposo, vigilante de ShadowMount+, espera por ps5upload, arreglo de la
+descarga de trucos). Los pasos de prueba están en docs/PRUEBAS-CONSOLA.md.
+
+
+Créditos
+----------------------------------------------------------------
+OnionHEN (aydencharles y colaboradores), etaHEN (LightningMods y
+colaboradores), ps5-payload-dev, EchoStretch (kstuff-lite), astrelsky
+(libhijacker), buzzer-re (NineS), drakmor (ShadowMount+), OnionBuddies.
