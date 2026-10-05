@@ -45,6 +45,55 @@ Lo que dice el código (leído en `v0.9.0-beta1`, sin verificar en consola):
 - OnionHEN **no** detecta ps5upload ni pldmgr como conflicto; solo etaHEN,
   Yoncore, kylin-core, wmdw-jwm y CheatRunner.
 
+### Resultado (2026-10-05): ARRANCA
+
+Probado por el usuario en su PS5 13.42, arranque en frío.
+
+- Orden al 9021: nanoDNS 0.4 → ftpsrv 0.21.1 → kstuff-lite 1.11 → 10 s →
+  `OnionHEN.elf` v0.9.0-beta1 (SHA-256 `c587a0e9…3a7530`, igual al publicado).
+  ps5upload sin cargar, panel doméstico parado. Después, ShadowMountPlus
+  v1.7beta2.
+- Sin panic ni cuelgues; `OnionHEN_crash.log` vacío. Del bootstrapper a
+  `Toolbox online for SceShellUI pid=59 (ready protocol)` en ~6 s.
+- `starting OnionHEN (0x1342)`; `ALLPROC=0xffffffffdd889e80
+  ROOTVNODE=0xffffffffde0f7510` (el `root_vnode` se resuelve).
+- `kstuff disabled (kstuff.autoload=false)`, como se esperaba.
+- Tarjeta en inicio, Toolbox en castellano, navegación correcta.
+- ShadowMount+ instala sus hooks y sincroniza 26 juegos. Syberia Remastered
+  (PPSA30140, `.ffpfsc`) abre, se juega y cierra; OnionHEN lo detecta
+  (`Big App started pid=94 appid=24 tid=PPSA30140`).
+
+Errores no fatales y su lectura (en el código):
+
+| Línea | Qué es | Consecuencia |
+|---|---|---|
+| `UpdateNavigationState not found` (`ReactNavigatorManager`) | En 11.x+ se usa la «ruta antigua» de Configuración de depuración; este hook desvía `DebugSettingsScreen` hacia la Toolbox | Probable: entrar por **Ajustes** podría abrir la pantalla de depuración de serie en vez de la Toolbox. La tarjeta de inicio no depende de él. Por probar (prueba 0.1) |
+| `Hook target missing: CaptureScreen(4)` | Se prueba la firma de 4 argumentos y, si falta, la de 5; la de 5 enganchó | Ninguna. Solo afecta a los atajos de «mantener Share» |
+| `[sprx-manager] cannot open manifest` | No hay plugins SPRX | Ninguna |
+| `Failed to open directory` para `payloads` | Recorre 12 carpetas candidatas que no existen | Ninguna. En NeoHEN ya sale como depuración (`f684786`) |
+| ShadowMount+ `pause deadline reached … but kstuff was already disabled` | Al cumplirse el plazo de autopausa, ShadowMount+ no vio activadas a la vez las tablas de llamadas de PS5 y PS4 de kstuff (`sysentvec`), así que no pausó nada | OnionHEN no toca esas tablas (0 referencias). Ocurre también sin OnionHEN. Hipótesis sin verificar: kstuff-lite 1.11 en 13.42 deja la de PS4 con otro valor. El juego corre con kstuff activo |
+
+### Pruebas extra en el mismo arranque (con OnionHEN ya cargado)
+
+De menor a mayor riesgo. Para cada una, anota lo que ves y la hora.
+
+1. **Toolbox desde Ajustes** (no desde la tarjeta). ¿Llegas a la Toolbox o
+   a la pantalla de depuración de serie? Busca `[DBG-NAV]` en el log.
+2. **Atajo «mantener Share»** para la Toolbox (actívalo en la Toolbox).
+   Debe abrirla. Busca `CaptureScreen_new` en el log.
+3. **Catálogo de trucos**: descargarlo. Mira `OnionHEN_util_daemon.log`.
+4. **Activar un truco** en Syberia y cerrar el juego.
+5. **Homebrew (ProsperoEden)** con `app_jailbreak` desactivado y luego
+   activado desde la Toolbox. Busca `jailbreak` en el log.
+6. **Juego AMPR** (Stellar Blade). Anota cualquier código de error y las
+   líneas `[KSTUFF]` y de fakelib del `debug.log` de ShadowMount+.
+7. **Instalar un `.pkg` pequeño** (cambio persistente: la app instalada).
+8. **Reposo**: 1 min en reposo, despertar, 30 s, abrir la Toolbox. Busca
+   `rest:` en el log. Riesgo medio-alto (reinyecta en ShellUI).
+9. No recomendado: superposición (fallo conocido en `calc_usage`) ni
+   ps5upload a la vez (dos tracers sobre ShellUI).
+10. **Última**: apagar OnionHEN y cargar NeoHEN (bloque 1, variante B).
+
 ### Preparación (antes del exploit)
 
 Copia por FTP este fichero **completo** a `/data/OnionHEN/config.ini`. El
@@ -163,57 +212,79 @@ Líneas que busco en `OnionHEN.log`:
 
 ## Bloque 1 — NeoHEN base (`neohen/base`)
 
-**Arranque distinto del bloque 0**: no cargues OnionHEN y NeoHEN en el mismo
-arranque (los dos inyectan en ShellUI).
+Objetivo: que NeoHEN arranque igual que el original. Estado: compilado; 467
+tests de host pasan; **sin verificar en consola**. Descarga: artefacto
+`NeoHEN-neohen-base-<commit>` en la pestaña Actions del fork (comprueba el
+SHA-256 de `SHA256SUMS`).
 
-Estado: compilado; tests de host de OnionHEN pasan (467, incluidos 2 nuevos);
-**sin verificar en consola**.
+### Diferencias que deberías ver (y nada más)
 
-Qué cambia respecto al original:
+| Dónde | OnionHEN original | NeoHEN |
+|---|---|---|
+| Fichero | `OnionHEN.elf` | `NeoHEN.elf` |
+| Notificaciones y Toolbox | «OnionHEN», «★OnionHEN Toolbox» | «NeoHEN», «★NeoHEN Toolbox» |
+| Datos y logs | `/data/OnionHEN/` | `/data/neohen/` (los ficheros se siguen llamando `OnionHEN.log`, `OnionHEN_crash.log`, …) |
+| Datos vistos desde ShellUI | `/user/data/OnionHEN/` | `/user/data/neohen/` |
+| Marcas de arranque | `/system_tmp/onionhen/ready/` | `/system_tmp/neohen/ready/` |
+| Icono de la barra | `/system_ex/vsh_asset/onionhen.png` (persistente) | `/system_tmp/neohen/icon______.png` (memoria) |
+| kstuff | Incrustado (no se usa con `autoload=false`) | No va dentro: `/data/neohen/kstuff.elf` o el que ya esté cargado |
+| Enlace de incidencias en los avisos de cierre | aydencharles/onionHEN | neox69/NeoHEN |
+| Log de carpetas `payloads` que no existen | `Failed to open directory` | Solo en nivel depuración |
 
-- Fichero `NeoHEN.elf`, datos en `/data/neohen`, estado volátil en
-  `/system_tmp/neohen`, textos con «NeoHEN».
-- **kstuff no va dentro.** Busca `/data/neohen/kstuff.elf`. Si no está, avisa
-  y arranca sin kstuff (igual que `autoload=false`). Si encuentra un `.elf` en
-  `/data/pldmgr/payloads/kstuff-lite/`, te dice que lo copies; no lo carga.
-- El icono de la barra se escribe en `/system_tmp/neohen/icon______.png`
-  (memoria) en vez de `/system_ex`.
+Los puertos (9020, 9048, 9021) y el resto del comportamiento son iguales.
 
 ### Preparación
 
-- `/data/neohen/config.ini`: el mismo fichero del bloque 0. Puedes dejar
-  `[kstuff] autoload=true` si quieres probar la detección: con tu 1.11 ya
-  cargado debería registrar `kstuff already running`.
-- Opción A (recomendada): carga tu kstuff-lite 1.11 antes, como en el bloque 0.
-- Opción B: copia tu `kstuff.elf` 1.11 a `/data/neohen/kstuff.elf` y no lo
-  cargues tú.
+- `/data/neohen/config.ini`: el mismo fichero del bloque 0.
+- Con `[kstuff] autoload=false` y tu 1.11 cargado antes, debe salir
+  `kstuff disabled (kstuff.autoload=false)`. Con `autoload=true`, debe salir
+  `kstuff already running / mprotect OK -- skip launch`.
 
-### Pasos y qué ver
+### Variante A — arranque nuevo (recomendada)
 
-1. Arranque en frío, exploit, (opción A: kstuff 1.11), `NeoHEN.elf` al 9021.
-2. Notificación de inicio con el nombre NeoHEN.
-3. **Icono de la barra superior**: es la prueba nueva de este bloque.
-   - Si aparece con su dibujo: HomeUI lee `/system_tmp`. Anótalo.
-   - Si aparece la entrada sin dibujo (o con un hueco): HomeUI no lee esa
-     ruta. La Toolbox debe abrirse igual al pulsarla. Anótalo; la alternativa
-     es activar `home_screen.system_ex_icon=true` o buscar otra ruta.
-   - Si ShellUI se congela al pintar la barra: apaga, arranca en frío sin
-     NeoHEN y manda los logs.
-4. Mismas pruebas que en el bloque 0 (páginas, juego, reposo al final).
-5. Comprueba por FTP que **no** se ha creado ni modificado
-   `/system_ex/vsh_asset/onionhen.png` (si ya existía del bloque 0, mira que
-   la fecha no cambie).
+1. Arranque en frío, exploit, nanoDNS, ftpsrv, kstuff-lite 1.11, 10 s.
+2. `NeoHEN.elf` al 9021. Después, ShadowMount+ si quieres.
+
+### Variante B — en el mismo arranque, tras OnionHEN (última prueba del día)
+
+Solo como última prueba: si falla, toca apagar igualmente.
+
+1. Cierra cualquier juego.
+2. `python3 scripts/shutdown_onion.py <IP>` (puerto 9048). Hace: parar
+   util, parar el cargador del 9020, **matar SceShellUI** (el sistema lo
+   relanza; así se van los parches en memoria) y salir el demonio. kstuff
+   se queda. Reiniciar ShellUI así nunca se ha probado en 13.42.
+3. Espera la notificación y que vuelva la pantalla de inicio sin la tarjeta.
+4. Desde el PC comprueba que **9048 y 9020 no responden**. Si alguno
+   responde, para aquí.
+5. `NeoHEN.elf` al 9021.
+
+### Qué mirar
+
+1. Notificación de inicio con «NeoHEN».
+2. **Icono de la barra superior**, la prueba nueva:
+   - con dibujo: HomeUI lee `/system_tmp`. Anótalo;
+   - entrada sin dibujo: HomeUI no lee esa ruta; la Toolbox debe abrirse
+     igual. Anótalo;
+   - ShellUI congelada al pintar la barra: apaga, y la próxima vez prueba con
+     `home_screen.system_ex_icon=true`.
+3. Toolbox con el nombre NeoHEN; Acerca de con créditos a OnionHEN/etaHEN.
+4. Las mismas pruebas que en el bloque 0, reposo al final.
+5. Por FTP: `/system_ex/vsh_asset/onionhen.png` no debe cambiar de fecha
+   (existe del bloque 0) y no debe aparecer ningún fichero nuevo en
+   `/system_ex/vsh_asset/`.
 
 ### Logs
 
-Los mismos nombres, ahora en `/data/neohen/`: `OnionHEN.log`,
-`OnionHEN_crash.log`, `OnionHEN_util_daemon.log`, `OnionHEN_util_crash.log`
-(los nombres internos de fichero no se han cambiado). Listado de
-`/system_tmp/neohen/ready/` y de `/system_tmp/neohen/`.
+`/data/neohen/OnionHEN.log` (y rotados), `OnionHEN_crash.log`,
+`OnionHEN_util_daemon.log`, `OnionHEN_util_crash.log`; listados de
+`/system_tmp/neohen/` y `/system_tmp/neohen/ready/`.
 
-Líneas nuevas que busco:
+Líneas que busco:
 
-- Opción A: `kstuff disabled (kstuff.autoload=false)` o
-  `kstuff already running / mprotect OK -- skip launch`.
-- Opción B: `Loading kstuff via 9020` seguido de `kstuff mprotect OK`.
+- `kstuff disabled (kstuff.autoload=false)` o `kstuff already running`.
 - Sin kstuff: `kstuff: /data/neohen/kstuff.elf missing`.
+- `payload loader port: 9020` (en la variante B confirma que el 9020 del
+  original se liberó).
+- `Toolbox online for SceShellUI pid=`.
+- Ningún `top-nav icon not written`.
