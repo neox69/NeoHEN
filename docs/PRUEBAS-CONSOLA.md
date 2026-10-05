@@ -223,13 +223,16 @@ SHA-256 de `SHA256SUMS`).
 |---|---|---|
 | Fichero | `OnionHEN.elf` | `NeoHEN.elf` |
 | Notificaciones y Toolbox | «OnionHEN», «★OnionHEN Toolbox» | «NeoHEN», «★NeoHEN Toolbox» |
-| Datos y logs | `/data/OnionHEN/` | `/data/neohen/` (los ficheros se siguen llamando `OnionHEN.log`, `OnionHEN_crash.log`, …) |
+| Datos y logs | `/data/OnionHEN/OnionHEN.log`, `OnionHEN_crash.log`, … | `/data/neohen/NeoHEN.log`, `NeoHEN_crash.log`, `NeoHEN_util_daemon.log`, `NeoHEN_util_crash.log`; líneas del demonio con `[NeoHEN]` |
 | Datos vistos desde ShellUI | `/user/data/OnionHEN/` | `/user/data/neohen/` |
 | Marcas de arranque | `/system_tmp/onionhen/ready/` | `/system_tmp/neohen/ready/` |
 | Icono de la barra | `/system_ex/vsh_asset/onionhen.png` (persistente) | `/system_tmp/neohen/icon______.png` (memoria) |
 | kstuff | Incrustado (no se usa con `autoload=false`) | No va dentro: `/data/neohen/kstuff.elf` o el que ya esté cargado |
 | Enlace de incidencias en los avisos de cierre | aydencharles/onionHEN | neox69/NeoHEN |
 | Log de carpetas `payloads` que no existen | `Failed to open directory` | Solo en nivel depuración |
+| Datos personales en el log | `Current user => <nombre>`, `User Account ID => …`, IP en el aviso de cambio de IP | Nada de eso: `Account ID present => yes/no`; las IP salen como `<ip>` y las MAC como `<mac>` (salvo `127.x` y `0.0.0.0`) |
+| Icono (avisos, barra de inicio, Ajustes) | Cebolla morada | Emblema «N» de NeoHEN, 128×128 |
+| Acerca de → Linaje | etaHEN | etaHEN y una línea nueva: OnionHEN (aydencharles y colaboradores), base directa de NeoHEN |
 
 Los puertos (9020, 9048, 9021) y el resto del comportamiento son iguales.
 
@@ -261,7 +264,7 @@ Solo como última prueba: si falla, toca apagar igualmente.
 
 ### Qué mirar
 
-1. Notificación de inicio con «NeoHEN».
+1. Notificación de inicio con «NeoHEN» y el emblema «N».
 2. **Icono de la barra superior**, la prueba nueva:
    - con dibujo: HomeUI lee `/system_tmp`. Anótalo;
    - entrada sin dibujo: HomeUI no lee esa ruta; la Toolbox debe abrirse
@@ -276,9 +279,12 @@ Solo como última prueba: si falla, toca apagar igualmente.
 
 ### Logs
 
-`/data/neohen/OnionHEN.log` (y rotados), `OnionHEN_crash.log`,
-`OnionHEN_util_daemon.log`, `OnionHEN_util_crash.log`; listados de
+`/data/neohen/NeoHEN.log` (y rotados), `NeoHEN_crash.log`,
+`NeoHEN_util_daemon.log`, `NeoHEN_util_crash.log`; listados de
 `/system_tmp/neohen/` y `/system_tmp/neohen/ready/`.
+
+Antes de subir un log, búscale tu nombre de usuario: NeoHEN ya no lo
+escribe, pero los logs de OnionHEN original sí (`Current user =>`).
 
 Líneas que busco:
 
