@@ -4,7 +4,9 @@
 The originals are never modified. Outputs:
 
   source/bootstrapper/assets/neohen/neohen_sicon.png
-      128x128 RGBA, colour emblem on a transparent background. Replaces
+      128x128 RGBA, ~6 KB (48 colours), default. neohen_sicon_full.png is the
+      same icon in full colour (~23 KB), selectable with NEOHEN_ICON=full.
+      Colour emblem on a transparent background. Replaces
       onionhen_sicon.png: startup notification icon, HomeUI top-nav icon
       (normal and focused/inverted state) and the Settings entry icon.
   assets/neohen-logo.png
@@ -30,7 +32,7 @@ import io
 import sys
 from pathlib import Path
 
-from PIL import Image, ImageChops
+from PIL import Image, ImageChops, ImageFilter
 
 ROOT = Path(__file__).resolve().parents[2]
 SRC = ROOT / "branding"
@@ -39,6 +41,7 @@ MONO = SRC / "neohen-icon-mono.png"
 SPLASH = SRC / "neohen-splash.png"
 
 OUT_SICON = ROOT / "source/bootstrapper/assets/neohen/neohen_sicon.png"
+OUT_SICON_FULL = ROOT / "source/bootstrapper/assets/neohen/neohen_sicon_full.png"
 OUT_LOGO = ROOT / "assets/neohen-logo.png"
 OUT_SPLASH = ROOT / "assets/neohen-splash.png"
 
@@ -46,6 +49,12 @@ SICON_SIZE = 128
 # The OnionHEN icon that HomeUI is known to load is 128x128 RGBA, 5.9 KB.
 # Stay in the same order of magnitude until a larger file is tested.
 SICON_MAX_BYTES = 32 * 1024
+# The default icon is reduced towards that known-good size: colour noise is
+# smoothed (alpha untouched) and the image limited to SICON_LIGHT_COLORS
+# colours, then stored again as 128x128 RGBA.
+SICON_LIGHT_COLORS = 48
+SICON_LIGHT_SMOOTH = 0.6
+SICON_LIGHT_MAX_BYTES = 8 * 1024
 LOGO_SIZE = 512
 SPLASH_WIDTH = 1280
 # Background of the colour original (#0B0F1A, the NeoHEN palette).
@@ -128,6 +137,16 @@ def build_emblem(size: int, margin: float) -> Image.Image:
     return emblem.resize((size, size), Image.LANCZOS)
 
 
+def lighten(img: Image.Image) -> Image.Image:
+    """Fewer colours, same size and RGBA mode, for a much smaller PNG."""
+    rgb = img.convert("RGB").filter(ImageFilter.GaussianBlur(SICON_LIGHT_SMOOTH))
+    smooth = rgb.convert("RGBA")
+    smooth.putalpha(img.getchannel("A"))
+    return smooth.quantize(colors=SICON_LIGHT_COLORS,
+                           method=Image.Quantize.FASTOCTREE,
+                           dither=Image.Dither.NONE).convert("RGBA")
+
+
 def png_bytes(img: Image.Image) -> bytes:
     buf = io.BytesIO()
     # Fixed settings and no metadata so the output is reproducible.
@@ -145,11 +164,14 @@ def outputs() -> dict[Path, bytes]:
     h = round(splash.height * SPLASH_WIDTH / splash.width)
     splash = splash.resize((SPLASH_WIDTH, h), Image.LANCZOS)
 
-    data = {OUT_SICON: png_bytes(sicon), OUT_LOGO: png_bytes(logo),
-            OUT_SPLASH: png_bytes(splash)}
-    if len(data[OUT_SICON]) > SICON_MAX_BYTES:
-        raise SystemExit(f"{OUT_SICON.name} is {len(data[OUT_SICON])} bytes "
-                         f"(limit {SICON_MAX_BYTES})")
+    data = {OUT_SICON: png_bytes(lighten(sicon)),
+            OUT_SICON_FULL: png_bytes(sicon),
+            OUT_LOGO: png_bytes(logo), OUT_SPLASH: png_bytes(splash)}
+    for path, limit in ((OUT_SICON, SICON_LIGHT_MAX_BYTES),
+                        (OUT_SICON_FULL, SICON_MAX_BYTES)):
+        if len(data[path]) > limit:
+            raise SystemExit(f"{path.name} is {len(data[path])} bytes "
+                             f"(limit {limit})")
     return data
 
 
