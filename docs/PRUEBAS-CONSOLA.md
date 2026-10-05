@@ -317,7 +317,8 @@ consola**.
    - `/data/neohen/payloads/nanodns.elf` ← nanoDNS 0.4
 3. Para esta prueba, edita `/data/neohen/config.ini`:
    - `[logging] level=debug`, `max_bytes=2m`
-   - `[diagnostics] kstuff_tables=true` (para el autopausado de kstuff)
+   - `[diagnostics] kstuff_tables=true` (para el autopausado de kstuff;
+     esta opción solo se lee al arrancar NeoHEN)
 4. Para tu panel doméstico y no cargues ps5upload salvo en la prueba 9.
 
 ### Procedimiento A — en frío (recomendado)
@@ -370,14 +371,15 @@ consola**.
    cambia `[shadowmount] watchdog=relaunch`, `watchdog_interval_seconds=60`
    y espera; solo actúa si falta el proceso o su log dice que perdió el
    hook.
-7. **Reposo, modo stable.** `[rest_mode] toolbox_after_resume=stable` en
-   `/data/neohen/config.ini`, pide la Toolbox para que relea la config (o
-   reinicia la Toolbox con `neohen_ctl.py`), reposo, despertar, esperar 90 s.
+7. **Reposo, modo stable.** Cambia por FTP `[rest_mode]
+   toolbox_after_resume=stable` en `/data/neohen/config.ini` (el demonio
+   relee el fichero en ~1 s si cambió; en el log: `Loading Settings`).
+   Reposo, despertar, esperar 90 s.
    Esperado: `rest: stable mode waiting 30 s`, si SceShellUI cambia
    `rest: SceShellUI changed`, y luego `stable for 30 s, activating
    Toolbox`. Menú usable en todo momento.
 8. **Reposo, modo original** (el último de los tres; reproduce el fallo):
-   `toolbox_after_resume=original`, reposo, despertar. Esperado: lo mismo
+   cambia por FTP a `toolbox_after_resume=original`, reposo, despertar. Esperado: lo mismo
    que con OnionHEN (menú bloqueado ~1 min). Sirve para confirmar que el
    fallo depende del modo.
 9. **(Opcional, mayor riesgo) ps5upload.** Con la Toolbox cargada, lanza
