@@ -116,3 +116,27 @@ jobs:
           path: dist/
           if-no-files-found: error
           retention-days: 30
+
+  pc-tool:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Install tools
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            exfat-fuse exfatprogs fuse3 makefs python3-pip
+          sudo python3 -m pip install --break-system-packages \
+            -r tools/pc/requirements.txt
+
+      # Root lets the exFAT test mount the image read-only through a loop
+      # device and exfat-fuse, an exFAT reader independent of MkPFS.
+      - name: PC tool tests
+        run: sudo python3 -m unittest discover -s tools/pc/tests -v
