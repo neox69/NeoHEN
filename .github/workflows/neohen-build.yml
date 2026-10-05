@@ -1,0 +1,118 @@
+# Build NeoHEN.elf on every push to a neohen/* branch and keep it as a
+# workflow artifact (Actions run page -> Artifacts). No releases, no tags.
+name: neohen-build
+
+on:
+  push:
+    branches: ['neohen/**']
+  workflow_dispatch:
+
+concurrency:
+  group: neohen-build-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      PS5_PAYLOAD_SDK: ${{ github.workspace }}/.ps5-payload-sdk
+      LLVM_CONFIG: /usr/lib/llvm-18/bin/llvm-config
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Install build packages
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential ca-certificates clang-18 cmake curl file git \
+            librsvg2-bin lld-18 llvm-18 ninja-build pkg-config python3 \
+            python3-certifi python3-pip python3-pyelftools unzip xz-utils
+          sudo ln -sf /usr/lib/llvm-18/bin/llvm-config /usr/local/bin/llvm-config
+
+      - name: Resolve PS5 Payload SDK release
+        id: sdk
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag="$(curl -fsSL -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+            https://api.github.com/repos/ps5-payload-dev/sdk/releases/latest \
+            | python3 -c 'import json,sys; print(json.load(sys.stdin)["tag_name"])')"
+          echo "tag=${tag}" >> "${GITHUB_OUTPUT}"
+
+      # The SDK zip lacks curl/OpenSSL/zstd; they are built once per SDK tag
+      # and dependency-script revision, then restored from the cache.
+      - name: Cache SDK and PS5 dependencies
+        id: sdk-cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.PS5_PAYLOAD_SDK }}
+          key: ps5-sdk-${{ steps.sdk.outputs.tag }}-deps-${{ hashFiles('scripts/ci/build_ps5_deps.sh') }}
+
+      - name: Install SDK and build PS5 dependencies
+        if: steps.sdk-cache.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          tmp="$(mktemp -d)"
+          curl -fsSL --retry 3 -o "${tmp}/sdk.zip" \
+            "https://github.com/ps5-payload-dev/sdk/releases/download/${{ steps.sdk.outputs.tag }}/ps5-payload-sdk.zip"
+          unzip -q "${tmp}/sdk.zip" -d "${tmp}/out"
+          rm -rf "${PS5_PAYLOAD_SDK}"
+          cp -a "${tmp}/out/ps5-payload-sdk" "${PS5_PAYLOAD_SDK}"
+          test -x "${PS5_PAYLOAD_SDK}/bin/prospero-cmake"
+          scripts/ci/build_ps5_deps.sh "${tmp}/deps"
+
+      - name: Build NeoHEN
+        run: |
+          set -euo pipefail
+          export PATH="/usr/lib/llvm-18/bin:${PS5_PAYLOAD_SDK}/bin:${PATH}"
+          ./scripts/build-neohen.sh --release --jobs "$(nproc)"
+          test -f build/bin/NeoHEN.elf
+
+      - name: Host unit tests
+        run: |
+          set -euo pipefail
+          pip3 install --break-system-packages --no-cache-dir keystone-engine
+          kdir="$(python3 -c 'import keystone, os; print(os.path.dirname(keystone.__file__))')"
+          mkdir -p "${RUNNER_TEMP}/keystone/lib"
+          ln -sf "${kdir}/libkeystone.so" "${RUNNER_TEMP}/keystone/lib/libkeystone.so"
+          ln -sf "${kdir}/libkeystone.so" "${RUNNER_TEMP}/keystone/lib/libkeystone.so.0"
+          export LD_LIBRARY_PATH="${RUNNER_TEMP}/keystone/lib"
+          make -C source/util/tests test KEYSTONE_PREFIX="${RUNNER_TEMP}/keystone" -j"$(nproc)"
+
+      - name: Stage artifact
+        run: |
+          set -euo pipefail
+          rm -rf dist && mkdir dist
+          cp build/bin/NeoHEN.elf dist/
+          {
+            echo "branch=${GITHUB_REF_NAME}"
+            echo "commit=${GITHUB_SHA}"
+            echo "built=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo "sdk=${{ steps.sdk.outputs.tag }}"
+            echo "build_type=Release"
+            echo "status=compiled; not verified on a console"
+          } > dist/BUILD_INFO.txt
+          (cd dist && sha256sum NeoHEN.elf BUILD_INFO.txt > SHA256SUMS)
+          cat dist/SHA256SUMS
+
+      - name: Sanitize branch name for the artifact
+        id: name
+        run: echo "ref=${GITHUB_REF_NAME//\//-}" >> "${GITHUB_OUTPUT}"
+
+      - name: Upload NeoHEN.elf
+        uses: actions/upload-artifact@v4
+        with:
+          name: NeoHEN-${{ steps.name.outputs.ref }}-${{ github.sha }}
+          path: dist/
+          if-no-files-found: error
+          retention-days: 30
