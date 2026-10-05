@@ -13,9 +13,11 @@
 #include <onion/proc_query.h>
 #include <onion/ready.h>
 
+#include <dirent.h>
 #include <errno.h>
 #include <signal.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -26,8 +28,10 @@ extern uint8_t util_start[];
 extern const unsigned int util_size;
 extern uint8_t onion_elfldr_start[];
 extern const unsigned int onion_elfldr_size;
+#ifndef ONION_EXTERNAL_KSTUFF
 extern uint8_t kstuff_start[];
 extern const unsigned int kstuff_size;
+#endif
 
 int sceKernelGetProcessName(int pid, char *name);
 int sceKernelMprotect(void *addr, size_t len, int prot);
@@ -150,6 +154,45 @@ static bool launch_util(LaunchContext *context) {
   return true;
 }
 
+#ifdef ONION_EXTERNAL_KSTUFF
+/*
+ * Payload managers keep their own kstuff copy. It is only reported: the user
+ * decides whether to copy it to ONION_DATA_DIR. Nothing is loaded from here.
+ */
+#define ONION_PLDMGR_KSTUFF_DIR "/data/pldmgr/payloads/kstuff-lite"
+
+static bool find_pldmgr_kstuff(char *out, size_t out_size) {
+  DIR *dir = opendir(ONION_PLDMGR_KSTUFF_DIR);
+  if (!dir)
+    return false;
+  bool found = false;
+  struct dirent *entry;
+  while (!found && (entry = readdir(dir)) != NULL) {
+    const size_t len = strlen(entry->d_name);
+    if (len > 4 && strcmp(entry->d_name + len - 4, ".elf") == 0) {
+      snprintf(out, out_size, "%s/%s", ONION_PLDMGR_KSTUFF_DIR,
+               entry->d_name);
+      found = true;
+    }
+  }
+  closedir(dir);
+  return found;
+}
+
+static void report_missing_kstuff(void) {
+  char pldmgr_path[256];
+  if (find_pldmgr_kstuff(pldmgr_path, sizeof(pldmgr_path))) {
+    LOG_WARN("kstuff: %s missing; found %s (not loaded)",
+             ONION_DATA_DIR "/kstuff.elf", pldmgr_path);
+    bootstrap_notify("notify.kstuff.found_pldmgr", pldmgr_path);
+  } else {
+    LOG_WARN("kstuff: %s missing -- continuing without kstuff",
+             ONION_DATA_DIR "/kstuff.elf");
+    bootstrap_notify("notify.kstuff.missing");
+  }
+}
+#endif
+
 static void launch_kstuff(LaunchContext *context, uint32_t firmware_version,
                           bool autoload) {
   char probe[100] = {0};
@@ -180,8 +223,20 @@ static void launch_kstuff(LaunchContext *context, uint32_t firmware_version,
     override_elf = onion_payload_read_file(ONION_DATA_DIR "/kstuff.elf",
                                            &override_size);
 
+#ifdef ONION_EXTERNAL_KSTUFF
+  if (!override_elf) {
+    /* No embedded fallback: the daemon starts without kstuff, exactly as
+     * with kstuff.autoload=false. */
+    report_missing_kstuff();
+    onion_ready_signal(ONION_READY_KSTUFF);
+    return;
+  }
+  const uint8_t *elf = override_elf;
+  const size_t size = override_size;
+#else
   const uint8_t *elf = override_elf ? override_elf : kstuff_start;
   const size_t size = override_elf ? override_size : (size_t)kstuff_size;
+#endif
   const bool sent =
       launch_blob(context, elf, size, "kstuff", "kstuff.elf");
   free(override_elf);
