@@ -16,12 +16,16 @@ set(ONIONHEN_GENERATED_INCLUDE_DIR "${CMAKE_BINARY_DIR}/generated/include")
 set(ONIONHEN_VERSION_HEADER
 	"${ONIONHEN_GENERATED_INCLUDE_DIR}/onion/version.h")
 
+# Forks set their own release number (e.g. 0.1.0-rc1); the commit is appended.
+set(ONION_PRODUCT_VERSION "" CACHE STRING "Product version shown instead of the git tag")
+
 # Re-evaluate Git state on every build. The script preserves the header mtime
 # when the version is unchanged, so incremental compilation remains cheap.
 add_custom_target(onion_version
 	COMMAND "${CMAKE_COMMAND}"
 		"-DREPO_ROOT=${ONIONHEN_ROOT}"
 		"-DOUTPUT_FILE=${ONIONHEN_VERSION_HEADER}"
+		"-DPRODUCT_VERSION=${ONION_PRODUCT_VERSION}"
 		-P "${PROJECT_ROOT}/cmake/GenerateVersionHeader.cmake"
 	BYPRODUCTS "${ONIONHEN_VERSION_HEADER}"
 	COMMENT "Generating OnionHEN build version"
