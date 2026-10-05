@@ -5,7 +5,7 @@
 #include "http.h"
 #include "json.h"
 
-#define PS5AIO_NAME      "NeoHEN Web"
+#define PS5AIO_NAME      "NeoWEB"
 #define PS5AIO_VERSION   "0.1.0"
 #define PS5AIO_HTTP_PORT 8686
 #define PS5AIO_DISC_PORT 8687

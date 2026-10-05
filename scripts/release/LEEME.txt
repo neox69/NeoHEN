@@ -18,7 +18,7 @@ de usarla.
   config.ini.ejemplo    la configuración por defecto, como referencia
 
 NeoHEN.elf lleva dentro todo lo que arranca: kstuff-lite, ShadowMount+, el
-servidor FTP, nanoDNS y NeoHEN Web. Los tres primeros payloads son los
+servidor FTP, nanoDNS y NeoWEB. Los tres primeros payloads son los
 binarios oficiales de sus autores, sin modificar (ver TERCEROS.txt).
 
 
@@ -55,7 +55,7 @@ Si ya hay un kstuff en marcha al enviar NeoHEN, no carga otro.
   2. Envía NeoHEN.elf al 9021. Nada más.
 
 NeoHEN arranca, en este orden: kstuff, su cargador privado (9020), la
-Toolbox en el menú, y luego ShadowMount+, FTP, nanoDNS y NeoHEN Web
+Toolbox en el menú, y luego ShadowMount+, FTP, nanoDNS y NeoWEB
 (esperando 10 s desde que kstuff está listo).
 
 La Toolbox se abre desde la tarjeta "N" de la barra superior de inicio o
@@ -119,7 +119,7 @@ Para util, el cargador 9020 y reinicia SceShellUI (la Toolbox desaparece);
 kstuff y los demás payloads siguen en marcha.
 
 
-8. NeoHEN Web (panel y acceso remoto)
+8. NeoWEB (panel y acceso remoto)
 ----------------------------------------------------------------
 payloads/neoweb.elf es un servicio propio de NeoHEN (puerto 8686) que deja
 consultar la consola desde la red: temperaturas, discos, juegos instalados

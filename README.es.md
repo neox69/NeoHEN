@@ -31,10 +31,10 @@ GPLv3.
 | Área | NeoHEN |
 |---|---|
 | Reposo | La Toolbox vuelve sola cuando el menú lleva 30 s estable. El original la reinyecta a los 10 s de despertar, y en 13.42 eso reiniciaba el menú y lo dejaba bloqueado cerca de un minuto. Tres modos: `stable` (por defecto), `manual` y `original`. |
-| Un solo fichero | `NeoHEN.elf` lleva dentro kstuff-lite, ShadowMount+, ftpsrv, nanoDNS y NeoHEN Web. En el primer arranque los escribe en `/data/neohen/payloads` y los lanza en orden; en los siguientes, solo los lanza. No hay que descargar, copiar ni renombrar nada. |
+| Un solo fichero | `NeoHEN.elf` lleva dentro kstuff-lite, ShadowMount+, ftpsrv, nanoDNS y NeoWEB. En el primer arranque los escribe en `/data/neohen/payloads` y los lanza en orden; en los siguientes, solo los lanza. No hay que descargar, copiar ni renombrar nada. |
 | Tú decides | Un payload que sustituyas o borres se queda como lo dejaste. Un `kstuff.elf` en `/data/neohen/` sustituye al que va dentro, y si ya hay un kstuff en marcha no se toca. |
 | ShadowMount+ | Se usa el payload de su autor sin modificar, con un vigilante que comprueba su hook tras el reposo y cada 5 minutos, y puede relanzarlo. |
-| NeoHEN Web | Servicio HTTP en la consola (puerto 8686) para paneles: temperaturas, discos, biblioteca con carátulas, juego abierto, lanzar y cerrar. Ver [web/README.md](web/README.md). |
+| NeoWEB | Servicio HTTP en la consola (puerto 8686) para paneles: temperaturas, discos, biblioteca con carátulas, juego abierto, lanzar y cerrar. Ver [web/README.md](web/README.md). |
 | Privacidad | Los logs nunca llevan el nombre ni el identificador de la cuenta, y las IP y MAC se sustituyen. Los del original escriben nombre e identificador cada vez que se abre un menú. |
 | Partición del sistema | El icono de la Toolbox vive en memoria volátil en vez de escribirse en `/system_ex`. |
 | Descarga de trucos | Arreglado un caso en el que el botón no hacía nada al volver de otra página. |
@@ -61,10 +61,10 @@ En una PS5 CFI-7021, firmware 13.42, con kstuff-lite 1.11 y ShadowMount+
 | Reposo con un juego suspendido, modos `manual` y `stable` | Funciona (0.1.0-rc1) |
 | Recargar la Toolbox desde un PC (`neohen_ctl.py toolbox`) | Funciona (0.1.0-rc1) |
 | Pasar desde un OnionHEN en marcha sin reiniciar | Funciona (0.1.0-rc1) |
-| NeoHEN Web: estado, sensores, discos, biblioteca, carátulas, juego abierto | Funciona |
+| NeoWEB: estado, sensores, discos, biblioteca, carátulas, juego abierto | Funciona |
 | Carga única en frío con arranque automático de payloads | **Sin probar** |
 | Cambios de 0.1.0-rc2 (nombre en Ajustes, `stable` por defecto) | **Compilado, sin probar en consola** |
-| NeoHEN Web: lanzar y cerrar un juego | **Sin probar** |
+| NeoWEB: lanzar y cerrar un juego | **Sin probar** |
 | El vigilante de ShadowMount+ recuperando un hook perdido | **Sin probar** |
 | Aplicar un truco, instalar PKG, superposición, app jailbreak | **Sin probar** |
 | Cualquier firmware distinto de 13.42 | **Sin probar** |
@@ -72,10 +72,10 @@ En una PS5 CFI-7021, firmware 13.42, con kstuff-lite 1.11 y ShadowMount+
 ## En desarrollo
 
 - **0.1.0-rc2** — compilada; pendiente de una prueba en frío en la consola.
-- **NeoHEN Web** — la variante segura ya funciona; lo siguiente es probar
+- **NeoWEB** — la variante segura ya funciona; lo siguiente es probar
   lanzar y cerrar en consola, una página web a juego con esa variante, y las
   lecturas de energía, ventilador y M.2.
-- **NeoAPP** — aplicación de PC sobre la variante completa de NeoHEN Web:
+- **NeoAPP** — aplicación de PC sobre la variante completa de NeoWEB:
   subir juegos con transferencias reanudables, explorador de ficheros,
   biblioteca con carátulas, instalador, nombre, icono y fondo por juego, y
   temas. Sin empezar; la parte del servicio ya existe tras `make FULL=1`.
@@ -186,7 +186,7 @@ compilando un OnionHEN sin marca desde el mismo árbol.
 
 | Rama | Contenido |
 |---|---|
-| `neohen-main` | NeoHEN actual: 0.1.0-rc2 más NeoHEN Web |
+| `neohen-main` | NeoHEN actual: 0.1.0-rc2 más NeoWEB |
 | `neohen/release` | 0.1.0-rc1, la versión probada en consola |
 | `neohen/pc-tool` | `neohen_pc`, el empaquetador de juegos |
 | `neohen/docs` | Plan y procedimientos de prueba en consola |

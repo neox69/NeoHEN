@@ -31,10 +31,10 @@ Licensed under GPLv3.
 | Area | NeoHEN |
 |---|---|
 | Rest Mode | The Toolbox comes back by itself once the home screen has been stable for 30 s. Upstream re-injects 10 s after waking, which on 13.42 restarted the home screen and froze it for about a minute. Three modes: `stable` (default), `manual`, `original`. |
-| One file | `NeoHEN.elf` carries kstuff-lite, ShadowMount+, ftpsrv, nanoDNS and NeoHEN Web. On first boot it writes them to `/data/neohen/payloads` and starts them in order; on later boots it just starts them. Nothing to download, copy or rename. |
+| One file | `NeoHEN.elf` carries kstuff-lite, ShadowMount+, ftpsrv, nanoDNS and NeoWEB. On first boot it writes them to `/data/neohen/payloads` and starts them in order; on later boots it just starts them. Nothing to download, copy or rename. |
 | Your choices win | A payload you replace or delete stays the way you left it. A `kstuff.elf` in `/data/neohen/` overrides the embedded one, and a kstuff that is already running is left alone. |
 | ShadowMount+ | Used as the author's unmodified payload, with a watchdog that checks its hook after Rest Mode and every 5 minutes, and can relaunch it. |
-| NeoHEN Web | A remote HTTP service on the console (port 8686) for home dashboards: temperatures, disks, library with covers, running game, launch and close. See [web/README.md](web/README.md). |
+| NeoWEB | A remote HTTP service on the console (port 8686) for home dashboards: temperatures, disks, library with covers, running game, launch and close. See [web/README.md](web/README.md). |
 | Privacy | Logs never contain the account name or account id, and IP and MAC addresses are replaced. Upstream logs write the account name and id every time a menu opens. |
 | System partition | The Toolbox icon lives in volatile memory instead of being written to `/system_ex`. |
 | Cheat download | Fixed a case where the download button did nothing after returning from another page. |
@@ -61,10 +61,10 @@ On a PS5 CFI-7021, firmware 13.42, with kstuff-lite 1.11 and ShadowMount+
 | Rest Mode with a suspended game, modes `manual` and `stable` | Works (0.1.0-rc1) |
 | Toolbox reload from a PC (`neohen_ctl.py toolbox`) | Works (0.1.0-rc1) |
 | Switching from a running OnionHEN without a reboot | Works (0.1.0-rc1) |
-| NeoHEN Web: state, sensors, disks, library, covers, running game | Works |
+| NeoWEB: state, sensors, disks, library, covers, running game | Works |
 | One load on a cold boot with payload autostart | **Not tested** |
 | 0.1.0-rc2 changes (Settings label, `stable` as default) | **Compiled, not tested on a console** |
-| NeoHEN Web: launch and close a game | **Not tested** |
+| NeoWEB: launch and close a game | **Not tested** |
 | ShadowMount+ watchdog recovering a lost hook | **Not tested** |
 | Applying a cheat, PKG install, overlay, app jailbreak | **Not tested** |
 | Any firmware other than 13.42 | **Not tested** |
@@ -72,10 +72,10 @@ On a PS5 CFI-7021, firmware 13.42, with kstuff-lite 1.11 and ShadowMount+
 ## In progress
 
 - **0.1.0-rc2** — compiled; waiting for a cold-boot test on the console.
-- **NeoHEN Web** — the safe build is running; next are launch and close on a
+- **NeoWEB** — the safe build is running; next are launch and close on a
   console, a web page that matches the safe build, and power, fan and M.2
   readings.
-- **NeoAPP** — a PC app on top of the full NeoHEN Web build: upload games
+- **NeoAPP** — a PC app on top of the full NeoWEB build: upload games
   with resumable transfers, file manager, library with covers, installer,
   per-game name, icon and background, themes. Not started; the service side
   already exists behind `make FULL=1`.
@@ -184,7 +184,7 @@ environment, including the libraries the SDK does not ship.
 
 | Branch | Content |
 |---|---|
-| `neohen-main` | Current NeoHEN: 0.1.0-rc2 plus NeoHEN Web |
+| `neohen-main` | Current NeoHEN: 0.1.0-rc2 plus NeoWEB |
 | `neohen/release` | 0.1.0-rc1, the build tested on the console |
 | `neohen/pc-tool` | `neohen_pc`, the game packer |
 | `neohen/docs` | Plan and console test procedures (Spanish) |

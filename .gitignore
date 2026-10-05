@@ -68,5 +68,6 @@ docs/发行说明*.pdf
 /.ps5-payload-sdk/
 /dist/
 
-# NeoHEN Web host build
+# NeoWEB host build
 web/build/
+__pycache__/

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""End-to-end tests for the full NeoHEN Web API using the host emulator.
+"""End-to-end tests for the full NeoWEB API using the host emulator.
 
     make -C web host FULL=1 && python3 web/tests/test_api.py
 
@@ -164,7 +164,7 @@ class PayloadTest(unittest.TestCase):
         st, j = self.api.get("/api/ping")
         self.assertEqual(st, 200)
         self.assertTrue(j["ok"])
-        self.assertEqual(j["name"], "NeoHEN Web")
+        self.assertEqual(j["name"], "NeoWEB")
         self.assertEqual(j["platform"], "host")
 
     def test_sysinfo_and_mounts(self):
@@ -198,7 +198,7 @@ class PayloadTest(unittest.TestCase):
     def test_webui(self):
         st, body, hdr = self.api.req("GET", "/")
         self.assertEqual(st, 200)
-        self.assertIn(b"PS5AIO", body)
+        self.assertIn(b"NeoWEB", body)
         self.assertIn("text/html", hdr["Content-Type"])
 
     def test_discovery(self):
@@ -211,7 +211,7 @@ class PayloadTest(unittest.TestCase):
         except socket.timeout:
             self.skipTest("discovery port busy (another instance?)")
         j = json.loads(data)
-        self.assertEqual(j["name"], "NeoHEN Web")
+        self.assertEqual(j["name"], "NeoWEB")
         self.assertEqual(j["port"], 8686)
 
     # ------------------------------------------------------------ files
