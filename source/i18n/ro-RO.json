@@ -412,6 +412,7 @@
     "notify.game.sfo_failed": "Nu s-a putut citi fișierul SFO",
     "notify.payload.load_failed": "Încărcarea payload a eșuat\nCale: %s\nCheie: %s",
     "notify.payload.load_failed_path": "Încărcarea payload a eșuat!\nCale: %s",
+    "notify.payload.missing_fmt": "%s is missing from %s. Copy it there or turn off its auto start; continuing with the rest",
     "notify.payload.launched": "Payload lansat\nCale: %s\nCheie: %s",
     "notify.cheats.none": "Nu există cheat-uri pentru %s versiunea %s!",
     "notify.payload.elf_only": "Sunt acceptate doar payload-uri .elf:\n%s",

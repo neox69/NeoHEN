@@ -412,6 +412,7 @@
     "notify.game.sfo_failed": "SFO-Datei konnte nicht gelesen werden",
     "notify.payload.load_failed": "Payload konnte nicht geladen werden\nPfad: %s\nKennung: %s",
     "notify.payload.load_failed_path": "Payload konnte nicht geladen werden!\nPfad: %s",
+    "notify.payload.missing_fmt": "%s is missing from %s. Copy it there or turn off its auto start; continuing with the rest",
     "notify.payload.launched": "Payload gestartet\nPfad: %s\nKennung: %s",
     "notify.cheats.none": "Keine Cheats für %s Version %s!",
     "notify.payload.elf_only": "Nur .elf-Payloads werden unterstützt:\n%s",

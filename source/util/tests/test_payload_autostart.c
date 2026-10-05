@@ -4,6 +4,8 @@
 #include <onion/platform.h>
 #include <elfldr_remote.h>
 #include <dirent.h>
+#include <stdarg.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -75,10 +77,23 @@ static bool fixture_launch(const char *path, const char *filename, const char *k
   return strcmp(filename, "a.elf") != 0;
 }
 
+static int missing_notified;
+static char missing_name[64];
+static uint64_t kstuff_since_ms = UINT64_MAX;
+
 static void fixture_notify(const char *key, ...) {
   if (strcmp(key, "notify.payload.load_failed_path") == 0)
     ++failures_notified;
+  if (strcmp(key, "notify.payload.missing_fmt") == 0) {
+    va_list args;
+    va_start(args, key);
+    snprintf(missing_name, sizeof(missing_name), "%s", va_arg(args, const char *));
+    va_end(args);
+    ++missing_notified;
+  }
 }
+
+uint64_t bootstrap_ms_since_kstuff_ready(void) { return kstuff_since_ms; }
 
 /* Run the production scanner and loop against temporary files and a fake clock. */
 #define opendir fixture_opendir
@@ -166,6 +181,49 @@ static int test_autostart_schedule(void) {
   return 0;
 }
 
+
+/* NeoHEN: a marker without its ELF is reported once (the folder is seen
+ * through two paths), and payloads wait until kstuff has had 10 s. */
+static int test_autostart_missing_and_settle(void) {
+  snprintf(fixture, sizeof(fixture), "/tmp/onion-autostart-XXXXXX");
+  TEST_ASSERT_TRUE(mkdtemp(fixture) != NULL);
+  TEST_ASSERT_EQ_INT(0, add_payload("smp.elf", 300, 0, true));
+  char marker[528];
+  local_path("ghost.elf.auto_start", marker, sizeof(marker));
+  FILE *file = fopen(marker, "wb");
+  TEST_ASSERT_TRUE(file != NULL);
+  fclose(file);
+
+  loader_available = true;
+  interrupt_wait = false;
+  wait_count = launch_count = event_count = 0;
+  missing_notified = 0;
+  kstuff_since_ms = 3500; /* kstuff ready 3.5 s ago -> wait ceil(6.5) = 7 s */
+  bootstrap_payload_autostart();
+  kstuff_since_ms = UINT64_MAX;
+  TEST_ASSERT_EQ_INT(1, missing_notified);
+  TEST_ASSERT_STREQ("ghost.elf", missing_name);
+  TEST_ASSERT_EQ_INT(1, (int)launch_count);
+  TEST_ASSERT_STREQ("wait:7", events[0]);
+  TEST_ASSERT_STREQ("load:smp.elf", events[1]);
+
+  DIR *dir = opendir(fixture);
+  TEST_ASSERT_TRUE(dir != NULL);
+  struct dirent *entry;
+  while ((entry = readdir(dir)) != NULL) {
+    if (entry->d_name[0] == '.')
+      continue;
+    char path[512];
+    local_path(entry->d_name, path, sizeof(path));
+    unlink(path);
+  }
+  closedir(dir);
+  TEST_ASSERT_EQ_INT(0, rmdir(fixture));
+  return 0;
+}
+
 int test_payload_autostart_suite(void) {
-  return onion_test_run("payload.autostart_schedule", test_autostart_schedule);
+  return onion_test_run("payload.autostart_schedule", test_autostart_schedule) +
+         onion_test_run("payload.autostart_missing_settle",
+                        test_autostart_missing_and_settle);
 }

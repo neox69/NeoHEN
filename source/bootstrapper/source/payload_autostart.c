@@ -4,6 +4,7 @@
 #include "payload_autostart.h"
 
 #include "bootstrap_notify.h"
+#include "launch_pipeline.h"
 
 #include <elfldr_remote.h>
 #include <onion/log.h>
@@ -131,6 +132,71 @@ static void scan_payload_directory(PayloadList *list, const char *directory) {
   closedir(dir);
 }
 
+/*
+ * <name>.elf.auto_start without <name>.elf: the user (or the NeoHEN install
+ * zip) asked for a payload that is not there. Say which file and where, then
+ * carry on with the rest.
+ */
+#define MISSING_SEEN_MAX 16
+
+/* The same folder is reachable as /data/... and /user/data/...; report each
+ * missing file name only once per boot. */
+static bool missing_seen_first(const char *name) {
+  static char seen[MISSING_SEEN_MAX][256];
+  static size_t count;
+  for (size_t i = 0; i < count; ++i)
+    if (strcmp(seen[i], name) == 0)
+      return false;
+  if (count < MISSING_SEEN_MAX)
+    snprintf(seen[count++], sizeof(seen[0]), "%s", name);
+  return true;
+}
+
+static void report_missing_autostart(const char *directory) {
+  DIR *dir = opendir(directory);
+  if (!dir)
+    return;
+  static const char kSuffix[] = ".auto_start";
+  const size_t suffix_len = sizeof(kSuffix) - 1;
+  struct dirent *entry;
+  while ((entry = readdir(dir)) != NULL) {
+    const size_t len = strlen(entry->d_name);
+    if (len <= suffix_len ||
+        strcmp(entry->d_name + len - suffix_len, kSuffix) != 0)
+      continue;
+    char elf_name[256];
+    if (len - suffix_len >= sizeof(elf_name))
+      continue;
+    memcpy(elf_name, entry->d_name, len - suffix_len);
+    elf_name[len - suffix_len] = '\0';
+    if (!is_elf_filename(elf_name))
+      continue;
+    char elf_path[512];
+    snprintf(elf_path, sizeof(elf_path), "%s/%s", directory, elf_name);
+    if (if_exists(elf_path) || !missing_seen_first(elf_name))
+      continue;
+    LOG_WARN("auto start payload missing: %s", elf_path);
+    bootstrap_notify("notify.payload.missing_fmt", elf_name, directory);
+  }
+  closedir(dir);
+}
+
+/* kstuff must be fully up before ShadowMount+; 10 s matches the manual
+ * sequence verified on 13.42 (kstuff, wait 10 s, then the rest). */
+#define KSTUFF_SETTLE_MS 10000u
+
+static void wait_for_kstuff_settle(void) {
+  const uint64_t since = bootstrap_ms_since_kstuff_ready();
+  if (since == UINT64_MAX || since >= KSTUFF_SETTLE_MS)
+    return;
+  const unsigned int wait_s =
+      (unsigned int)((KSTUFF_SETTLE_MS - since + 999u) / 1000u);
+  LOG_INFO("Auto-start: waiting %u s for kstuff to settle", wait_s);
+  unsigned int remaining = wait_s;
+  while (remaining)
+    remaining = sleep(remaining);
+}
+
 static int compare_payload_entries(const void *a, const void *b) {
   const PayloadEntry *first = (const PayloadEntry *)a;
   const PayloadEntry *second = (const PayloadEntry *)b;
@@ -156,7 +222,13 @@ void bootstrap_payload_autostart(void) {
     return;
   }
 
+  for (size_t i = 0;
+       i < sizeof(kPayloadDirectories) / sizeof(kPayloadDirectories[0]); ++i)
+    report_missing_autostart(kPayloadDirectories[i]);
+
   PayloadList list = find_autostart_payloads();
+  if (list.count > 0)
+    wait_for_kstuff_settle();
   int loaded = 0;
   for (size_t i = 0; i < list.count; ++i) {
     const PayloadEntry *entry = &list.entries[i];

@@ -412,6 +412,7 @@
     "notify.game.sfo_failed": "No se pudo leer el archivo SFO",
     "notify.payload.load_failed": "No se pudo cargar el payload\nRuta: %s\nIdentificador: %s",
     "notify.payload.load_failed_path": "No se pudo cargar el payload.\nRuta: %s",
+    "notify.payload.missing_fmt": "Falta %s en %s. Cópialo ahí o quita su arranque automático; se sigue con el resto",
     "notify.payload.launched": "Payload lanzado\nRuta: %s\nIdentificador: %s",
     "notify.cheats.none": "No hay trucos para %s versión %s.",
     "notify.payload.elf_only": "Solo se admiten payloads .elf:\n%s",

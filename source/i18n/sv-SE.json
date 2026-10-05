@@ -412,6 +412,7 @@
     "notify.game.sfo_failed": "Kunde inte läsa SFO-fil",
     "notify.payload.load_failed": "Kunde inte läsa in payload\nSökväg: %s\nNyckel: %s",
     "notify.payload.load_failed_path": "Kunde inte läsa in payload!\nSökväg: %s",
+    "notify.payload.missing_fmt": "%s is missing from %s. Copy it there or turn off its auto start; continuing with the rest",
     "notify.payload.launched": "Payload startad\nSökväg: %s\nNyckel: %s",
     "notify.cheats.none": "Inga fusk för %s version %s!",
     "notify.payload.elf_only": "Endast .elf-payloads stöds:\n%s",
