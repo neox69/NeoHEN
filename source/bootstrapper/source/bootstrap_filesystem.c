@@ -1,5 +1,6 @@
 /* Copyright (C) 2026 OnionHEN / LightningMods */
 
+#include <onion/brand.h>
 #include "bootstrap_filesystem.h"
 
 #include "bootstrap_notify.h"
@@ -36,11 +37,11 @@ static bool remount(const char *device, const char *path) {
 }
 
 void bootstrap_filesystem_create_directories(void) {
-  mkdir("/data/OnionHEN", 0777);
-  mkdir("/data/OnionHEN/payloads", 0777);
-  mkdir("/data/OnionHEN/plugins", 0777);
-  mkdir("/data/OnionHEN/assets", 0777);
-  mkdir("/data/OnionHEN/games", 0777);
+  mkdir(ONION_DATA_DIR, 0777);
+  mkdir(ONION_DATA_DIR "/payloads", 0777);
+  mkdir(ONION_DATA_DIR "/plugins", 0777);
+  mkdir(ONION_DATA_DIR "/assets", 0777);
+  mkdir(ONION_DATA_DIR "/games", 0777);
 }
 
 bool bootstrap_filesystem_mount_system(void) {

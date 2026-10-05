@@ -1,5 +1,7 @@
 #pragma once
 
+#include <onion/brand.h>
+
 #include <cstddef>
 #include <cstdint>
 #include <mutex>
@@ -29,7 +31,7 @@ inline constexpr uint32_t kKnownFlags = kFlagLongRunning | kFlagStopSupported;
 #endif
 inline constexpr const char *kInstallRoot = ONION_DATA_ROOT "/plugins";
 #else
-inline constexpr const char *kInstallRoot = "/data/OnionHEN/plugins";
+inline constexpr const char *kInstallRoot = ONION_DATA_DIR "/plugins";
 #endif
 
 struct Descriptor {
