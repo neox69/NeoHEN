@@ -10,6 +10,7 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <sys/time.h>
+#include <pthread.h>
 #include <unistd.h>
 #include <atomic>
 #include <cstring>
@@ -53,8 +54,9 @@ bool crit_ipc_is_listening() {
  * PC control: TCP :9048
  * Frame (little-endian):
  *   u32 magic = ONION_CTRL_TCP_MAGIC (0x4F4E494F 'ONIO')
- *   u32 cmd   = ONION_CTRL_TCP_CMD_SHUTDOWN (1)
- * Reply: 1 byte 0 = accepted, then daemon shuts the stack down.
+ *   u32 cmd   = ONION_CTRL_TCP_CMD_SHUTDOWN (1) or ONION_CTRL_TCP_CMD_TOOLBOX (2)
+ * Reply: 1 byte 0 = accepted. SHUTDOWN then shuts the stack down; TOOLBOX
+ * injects the Toolbox in the background (the result is a notification).
  *
  * The listener self-heals: if accept() fails (socket dead after a standby
  * resume, or restart_crit_tcp requested), the port is re-bound.
@@ -138,6 +140,26 @@ void *control_tcp_loop(void *args) {
         usleep(100 * 1000);
         cmd_shutdown_onion_stack();
         /* noreturn */
+      }
+
+      if (n == static_cast<ssize_t>(sizeof(frame)) &&
+          frame[0] == ONION_CTRL_TCP_MAGIC &&
+          frame[1] == ONION_CTRL_TCP_CMD_TOOLBOX) {
+        const uint8_t ok = 0;
+        (void)send(client, &ok, 1, MSG_NOSIGNAL);
+        onion::ipc_release_fd(&g_ctrl_client_fd);
+        LOG_INFO("control_tcp: TOOLBOX request from LAN client");
+        pthread_t thread = nullptr;
+        if (pthread_create(&thread, nullptr,
+                           [](void *) -> void * {
+                             (void)cmd_enable_toolbox();
+                             return nullptr;
+                           },
+                           nullptr) == 0)
+          pthread_detach(thread);
+        else
+          LOG_ERROR("control_tcp: cannot start Toolbox thread");
+        continue;
       }
 
       const uint8_t err = 1;

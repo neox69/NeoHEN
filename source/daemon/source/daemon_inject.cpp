@@ -14,7 +14,9 @@
 #include <ps5/kernel.h>
 #include <atomic>
 #include <cstdint>
+#include <cstdio>
 #include <pthread.h>
+#include <time.h>
 #include <unistd.h>
 
 extern "C" {
@@ -173,6 +175,51 @@ void toolbox_notify_outcome(const onion::ToolboxInjectionOutcome &outcome) {
   }
 }
 
+/*
+ * Only one tracer can hold SceShellUI. When another tool (ps5upload, a
+ * debugger) is attached, wait for it to detach instead of attaching a second
+ * tracer, which can freeze the home screen.
+ */
+constexpr int kTracerWaitSeconds = 120;
+constexpr useconds_t kTracerPollUs = 2 * 1000 * 1000;
+
+bool toolbox_wait_untraced(pid_t pid) {
+  if (!g_settings.snapshot().shellui_wait_for_tracer)
+    return true;
+  bool announced = false;
+  char name[32] = "?";
+  for (int waited = 0; waited <= kTracerWaitSeconds; waited += 2) {
+    const pid_t tracer = onion_proc_tracer(pid);
+    if (tracer < 0) {
+      if (!isProcessAlive(pid))
+        return false;
+      /* kinfo layout unknown: cannot tell, keep the original behaviour. */
+      LOG_DEBUG("shellui: tracer state unknown for pid=%d",
+                static_cast<int>(pid));
+      return true;
+    }
+    if (tracer == 0 || tracer == getpid()) {
+      if (announced)
+        LOG_INFO("shellui: tracer detached from pid=%d after %d s",
+                 static_cast<int>(pid), waited);
+      return true;
+    }
+    if (!announced) {
+      if (!onion_proc_name(tracer, name, sizeof(name)))
+        snprintf(name, sizeof(name), "pid %d", static_cast<int>(tracer));
+      LOG_WARN("shellui: pid=%d is traced by %s (pid=%d); waiting",
+               static_cast<int>(pid), name, static_cast<int>(tracer));
+      onion_notify(true, "notify.toolbox.tracer_wait", name);
+      announced = true;
+    }
+    usleep(kTracerPollUs);
+  }
+  LOG_WARN("shellui: still traced by %s after %d s; Toolbox not injected",
+           name, kTracerWaitSeconds);
+  onion_notify(true, "notify.toolbox.tracer_gave_up", name);
+  return false;
+}
+
 bool toolbox_inject_immediate(pid_t expected_pid = 0) {
   const pid_t observed_pid = expected_pid > 1 ? expected_pid : toolbox_live_pid();
   LOG_DEBUG("rest: cmd_enable_toolbox shellui_pid=%d",
@@ -185,6 +232,8 @@ bool toolbox_inject_immediate(pid_t expected_pid = 0) {
   }
 
   toolbox_wait_kstuff();
+  if (observed_pid > 1 && !toolbox_wait_untraced(observed_pid))
+    return false;
   LOG_INFO("Activating toolbox...");
 
   const onion::ToolboxInjectionOutcome outcome = g_toolbox_inject.inject(
@@ -293,7 +342,128 @@ void start_rest_inject(pid_t exec_pid) {
   pthread_detach(thread);
 }
 
+/* ---- NeoHEN Rest Mode policies (rest_mode.toolbox_after_resume) ---- */
+
+std::atomic<bool> g_boot_inject_done{false};
+std::atomic<bool> g_manual_hint_shown{false};
+
+int rest_toolbox_mode() { return g_settings.snapshot().rest_toolbox_mode; }
+
+void toolbox_manual_hint(const char *why, pid_t pid) {
+  LOG_INFO("rest: manual mode, Toolbox not re-injected (%s) pid=%d", why,
+           static_cast<int>(pid));
+  /* One notification per standby cycle is enough. */
+  if (!g_manual_hint_shown.exchange(true, std::memory_order_acq_rel))
+    onion_notify(true, "notify.rest.manual_hint");
+}
+
+uint64_t monotonic_ms() {
+  struct timespec ts{};
+  clock_gettime(CLOCK_MONOTONIC, &ts);
+  return static_cast<uint64_t>(ts.tv_sec) * 1000u +
+         static_cast<uint64_t>(ts.tv_nsec) / 1000000u;
+}
+
+struct StableJob {
+  pid_t pid;
+  uint32_t gen;
+};
+
+/*
+ * stable: wait until SceShellUI has been up, unchanged, for stable_seconds
+ * while the console is awake. A newer EXEC (new gen) supersedes the job; if
+ * the target dies the job ends and the EXEC of its replacement starts over.
+ * The ready wait stops as soon as the target dies instead of waiting 45 s.
+ */
+void *toolbox_stable_worker(void *arg) {
+  StableJob job = *static_cast<StableJob *>(arg);
+  delete static_cast<StableJob *>(arg);
+  const uint64_t need_ms =
+      static_cast<uint64_t>(g_settings.snapshot().rest_stable_seconds) * 1000u;
+  uint64_t since = monotonic_ms();
+  LOG_INFO("rest: stable mode waiting %llu s for SceShellUI pid=%d gen=%u",
+           static_cast<unsigned long long>(need_ms / 1000),
+           static_cast<int>(job.pid), job.gen);
+  for (;;) {
+    if (g_rest_gen.load(std::memory_order_acquire) != job.gen) {
+      LOG_DEBUG("rest: stable wait superseded gen=%u", job.gen);
+      return nullptr;
+    }
+    if (!isProcessAlive(job.pid)) {
+      LOG_INFO("rest: stable wait target pid=%d exited; waiting for its "
+               "replacement", static_cast<int>(job.pid));
+      return nullptr;
+    }
+    if (daemon_power_state_is_sleeping()) {
+      since = monotonic_ms(); /* the clock only runs while awake */
+    } else {
+      const pid_t live = toolbox_live_pid();
+      if (live > 1 && live != job.pid) {
+        LOG_INFO("rest: SceShellUI changed %d -> %d during stable wait",
+                 static_cast<int>(job.pid), static_cast<int>(live));
+        job.pid = live;
+        since = monotonic_ms();
+      } else if (monotonic_ms() - since >= need_ms) {
+        break;
+      }
+    }
+    usleep(500 * 1000);
+  }
+  if (!toolbox_wait_shellui_sprx(job.pid, job.gen))
+    return nullptr;
+  if (toolbox_already_ready(job.pid)) {
+    toolbox_remember_pid(job.pid);
+    return nullptr;
+  }
+  toolbox_wait_kstuff();
+  if (!toolbox_wait_untraced(job.pid))
+    return nullptr;
+  LOG_INFO("rest: stable for %llu s, activating Toolbox pid=%d",
+           static_cast<unsigned long long>(need_ms / 1000),
+           static_cast<int>(job.pid));
+  const uint32_t gen = job.gen;
+  const onion::ToolboxInjectionOutcome outcome =
+      g_toolbox_inject.inject_abortable(
+          []() -> pid_t { return toolbox_live_pid(); },
+          [](pid_t pid) -> bool {
+            LOG_DEBUG("Injecting toolbox into SceShellUI pid=%d",
+                      static_cast<int>(pid));
+            return Inject_Toolbox(static_cast<int>(pid), shellui_elf_start);
+          },
+          [gen](pid_t pid) -> bool {
+            return !isProcessAlive(pid) ||
+                   g_rest_gen.load(std::memory_order_acquire) != gen;
+          },
+          /*timeout_ms=*/45 * 1000, /*poll_ms=*/250, job.pid);
+  toolbox_remember_pid(outcome.pid);
+  toolbox_notify_outcome(outcome);
+  return nullptr;
+}
+
+void start_stable_inject(pid_t pid) {
+  if (pid <= 1)
+    pid = toolbox_live_pid();
+  if (pid <= 1) {
+    LOG_DEBUG("rest: stable mode has no SceShellUI pid yet");
+    return;
+  }
+  toolbox_remember_pid(pid);
+  const uint32_t gen = g_rest_gen.fetch_add(1, std::memory_order_acq_rel) + 1;
+  auto *job = new StableJob{pid, gen};
+  pthread_t thread = nullptr;
+  if (pthread_create(&thread, nullptr, toolbox_stable_worker, job) != 0) {
+    LOG_ERROR("rest: pthread_create for stable inject failed");
+    delete job;
+    return;
+  }
+  pthread_detach(thread);
+}
+
 } // namespace
+
+void toolbox_note_boot_injection() {
+  g_boot_inject_done.store(true, std::memory_order_release);
+}
 
 void toolbox_on_new_shellui(pid_t pid) {
   /* NOTE_EXEC denotes a new image, even when the kernel reuses the PID. */
@@ -304,12 +474,43 @@ void toolbox_on_new_shellui(pid_t pid) {
              static_cast<int>(pid));
     return;
   }
-  start_rest_inject(pid);
+  switch (rest_toolbox_mode()) {
+  case onion::kRestToolboxOriginal:
+    start_rest_inject(pid);
+    return;
+  case onion::kRestToolboxStable:
+    start_stable_inject(pid);
+    return;
+  default:
+    if (!g_boot_inject_done.load(std::memory_order_acquire)) {
+      start_rest_inject(pid); /* first Toolbox of this boot */
+      return;
+    }
+    toolbox_remember_pid(pid);
+    toolbox_manual_hint("new SceShellUI", pid);
+    return;
+  }
 }
 
 void toolbox_on_resume() {
   if (daemon_power_state_is_sleeping()) {
     LOG_DEBUG("rest: resume compensation still in standby; defer");
+    return;
+  }
+  g_manual_hint_shown.store(false, std::memory_order_release);
+  const int mode = rest_toolbox_mode();
+  if (mode != onion::kRestToolboxOriginal) {
+    const pid_t live = toolbox_live_pid();
+    if (live > 1 && toolbox_already_ready(live)) {
+      toolbox_remember_pid(live);
+      LOG_DEBUG("rest: resume sees ready toolbox pid=%d",
+                static_cast<int>(live));
+      return;
+    }
+    if (mode == onion::kRestToolboxStable)
+      start_stable_inject(live);
+    else
+      toolbox_manual_hint("resume", live);
     return;
   }
   const pid_t pid = toolbox_live_pid();
@@ -329,5 +530,8 @@ void toolbox_on_resume() {
 }
 
 bool cmd_enable_toolbox() {
-  return toolbox_inject_immediate();
+  const bool ok = toolbox_inject_immediate();
+  if (ok)
+    toolbox_note_boot_injection();
+  return ok;
 }

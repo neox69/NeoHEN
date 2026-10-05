@@ -50,6 +50,16 @@ pid_t onion_find_pid_ex(const char *name, bool needle, bool for_bigapp);
 /** True if pid still exists (KERN_PROC_PID). */
 bool onion_proc_is_alive(pid_t pid);
 
+/**
+ * Pid of the process tracing pid (kinfo_proc.ki_tracer): 0 when untraced,
+ * -1 when pid is gone or the kernel's kinfo_proc layout is not the one this
+ * build expects (callers must then not assume anything).
+ */
+pid_t onion_proc_tracer(pid_t pid);
+
+/** ki_comm of pid into out (NUL-terminated); false if unknown. */
+bool onion_proc_name(pid_t pid, char *out, size_t out_size);
+
 typedef int (*onion_get_process_name_fn)(int pid, char *name);
 typedef int (*onion_get_app_info_fn)(pid_t pid, void *app_info /* app_info_t */);
 typedef int (*onion_get_bigapp_id_fn)(void);
