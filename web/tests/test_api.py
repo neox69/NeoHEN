@@ -24,6 +24,15 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 BIN = os.path.join(HERE, "..", "build", "neoweb-host")
 
 
+def ptrace_restricted():
+    """True when Linux only lets a process read the memory of its children."""
+    try:
+        with open("/proc/sys/kernel/yama/ptrace_scope") as f:
+            return f.read().strip() != "0"
+    except OSError:
+        return False
+
+
 def free_port():
     s = socket.socket()
     s.bind(("127.0.0.1", 0))
@@ -345,6 +354,9 @@ class PayloadTest(unittest.TestCase):
         self.assertTrue(any(int(m["start"], 16) <= addr < int(m["end"], 16) for m in j["maps"]))
 
         _, j = self.api.get(f"/api/mem/read?pid={pid}&addr={hex(addr)}&len=4")
+        if "hex" not in j and ptrace_restricted():
+            # e.g. GitHub's runners: the emulator may not read this process
+            self.skipTest("the kernel forbids reading another process (yama ptrace_scope)")
         self.assertEqual(j["hex"], "3412ED5E")
 
         # first scan narrowed to the page around the value to keep the test fast
