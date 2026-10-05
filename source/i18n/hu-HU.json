@@ -250,6 +250,7 @@
     "about.credits.sub": "Elődök, tesztelők és köszönet",
     "about.lineage": "★ Elődök ★",
     "about.lineage.etahen": "- etaHEN (LightningMods) — az {brand} forrásalapja",
+    "about.lineage.onionhen": "- OnionHEN (aydencharles and contributors) — the direct base of {brand}",
     "about.lineage.goldhen": "- GoldHEN (SiSTR0) — a PS4 AIO HEN szellemi elődje",
     "about.testers": "★ Köszönet a tesztelőknek ★",
     "about.testers.intro": "Köszönet minden tesztelőnek, aki segítette a projekt növekedését.",
