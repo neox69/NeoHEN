@@ -3,6 +3,7 @@
 #include "bootstrap_acquire.h"
 
 #include <onion/log.h>
+#include <onion/brand.h>
 #include <onion/notify.h>
 
 #include <stdbool.h>
@@ -27,7 +28,7 @@ static uint8_t *decompress_bootstrapper(size_t *out_size) {
     return NULL;
   case BOOTSTRAP_PAYLOAD_INVALID:
   default:
-    LOG_ERROR("Invalid OnionHEN payload! unable to unpack it!");
+    LOG_ERROR("Invalid " ONION_BRAND_NAME " payload! unable to unpack it!");
     return NULL;
   }
 
@@ -57,7 +58,7 @@ uint8_t *bootstrap_acquire(size_t *out_size) {
   }
 
   if (!elf) {
-    LOG_DEBUG("Bootstrapping OnionHEN.elf...");
+    LOG_DEBUG("Bootstrapping " ONION_BRAND_NAME ".elf...");
     elf = decompress_bootstrapper(out_size);
     if (!elf)
       return NULL;

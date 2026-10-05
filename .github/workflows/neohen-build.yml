@@ -74,6 +74,8 @@ jobs:
       - name: Build NeoHEN
         run: |
           set -euo pipefail
+          # The version gets a -dirty suffix when the tree is not clean: show why.
+          git status --porcelain --untracked-files=normal | head -20
           export PATH="/usr/lib/llvm-18/bin:${PS5_PAYLOAD_SDK}/bin:${PATH}"
           ./scripts/build-neohen.sh --release --jobs "$(nproc)"
           test -f build/bin/NeoHEN.elf

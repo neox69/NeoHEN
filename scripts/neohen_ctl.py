@@ -5,8 +5,8 @@
   python3 scripts/neohen_ctl.py shutdown <PS5_IP>   # stop NeoHEN (kstuff stays)
 
 toolbox is how the Toolbox comes back after Rest Mode with
-rest_mode.toolbox_after_resume=manual (the default). The result is shown as a
-notification on the console.
+rest_mode.toolbox_after_resume=manual (the default, stable, reloads it by
+itself). The result is shown as a notification on the console.
 
 shutdown stops util, the private loader on 9020, restarts SceShellUI (which
 removes the in-memory Toolbox) and exits the daemon. kstuff keeps running.

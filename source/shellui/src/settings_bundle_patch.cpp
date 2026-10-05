@@ -78,9 +78,34 @@ static constexpr LegacySettingsProfile kLegacySettingsProfiles[] = {
 static constexpr unsigned char kLegacyOldLabel[] = {
     0xe2, 0x98, 0x85, 'D', 'e', 'b', 'u', 'g', ' ', 'S', 'e', 't', 't', 'i',
     'n', 'g', 's'};
-static constexpr unsigned char kLegacyNewLabel[] = {
-    0xe2, 0x98, 0x85, 'O', 'n', 'i', 'o', 'n', 'H', 'E', 'N', ' ', 'T', 'o',
-    'o', 'l', 's'};
+/*
+ * The Toolbox entry reuses the stock "Debug Settings" row and is patched in
+ * place, so the label must keep exactly the same 14 characters (ASCII).
+ * Forks set ONION_SETTINGS_LABEL (see source/CMakeLists.txt).
+ */
+#ifndef ONION_SETTINGS_LABEL
+#define ONION_SETTINGS_LABEL "OnionHEN Tools"
+#endif
+static constexpr char kToolboxLabel[] = ONION_SETTINGS_LABEL;
+static constexpr size_t kToolboxLabelChars = 14;
+static_assert(sizeof(kToolboxLabel) == kToolboxLabelChars + 1,
+              "ONION_SETTINGS_LABEL must be exactly 14 characters");
+
+struct LegacyLabel {
+  unsigned char bytes[3 + kToolboxLabelChars];
+};
+static constexpr LegacyLabel make_legacy_label() {
+  LegacyLabel label{};
+  label.bytes[0] = 0xe2; /* U+2605 BLACK STAR, UTF-8 */
+  label.bytes[1] = 0x98;
+  label.bytes[2] = 0x85;
+  for (size_t i = 0; i < kToolboxLabelChars; ++i) {
+    label.bytes[3 + i] = static_cast<unsigned char>(kToolboxLabel[i]);
+  }
+  return label;
+}
+static constexpr LegacyLabel kLegacyNewLabelData = make_legacy_label();
+static constexpr auto &kLegacyNewLabel = kLegacyNewLabelData.bytes;
 static constexpr unsigned char kLegacyOldIcon[] = {
     'i', 'c', 'o', 'n', '_', 's', 'e', 't', 't', 'i', 'n', 'g'};
 
@@ -90,11 +115,21 @@ static constexpr unsigned char kHermesOldLabel[] = {
     'g',  0x00, ' ', 0x00, 'S', 0x00, 'e', 0x00, 't', 0x00,
     't',  0x00, 'i', 0x00, 'n', 0x00, 'g', 0x00, 's', 0x00,
 };
-static constexpr unsigned char kHermesNewLabel[] = {
-    0x05, 0x26, 'O', 0x00, 'n', 0x00, 'i', 0x00, 'o', 0x00,
-    'n',  0x00, 'H', 0x00, 'E', 0x00, 'N', 0x00, ' ', 0x00,
-    'T',  0x00, 'o', 0x00, 'o', 0x00, 'l', 0x00, 's', 0x00,
+struct HermesLabel {
+  unsigned char bytes[2 * (1 + kToolboxLabelChars)];
 };
+static constexpr HermesLabel make_hermes_label() {
+  HermesLabel label{};
+  label.bytes[0] = 0x05; /* U+2605 BLACK STAR, UTF-16LE */
+  label.bytes[1] = 0x26;
+  for (size_t i = 0; i < kToolboxLabelChars; ++i) {
+    label.bytes[2 + 2 * i] = static_cast<unsigned char>(kToolboxLabel[i]);
+    label.bytes[3 + 2 * i] = 0x00;
+  }
+  return label;
+}
+static constexpr HermesLabel kHermesNewLabelData = make_hermes_label();
+static constexpr auto &kHermesNewLabel = kHermesNewLabelData.bytes;
 
 static_assert(sizeof(kLegacyOldLabel) == sizeof(kLegacyNewLabel));
 static_assert(sizeof(kHermesOldLabel) == sizeof(kHermesNewLabel));

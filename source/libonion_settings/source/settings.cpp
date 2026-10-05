@@ -391,13 +391,13 @@ int parse_rest_toolbox_mode(const char *s, int def) {
 
 const char *rest_toolbox_mode_name(int v) {
   switch (v) {
-  case kRestToolboxStable:
-    return "stable";
+  case kRestToolboxManual:
+    return "manual";
   case kRestToolboxOriginal:
     return "original";
-  case kRestToolboxManual:
+  case kRestToolboxStable:
   default:
-    return "manual";
+    return "stable";
   }
 }
 
@@ -988,7 +988,7 @@ std::string settings_serialize(const Settings &in) {
   b += "# toolbox_after_resume chooses what happens to the Toolbox after Rest\n";
   b += "# Mode. manual waits until you request it (PC: neohen_ctl.py toolbox);\n";
   b += "# stable injects once a new SceShellUI has stayed up stable_seconds;\n";
-  b += "# original is the OnionHEN v0.9.0-beta1 behaviour.\n";
+  b += "# original re-injects 10 s after resume, as upstream v0.9.0-beta1 did.\n";
   b += "# Available values: manual, stable, original\n";
   b += "toolbox_after_resume=" +
        std::string(rest_toolbox_mode_name(in.rest_toolbox_mode)) + "\n";

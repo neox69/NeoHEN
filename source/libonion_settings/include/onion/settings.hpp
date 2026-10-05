@@ -304,7 +304,7 @@ struct Settings {
   // Extra seconds after Rest Mode trophy SPRX are ready, before Toolbox inject.
   uint64_t rest_mode_delay_seconds = kRestModeDelayDefaultSeconds;
   // Toolbox after resume: manual (default), stable or original.
-  int rest_toolbox_mode = kRestToolboxManual;
+  int rest_toolbox_mode = kRestToolboxStable;
   // stable mode: seconds a new SceShellUI must stay up before injection.
   int rest_stable_seconds = kRestStableDefaultSeconds;
 

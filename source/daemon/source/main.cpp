@@ -289,7 +289,8 @@ int main() {
   payload_args_t* args = payload_get_args();
   kernel_base = args->kdata_base_addr;
 
-  LOG_INFO("=========== starting OnionHEN (0x%X) ... ===========", fw_ver);
+  LOG_INFO("=========== starting " ONION_BRAND_NAME " (0x%X) ... ===========",
+           fw_ver);
   (void)sceKernelMprotect(&buz[0], 100, 0x7); // probe mprotect / kstuff state
   const bool toolbox_only = (fw_ver >= 0x10000);
   is_800 = (fw_ver >= 0x800);
