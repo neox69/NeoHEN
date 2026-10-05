@@ -412,6 +412,7 @@
     "notify.game.sfo_failed": "فشل قراءة ملف SFO",
     "notify.payload.load_failed": "فشل تحميل الحمولة\nالمسار: %s\nالمفتاح: %s",
     "notify.payload.load_failed_path": "فشل تحميل الحمولة!\nالمسار: %s",
+    "notify.payload.missing_fmt": "%s is missing from %s. Copy it there or turn off its auto start; continuing with the rest",
     "notify.payload.launched": "شُغِّلت الحمولة\nالمسار: %s\nالمفتاح: %s",
     "notify.cheats.none": "لا يتوفر غش لـ %s الإصدار %s!",
     "notify.payload.elf_only": "تُدعم حمولات .elf فقط:\n%s",

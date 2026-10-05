@@ -412,6 +412,7 @@
     "notify.game.sfo_failed": "读取 SFO 文件失败",
     "notify.payload.load_failed": "加载 Payload 失败\n路径：%s\n标识：%s",
     "notify.payload.load_failed_path": "加载 Payload 失败！\n路径：%s",
+    "notify.payload.missing_fmt": "%s is missing from %s. Copy it there or turn off its auto start; continuing with the rest",
     "notify.payload.launched": "Payload 已启动\n路径：%s\n标识：%s",
     "notify.cheats.none": "没有适用于 %s 版本 %s 的金手指！",
     "notify.payload.elf_only": "仅支持 .elf Payload：\n%s",

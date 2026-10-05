@@ -412,6 +412,7 @@
     "notify.game.sfo_failed": "Falha ao ler o ficheiro SFO",
     "notify.payload.load_failed": "Falha ao carregar o payload\nCaminho: %s\nIdentificador: %s",
     "notify.payload.load_failed_path": "Falha ao carregar o payload!\nCaminho: %s",
+    "notify.payload.missing_fmt": "%s is missing from %s. Copy it there or turn off its auto start; continuing with the rest",
     "notify.payload.launched": "Payload iniciado\nCaminho: %s\nIdentificador: %s",
     "notify.cheats.none": "Não há cheats para %s versão %s!",
     "notify.payload.elf_only": "Somente payloads .elf são suportados:\n%s",

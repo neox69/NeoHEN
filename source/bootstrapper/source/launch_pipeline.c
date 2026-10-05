@@ -20,6 +20,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
 
 extern uint8_t daemon_start[];
@@ -193,6 +194,26 @@ static void report_missing_kstuff(void) {
 }
 #endif
 
+/* Monotonic ms when the kstuff ready marker was published (0: never). */
+static uint64_t g_kstuff_ready_ms;
+
+static uint64_t monotonic_ms(void) {
+  struct timespec ts;
+  clock_gettime(CLOCK_MONOTONIC, &ts);
+  return (uint64_t)ts.tv_sec * 1000u + (uint64_t)ts.tv_nsec / 1000000u;
+}
+
+static void kstuff_ready_now(void) {
+  g_kstuff_ready_ms = monotonic_ms();
+  onion_ready_signal(ONION_READY_KSTUFF);
+}
+
+uint64_t bootstrap_ms_since_kstuff_ready(void) {
+  if (g_kstuff_ready_ms == 0)
+    return UINT64_MAX;
+  return monotonic_ms() - g_kstuff_ready_ms;
+}
+
 static void launch_kstuff(LaunchContext *context, uint32_t firmware_version,
                           bool autoload) {
   char probe[100] = {0};
@@ -200,18 +221,18 @@ static void launch_kstuff(LaunchContext *context, uint32_t firmware_version,
   if (disabled_by_usb || !autoload) {
     LOG_DEBUG("kstuff disabled (%s)",
               disabled_by_usb ? "usb no_kstuff" : "kstuff.autoload=false");
-    onion_ready_signal(ONION_READY_KSTUFF);
+    kstuff_ready_now();
     return;
   }
 
   if (firmware_version < 0x3000000) {
-    onion_ready_signal(ONION_READY_KSTUFF);
+    kstuff_ready_now();
     return;
   }
 
   if (kstuff_already_running()) {
     LOG_WARN("kstuff already running / mprotect OK -- skip launch");
-    onion_ready_signal(ONION_READY_KSTUFF);
+    kstuff_ready_now();
     return;
   }
 
@@ -228,7 +249,7 @@ static void launch_kstuff(LaunchContext *context, uint32_t firmware_version,
     /* No embedded fallback: the daemon starts without kstuff, exactly as
      * with kstuff.autoload=false. */
     report_missing_kstuff();
-    onion_ready_signal(ONION_READY_KSTUFF);
+    kstuff_ready_now();
     return;
   }
   const uint8_t *elf = override_elf;
@@ -248,7 +269,7 @@ static void launch_kstuff(LaunchContext *context, uint32_t firmware_version,
   for (int waited = 0; waited <= 15; ++waited) {
     if (sceKernelMprotect(probe, sizeof(probe), 0x7) == 0) {
       LOG_DEBUG("kstuff mprotect OK -- signal ready");
-      onion_ready_signal(ONION_READY_KSTUFF);
+      kstuff_ready_now();
       sleep(1);
       return;
     }

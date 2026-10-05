@@ -412,6 +412,7 @@
     "notify.game.sfo_failed": "Kunne ikke læse SFO-fil",
     "notify.payload.load_failed": "Kunne ikke indlæse payload\nSti: %s\nNøgle: %s",
     "notify.payload.load_failed_path": "Kunne ikke indlæse payload!\nSti: %s",
+    "notify.payload.missing_fmt": "%s is missing from %s. Copy it there or turn off its auto start; continuing with the rest",
     "notify.payload.launched": "Payload startet\nSti: %s\nNøgle: %s",
     "notify.cheats.none": "Ingen snydekoder til %s version %s!",
     "notify.payload.elf_only": "Kun .elf-payloads understøttes:\n%s",
