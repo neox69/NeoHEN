@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # Build the NeoHEN install zip.
-#   scripts/release/make_install_zip.sh <NeoHEN.elf> <version> <out_dir>
+#   scripts/release/make_install_zip.sh <NeoHEN.elf> <version> <out_dir> [neoweb.elf]
 # Produces <out_dir>/NeoHEN-<version>.zip with NeoHEN.elf, LEEME.txt, the
 # default config.ini (generated from this tree's settings code) and the
 # payloads folder with auto-start markers and priorities.
 set -euo pipefail
-ELF="$1"; VERSION="$2"; OUT="$3"
+ELF="$1"; VERSION="$2"; OUT="$3"; WEB="${4:-}"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 STAGE="$(mktemp -d)"
 trap 'rm -rf "${STAGE}"' EXIT
@@ -35,6 +35,15 @@ for entry in shadowmountplus:300 ftpsrv:200 nanodns:100; do
   : > "${P}/${name}.elf.auto_start"
   printf '{"priority":%s,"delay_seconds":0}\n' "${prio}" > "${P}/${name}.elf.json"
 done
+
+# NeoHEN Web is ours, so unlike the other payloads it ships in the zip. It
+# starts last (lowest priority).
+if [[ -n "${WEB}" ]]; then
+  cp "${WEB}" "${P}/neoweb.elf"
+  : > "${P}/neoweb.elf.auto_start"
+  printf '{"priority":50,"delay_seconds":0}' > "${P}/neoweb.elf.json"
+  echo >> "${P}/neoweb.elf.json"
+fi
 
 mkdir -p "${OUT}"
 OUT_ABS="$(cd "${OUT}" && pwd)"

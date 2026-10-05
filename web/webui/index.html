@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b0f1a">
+<title>PS5AIO</title>
+<style>
+:root{--bg:#0b0f1a;--panel:#141a2b;--panel2:#1b2338;--text:#e8ecf6;--muted:#8b94ad;--accent:#2f7bff;--accent2:#00c2ff;--ok:#2ecc71;--warn:#f5a623;--err:#ff4d5e;--radius:14px}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:12px;padding:12px 16px;background:rgba(11,15,26,.92);backdrop-filter:blur(8px);border-bottom:1px solid #222b44}
+header h1{font-size:18px;margin:0;letter-spacing:.5px}
+header .dot{width:10px;height:10px;border-radius:50%;background:var(--err)}
+header .dot.on{background:var(--ok)}
+header .sub{color:var(--muted);font-size:13px;margin-left:auto;text-align:right}
+nav{display:flex;gap:6px;overflow-x:auto;padding:10px 16px}
+nav button{flex:0 0 auto}
+main{padding:0 16px 32px;max-width:1100px;margin:0 auto}
+section{display:none}
+section.active{display:block}
+.grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(160px,1fr))}
+.cards{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}
+.card{background:var(--panel);border-radius:var(--radius);padding:14px;border:1px solid #20283f}
+.card h3{margin:0 0 8px;font-size:13px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.6px}
+.big{font-size:26px;font-weight:700}
+button,.btn{background:var(--panel2);color:var(--text);border:1px solid #2a3554;border-radius:10px;padding:9px 14px;font:inherit;cursor:pointer}
+button:hover{border-color:var(--accent)}
+button.primary{background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;color:#fff;font-weight:600}
+button.danger{background:#3a1520;border-color:#5b2232;color:#ffc2c9}
+nav button.active{background:var(--accent);border-color:var(--accent)}
+input,select{background:var(--panel2);color:var(--text);border:1px solid #2a3554;border-radius:10px;padding:9px 12px;font:inherit;width:100%}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:10px 0}
+.row>*{flex:1 1 auto}
+.row>button{flex:0 0 auto}
+.app{background:var(--panel);border-radius:var(--radius);overflow:hidden;border:1px solid #20283f;cursor:pointer;transition:transform .12s}
+.app:hover{transform:translateY(-2px);border-color:var(--accent)}
+.app img{width:100%;aspect-ratio:1;object-fit:cover;display:block;background:#0f1424}
+.app .t{padding:8px 10px;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.app .id{padding:0 10px 8px;font-size:11px;color:var(--muted)}
+.list{background:var(--panel);border-radius:var(--radius);border:1px solid #20283f;overflow:hidden}
+.item{display:flex;gap:10px;align-items:center;padding:10px 14px;border-bottom:1px solid #1f2740}
+.item:last-child{border-bottom:none}
+.item .n{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item .s{color:var(--muted);font-size:12px}
+.item.dir .n{color:#9cc3ff;cursor:pointer}
+.bar{height:8px;background:#0f1424;border-radius:4px;overflow:hidden;margin-top:6px}
+.bar>div{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2))}
+.muted{color:var(--muted)}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#1b2338;border:1px solid #2a3554;padding:10px 16px;border-radius:10px;display:none;z-index:10;max-width:90vw}
+.pill{font-size:11px;padding:2px 8px;border-radius:20px;background:#22304f;color:#9cc3ff}
+.pill.run{background:#173d2a;color:#7ff0b0}
+</style>
+</head>
+<body>
+<header>
+  <div class="dot" id="dot"></div>
+  <h1>PS5AIO</h1>
+  <div class="sub" id="hdr">conectando…</div>
+</header>
+<nav id="nav">
+  <button data-s="home" class="active">Inicio</button>
+  <button data-s="apps">Biblioteca</button>
+  <button data-s="files">Archivos</button>
+  <button data-s="jobs">Tareas</button>
+  <button data-s="tools">Herramientas</button>
+</nav>
+<main>
+  <section id="home" class="active">
+    <div class="cards" id="stats"></div>
+    <div class="card" style="margin-top:12px">
+      <h3>En ejecución</h3>
+      <div class="row"><div id="running" class="big">—</div><button class="danger" onclick="killApp()">Cerrar juego</button></div>
+    </div>
+    <div class="card" style="margin-top:12px">
+      <h3>Almacenamiento</h3>
+      <div id="mounts"></div>
+    </div>
+  </section>
+
+  <section id="apps">
+    <div class="row"><input id="appFilter" placeholder="Buscar juego o Title ID…" oninput="renderApps()"><button onclick="loadApps()">Recargar</button></div>
+    <div class="grid" id="appGrid"></div>
+  </section>
+
+  <section id="files">
+    <div class="row"><input id="path" value="/"><button onclick="ls(el('path').value)">Ir</button><button onclick="up()">Subir</button></div>
+    <div class="list" id="fileList"></div>
+  </section>
+
+  <section id="jobs">
+    <div class="row"><button onclick="loadJobs()">Recargar</button><button onclick="api('/api/jobs/clear',{}).then(loadJobs)">Limpiar terminadas</button></div>
+    <div id="jobList"></div>
+  </section>
+
+  <section id="tools">
+    <div class="cards">
+      <div class="card"><h3>Notificación</h3>
+        <div class="row"><input id="ntext" placeholder="Texto"><button class="primary" onclick="notify()">Enviar</button></div></div>
+      <div class="card"><h3>Navegador</h3>
+        <div class="row"><input id="burl" placeholder="https://…"><button onclick="api('/api/sys/browser',{url:el('burl').value}).then(()=>toast('Abierto'))">Abrir</button></div></div>
+      <div class="card"><h3>Energía</h3>
+        <div class="row"><button class="danger" onclick="power('reboot')">Reiniciar</button><button class="danger" onclick="power('poweroff')">Apagar</button></div></div>
+      <div class="card"><h3>Log del payload</h3>
+        <div class="row"><button onclick="loadLog()">Ver</button></div>
+        <pre id="log" class="muted" style="white-space:pre-wrap;max-height:300px;overflow:auto;font-size:12px"></pre></div>
+    </div>
+  </section>
+</main>
+<div id="toast"></div>
+<script>
+const el = id => document.getElementById(id);
+const fmtBytes = b => { if(b==null) return '—'; const u=['B','KB','MB','GB','TB']; let i=0; while(b>=1024&&i<4){b/=1024;i++} return b.toFixed(i?1:0)+' '+u[i]; };
+const esc = s => String(s??'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let apps = [];
+
+function toast(msg){ const t=el('toast'); t.textContent=msg; t.style.display='block'; clearTimeout(t._h); t._h=setTimeout(()=>t.style.display='none',2500); }
+
+async function api(path, body){
+  const opt = body===undefined ? {} : {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)};
+  const r = await fetch(path, opt);
+  const j = await r.json().catch(()=>({ok:false,error:'respuesta inválida'}));
+  if(!j.ok){ toast('Error: '+(j.error||r.status)); throw new Error(j.error); }
+  return j;
+}
+
+document.querySelectorAll('nav button').forEach(b => b.onclick = () => {
+  document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('active', x===b));
+  document.querySelectorAll('section').forEach(s=>s.classList.toggle('active', s.id===b.dataset.s));
+  ({apps:()=>apps.length||loadApps(), files:()=>ls(el('path').value), jobs:loadJobs})[b.dataset.s]?.();
+});
+
+async function refresh(){
+  try{
+    const i = await api('/api/sys/info');
+    el('dot').classList.add('on');
+    el('hdr').innerHTML = esc(i.model||'PS5')+' · FW '+esc(i.firmware)+'<br>'+esc(i.userName||'');
+    el('stats').innerHTML = [
+      ['CPU', (i.cpuTemp??'—')+' °C'], ['SoC', (i.socTemp??'—')+' °C'],
+      ['Frecuencia', (i.cpuFreqMhz??'—')+' MHz'], ['Uptime', i.uptime!=null? Math.floor(i.uptime/3600)+'h '+Math.floor(i.uptime%3600/60)+'m':'—'],
+      ['IP', (i.ips||[]).map(x=>x.ip).join(', ')||'—'], ['Payload', 'v'+esc(i.version)]
+    ].map(([k,v])=>`<div class="card"><h3>${k}</h3><div class="big">${esc(v)}</div></div>`).join('');
+    el('running').textContent = i.running ? i.running.titleId : 'Nada';
+  }catch(e){ el('dot').classList.remove('on'); }
+  try{
+    const m = await api('/api/sys/mounts');
+    el('mounts').innerHTML = m.mounts.filter(x=>x.total>0 && /^\/(user|data|mnt\/(usb|ext))/.test(x.path)).map(x=>{
+      const used = x.total-x.free, pct = Math.round(used*100/x.total);
+      return `<div style="margin:8px 0"><div class="row" style="margin:0"><b>${esc(x.path)}</b><span class="muted" style="text-align:right">${fmtBytes(x.free)} libres de ${fmtBytes(x.total)}</span></div><div class="bar"><div style="width:${pct}%"></div></div></div>`;
+    }).join('') || '<span class="muted">—</span>';
+  }catch(e){}
+}
+
+async function loadApps(){
+  const r = await api('/api/apps/list'); apps = r.apps; renderApps();
+}
+function renderApps(){
+  const f = el('appFilter').value.toLowerCase();
+  el('appGrid').innerHTML = apps.filter(a => !f || (a.title||'').toLowerCase().includes(f) || a.titleId.toLowerCase().includes(f)).map(a =>
+    `<div class="app" onclick="launch('${a.titleId}')"><img loading="lazy" src="/apps/icon?id=${a.titleId}" onerror="this.style.visibility='hidden'"><div class="t">${esc(a.title)}</div><div class="id">${a.titleId} <span class="pill">${esc(a.format)}</span></div></div>`).join('');
+}
+async function launch(id){ if(!confirm('¿Lanzar '+id+'?')) return; await api('/api/apps/launch',{titleId:id}); toast('Lanzando '+id); setTimeout(refresh,3000); }
+async function killApp(){ await api('/api/apps/kill',{}); toast('Cerrado'); setTimeout(refresh,1500); }
+
+async function ls(p){
+  const r = await api('/api/fs/list?path='+encodeURIComponent(p));
+  el('path').value = r.path;
+  el('fileList').innerHTML = r.entries.map(e => e.type==='dir'
+    ? `<div class="item dir" onclick="ls('${esc((r.path==='/'?'':r.path)+'/'+e.name).replace(/'/g,"\\'")}')"><span>📁</span><span class="n">${esc(e.name)}</span></div>`
+    : `<div class="item"><span>📄</span><span class="n"><a style="color:inherit" href="/fs/get?download=1&path=${encodeURIComponent((r.path==='/'?'':r.path)+'/'+e.name)}">${esc(e.name)}</a></span><span class="s">${fmtBytes(e.size)}</span></div>`).join('') || '<div class="item muted">Carpeta vacía</div>';
+}
+function up(){ const p = el('path').value.replace(/\/+$/,''); ls(p.substring(0,p.lastIndexOf('/'))||'/'); }
+
+async function loadJobs(){
+  const r = await api('/api/jobs');
+  el('jobList').innerHTML = r.jobs.map(j => {
+    const pct = j.bytesTotal ? Math.floor(j.bytesDone*100/j.bytesTotal) : (j.state==='done'?100:0);
+    return `<div class="card" style="margin-bottom:10px"><div class="row" style="margin:0"><b>${esc(j.title)}</b><span class="pill ${j.state==='running'?'run':''}">${j.state}</span>${j.state==='running'?`<button class="danger" onclick="api('/api/jobs/cancel',{id:${j.id}}).then(loadJobs)">Cancelar</button>`:''}</div>
+      <div class="bar"><div style="width:${pct}%"></div></div><div class="muted" style="font-size:12px;margin-top:6px">${pct}% · ${fmtBytes(j.bytesDone)} / ${fmtBytes(j.bytesTotal)} · ${j.filesDone}/${j.filesTotal} archivos ${esc(j.error||j.result||'')}</div></div>`;
+  }).join('') || '<p class="muted">No hay tareas.</p>';
+  if(r.jobs.some(j=>j.state==='running')) setTimeout(()=>{ if(el('jobs').classList.contains('active')) loadJobs(); }, 1500);
+}
+
+async function notify(){ await api('/api/sys/notify',{text:el('ntext').value}); toast('Enviada'); }
+async function power(a){ if(!confirm('¿Seguro? ('+a+')')) return; await api('/api/sys/power',{action:a}); toast('Hecho'); }
+async function loadLog(){ const r = await api('/api/sys/log'); el('log').textContent = r.entries.map(e=>`[${e.level}] ${e.msg}`).join('\n'); }
+
+refresh(); setInterval(refresh, 5000);
+</script>
+</body>
+</html>

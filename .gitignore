@@ -62,3 +62,11 @@ docs/release*.md
 docs/release*.css
 docs/release*.md
 docs/发行说明*.pdf
+
+# CI installs the PS5 SDK inside the checkout; untracked, it made every CI
+# build report a -dirty version.
+/.ps5-payload-sdk/
+/dist/
+
+# NeoHEN Web host build
+web/build/
