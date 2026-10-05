@@ -42,7 +42,7 @@ REQUIRED_TOKENS = {
         "notify.kstuff.load_elfldr_failed": ("Kstuff",),
         "notify.kstuff.deleted": ("Kstuff",),
         "notify.crash.main": (
-            "OnionHEN_crash.log",
+            "{brand}_crash.log",
             "{issues_url}",
         ),
     },
