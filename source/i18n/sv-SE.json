@@ -366,7 +366,7 @@
     "notify.mount.system_ex": "kunde inte montera /system_ex\nom du ser detta, starta om",
     "notify.mount.system": "kunde inte montera /system\nom du ser detta, starta om",
     "notify.crash.resolved": "Det allvarliga felet är löst\n\ndu behöver inte oroa dig",
-    "notify.crash.main": "{brand} har kraschat ...\n\nBifoga {data_dir}/OnionHEN_crash.log till ett GitHub-ärende: {issues_url}",
+    "notify.crash.main": "{brand} har kraschat ...\n\nBifoga {data_dir}/{brand}_crash.log till ett GitHub-ärende: {issues_url}",
     "notify.stack.shutdown": "{brand}-stacken avstängd (util + ShellUI + daemon; kstuff kvarstår)",
     "notify.fan.open_failed": "Kunde inte öppna fläktinställningar!",
     "notify.fan.set_failed": "Kunde inte ange fläkthastighet!",
