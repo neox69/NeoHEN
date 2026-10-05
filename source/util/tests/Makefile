@@ -69,6 +69,7 @@ PROD_C_SRCS := \
 	$(REPO_ROOT)/source/libonion_platform/source/fs.c \
 	$(REPO_ROOT)/source/libonion_platform/source/tree.c \
 	$(REPO_ROOT)/source/libonion_platform/source/log.c \
+	$(REPO_ROOT)/source/libonion_platform/source/log_redact.c \
 	$(REPO_ROOT)/source/libonion_platform/source/net.c \
 	$(REPO_ROOT)/source/libonion_platform/source/notify.c \
 	$(REPO_ROOT)/source/libonion_platform/source/notify_i18n.c \
@@ -127,6 +128,7 @@ TEST_C_SRCS := \
 	test_ready.c \
 	test_platform_fs.c \
 	test_bootstrap_cache.c \
+	test_log_redact.c \
 	test_topnav_icon.c \
 	test_platform_log.c \
 	test_platform_net.c \
@@ -176,6 +178,7 @@ PROD_C_OBJS := $(patsubst $(UTIL_ROOT)/%.c,$(BUILD_DIR)/prod/%.o,$(filter $(UTIL
 PROD_C_OBJS += $(BUILD_DIR)/prod/libonion_platform/fs.o
 PROD_C_OBJS += $(BUILD_DIR)/prod/libonion_platform/tree.o
 PROD_C_OBJS += $(BUILD_DIR)/prod/libonion_platform/log.o
+PROD_C_OBJS += $(BUILD_DIR)/prod/libonion_platform/log_redact.o
 PROD_C_OBJS += $(BUILD_DIR)/prod/libonion_platform/net.o
 PROD_C_OBJS += $(BUILD_DIR)/prod/libonion_platform/notify.o
 PROD_C_OBJS += $(BUILD_DIR)/prod/libonion_platform/notify_i18n.o
@@ -390,6 +393,10 @@ $(BUILD_DIR)/prod/libonion_platform/tree.o: $(REPO_ROOT)/source/libonion_platfor
 	$(HOST_CC) $(CFLAGS) -c -o $@ $<
 
 $(BUILD_DIR)/prod/libonion_platform/log.o: $(REPO_ROOT)/source/libonion_platform/source/log.c | $(BUILD_DIR)
+	@mkdir -p $(dir $@)
+	$(HOST_CC) $(CFLAGS) -c -o $@ $<
+
+$(BUILD_DIR)/prod/libonion_platform/log_redact.o: $(REPO_ROOT)/source/libonion_platform/source/log_redact.c | $(BUILD_DIR)
 	@mkdir -p $(dir $@)
 	$(HOST_CC) $(CFLAGS) -c -o $@ $<
 

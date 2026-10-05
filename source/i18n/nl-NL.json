@@ -366,7 +366,7 @@
     "notify.mount.system_ex": "koppelen van /system_ex mislukt\nals je dit ziet, herstart",
     "notify.mount.system": "koppelen van /system mislukt\nals je dit ziet, herstart",
     "notify.crash.resolved": "De fatale fout is opgelost\n\nje hoeft je nergens zorgen over te maken",
-    "notify.crash.main": "{brand} is gecrasht ...\n\nVoeg {data_dir}/OnionHEN_crash.log toe aan een GitHub-issue: {issues_url}",
+    "notify.crash.main": "{brand} is gecrasht ...\n\nVoeg {data_dir}/{brand}_crash.log toe aan een GitHub-issue: {issues_url}",
     "notify.stack.shutdown": "{brand}-stack gestopt (util + ShellUI + daemon; kstuff blijft)",
     "notify.fan.open_failed": "Ventilatorinstellingen openen mislukt!",
     "notify.fan.set_failed": "Ventilatorsnelheid instellen mislukt!",
