@@ -171,6 +171,7 @@ TEST_CXX_SRCS := \
 	test_trampoline_arena.cpp \
 	test_hook_lifecycle.cpp \
 	test_hotpatch.cpp \
+	test_smp_watchdog.cpp \
 	test_x64_relocator.cpp \
 	test_main.cpp
 
@@ -217,6 +218,7 @@ PROD_CXX_OBJS += $(BUILD_DIR)/prod/libonion_plugin_ui/plugin_ui.o
 PROD_CXX_OBJS += $(BUILD_DIR)/prod/libonion_plugin_bridge/plugin_ui_bridge.o
 PROD_CXX_OBJS += $(BUILD_DIR)/prod/libonion_plugin_session/plugin_session.o
 PROD_CXX_OBJS += $(BUILD_DIR)/prod/daemon/plugin_ipc_server.o
+PROD_CXX_OBJS += $(BUILD_DIR)/prod/daemon/smp_watchdog_parse.o
 PROD_CXX_OBJS += $(BUILD_DIR)/prod/daemon/plugin_ui_bridge_server.o
 PROD_CXX_OBJS += $(BUILD_DIR)/prod/daemon/plugin_host_services.o
 PROD_CXX_OBJS += $(BUILD_DIR)/prod/shellui/dynamic_ui_xml.o
@@ -323,6 +325,10 @@ $(BUILD_DIR)/prod/libonion_plugin_session/plugin_session.o: $(REPO_ROOT)/source/
 	$(HOST_CXX) $(CXXFLAGS) -c -o $@ $<
 
 $(BUILD_DIR)/prod/daemon/plugin_ipc_server.o: $(REPO_ROOT)/source/daemon/source/plugin_ipc_server.cpp | $(BUILD_DIR)
+	@mkdir -p $(dir $@)
+	$(HOST_CXX) $(CXXFLAGS) -c -o $@ $<
+
+$(BUILD_DIR)/prod/daemon/smp_watchdog_parse.o: $(REPO_ROOT)/source/daemon/source/smp_watchdog_parse.cpp | $(BUILD_DIR)
 	@mkdir -p $(dir $@)
 	$(HOST_CXX) $(CXXFLAGS) -c -o $@ $<
 
