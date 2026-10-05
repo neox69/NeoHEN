@@ -66,6 +66,13 @@ add_compile_definitions(
 	ONION_DIR_NAME="${ONION_DIR_NAME}"
 	ONION_DIR_NAME_LOWER="${ONION_DIR_NAME_LOWER}"
 )
+# kstuff is embedded by default. Forks that ship it separately turn this off:
+# the bootstrapper then loads ${ONION_DATA_DIR}/kstuff.elf only and never
+# carries a kstuff binary of its own.
+option(ONION_EMBED_KSTUFF "Embed kstuff.elf in the bootstrapper" ON)
+if(NOT ONION_EMBED_KSTUFF)
+	add_compile_definitions(ONION_EXTERNAL_KSTUFF=1)
+endif()
 set(ONION_I18N_BRAND_ARGS
 	--brand "${ONION_BRAND_NAME}"
 	--data-dir "/data/${ONION_DIR_NAME}"

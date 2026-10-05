@@ -254,6 +254,12 @@ stage_dependencies() {
     return 0
   fi
 
+  case "${ONION_EMBED_KSTUFF:-ON}" in
+    OFF|off|0|false|FALSE|no|NO)
+      ok "kstuff is loaded from the console at runtime (ONION_EMBED_KSTUFF=${ONION_EMBED_KSTUFF}); nothing to sync"
+      return 0
+      ;;
+  esac
   log "Syncing third-party embeds (submodules / GitHub releases)"
   local args=()
   [[ "${STUB_MISSING}" -eq 1 ]] && args+=(--stub-missing)
@@ -292,7 +298,7 @@ clean_build_artifacts() {
 # Optional branding overrides for forks (see source/include/onion/brand.h).
 PAYLOAD_NAME="${ONION_PAYLOAD_NAME:-OnionHEN}"
 BRAND_ARGS=()
-for var in ONION_BRAND_NAME ONION_DIR_NAME ONION_DIR_NAME_LOWER ONION_ISSUES_URL ONION_PAYLOAD_NAME; do
+for var in ONION_BRAND_NAME ONION_DIR_NAME ONION_DIR_NAME_LOWER ONION_ISSUES_URL ONION_PAYLOAD_NAME ONION_EMBED_KSTUFF; do
   if [[ -n "${!var:-}" ]]; then
     BRAND_ARGS+=("-D${var}=${!var}")
   fi

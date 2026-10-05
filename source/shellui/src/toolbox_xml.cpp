@@ -480,7 +480,13 @@ static bool kstuff_model(ps5ui::Node &model) {
   page.toggle("id_plugin_kstuff_autoload", toolbox_i18n::tr("kstuff.autoload"),
               g_settings.kstuff_autoload, toolbox_i18n::tr("kstuff.autoload.sub"))
       .button("id_plugin_delete_kstuff", toolbox_i18n::tr("kstuff.delete"),
-              std::nullopt, toolbox_i18n::tr("kstuff.delete.desc"));
+              std::nullopt, toolbox_i18n::tr(
+#ifdef ONION_EXTERNAL_KSTUFF
+                  "kstuff.delete.desc.external"
+#else
+                  "kstuff.delete.desc"
+#endif
+                  ));
   model = page.root();
   return true;
 }
