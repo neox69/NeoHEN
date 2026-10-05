@@ -5,6 +5,7 @@
  */
 
 #include <onion/brand.h>
+#include <string_view>
 #include "hooked_funcs.hpp"
 #include "account_activator.h"
 #include "defs.h"
@@ -985,7 +986,13 @@ void append_toolbox_about_group(ps5ui::Group& g) {
                        ps5ui::Style::Center)
                 .label("id_about_lineage_1",
                        toolbox_i18n::tr("about.lineage.etahen"),
-                       ps5ui::Style::Center)
+                       ps5ui::Style::Center);
+            /* A rebranded fork must still credit OnionHEN itself. */
+            if (std::string_view(ONION_BRAND_NAME) != "OnionHEN")
+              c.label("id_about_lineage_fork",
+                      toolbox_i18n::tr("about.lineage.onionhen"),
+                      ps5ui::Style::Center);
+            c
                 .label("id_about_lineage_2",
                        toolbox_i18n::tr("about.lineage.goldhen"),
                        ps5ui::Style::Center)
