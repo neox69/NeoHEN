@@ -30,6 +30,9 @@ grep -q '^schema_version=1$' "${DIR}/data/neohen/config.ini"
 
 # Autostart set and order: ShadowMount+ (300), FTP (200), nanoDNS (100).
 P="${DIR}/data/neohen/payloads"
+# Their authors' release binaries, pinned and checksummed in payloads.lock.
+"${ROOT}/scripts/release/fetch_payloads.sh" "${P}"
+cp "${ROOT}/scripts/release/TERCEROS.txt" "${DIR}/TERCEROS.txt"
 for entry in shadowmountplus:300 ftpsrv:200 nanodns:100; do
   name="${entry%%:*}"; prio="${entry##*:}"
   : > "${P}/${name}.elf.auto_start"

@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
-# Build NeoHEN: OnionHEN's pipeline with NeoHEN branding and kstuff kept
-# outside the payload (loaded from /data/neohen/kstuff.elf on the console).
+# Build NeoHEN: OnionHEN's pipeline with NeoHEN branding. kstuff-lite is
+# embedded, as upstream does, so one ELF is enough; a kstuff.elf placed in
+# /data/neohen/ on the console still takes priority, and a kstuff that is
+# already running is left alone. ONION_EMBED_KSTUFF=OFF builds without it.
 # Any extra arguments go to scripts/build.sh, e.g. --release --jobs 8.
 set -euo pipefail
 export ONION_BRAND_NAME="${ONION_BRAND_NAME:-NeoHEN}"
@@ -10,7 +12,7 @@ export ONION_ISSUES_URL="${ONION_ISSUES_URL:-https://github.com/neox69/NeoHEN/is
 export ONION_PAYLOAD_NAME="${ONION_PAYLOAD_NAME:-NeoHEN}"
 # Row in Settings: replaces "Debug Settings" in place, exactly 14 characters.
 export ONION_SETTINGS_LABEL="${ONION_SETTINGS_LABEL:-NeoHEN Toolbox}"
-export ONION_EMBED_KSTUFF="${ONION_EMBED_KSTUFF:-OFF}"
+export ONION_EMBED_KSTUFF="${ONION_EMBED_KSTUFF:-ON}"
 export ONION_HIDE_UNTESTED="${ONION_HIDE_UNTESTED:-ON}"
 export ONION_PRODUCT_VERSION="${ONION_PRODUCT_VERSION:-0.1.0-rc2}"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
