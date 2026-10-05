@@ -189,6 +189,7 @@ void start_worker_threads(pthread_t* app_jailbreak_thr, pthread_t* msg_thr) {
   pthread_t resume_thr = nullptr;
   pthread_create(&resume_thr, nullptr, resume_recovery_thread, nullptr);
   onion::daemon::smp::watchdog_start();
+  kstuff_diag_start();
   pthread_detach(resume_thr);
 }
 
