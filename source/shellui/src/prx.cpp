@@ -38,6 +38,7 @@ along with this program; see the file COPYING. If not, see
 #include <cstring>
 #include <cstdint>
 #include <string>
+#include <string_view>
 #include <unistd.h>
 #include <vector>
 
@@ -382,6 +383,9 @@ bool init_version_string(const OrbisKernelSwVersion& sw) {
       encrypt_decrypt(reinterpret_cast<const unsigned char*>(enc_ver),
                       sizeof(enc_ver) - 1, key);
   std::string dec_ver(dev_ver_bytes.begin(), dev_ver_bytes.end());
+  /* Rebranded builds show their own name in the system version string. */
+  if (std::string_view(ONION_BRAND_NAME) != "OnionHEN")
+    dec_ver = ONION_BRAND_NAME " ";
   dec_ver += ONIONHEN_VERSION;
 
   std::string final_ver;
