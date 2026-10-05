@@ -1,0 +1,11 @@
+[162.704] [OnionHEN utils] info: util daemon entered
+[162.708] [OnionHEN utils] info: =========== starting OnionHEN Utilities... ===========
+[162.711] [OnionHEN utils] info: Loaded settings from /data/OnionHEN/config.ini
+[162.716] [OnionHEN utils] debug: [ipc] Deleted Socket /system_tmp/onionhen/ipc/util_service
+[162.716] [OnionHEN utils] info: Initializing cheat engine...
+[162.721] [OnionHEN utils] debug: rest: [util] listening path=/system_tmp/onionhen/ipc/util_service fd=9
+[168.906] [OnionHEN utils] debug: [util] Connection Accepted cl_nmb 0
+[168.912] [OnionHEN utils] debug: [util] Thread created for Socket 10
+[168.922] [OnionHEN utils] debug: Received IPC command 0x8000019
+[168.923] [OnionHEN utils] debug: system language runtime updated value=3
+[168.928] [OnionHEN utils] debug: IPC reply ok

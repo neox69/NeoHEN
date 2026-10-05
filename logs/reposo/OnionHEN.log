@@ -1,0 +1,1636 @@
+[158.622] [Bootstrapper] debug: Jailbreaking the bootstrapper ...
+[158.624] [Bootstrapper] debug:    Success!
+[158.633] [Bootstrapper] debug: ============== Spawner (Bootstrapper) Started =================
+[158.649] [Bootstrapper] debug: Remounting system partitions ...
+[158.650] [Bootstrapper] debug:    Success!
+[158.650] [Bootstrapper] debug: Writing embedded assets ...
+[158.802] [Bootstrapper] debug: Rich notify: OnionHEN - OnionHEN se está iniciando...
+[158.803] [Bootstrapper] debug:    Written!
+[158.804] [Bootstrapper] debug: Unmounting /update forcefully ...
+[158.817] [Bootstrapper] debug:    Success!
+[158.818] [Bootstrapper] debug: Starting embedded elfldr on 9020 via external 9021 ...
+[159.325] [Bootstrapper] debug:   embedded elfldr :9020 ready
+[159.325] [Bootstrapper] debug: payload loader port: 9020
+[159.326] [Bootstrapper] debug: launching embedded ELFs (serialized)
+[162.331] [Bootstrapper] debug: Starting util via 9020 ...
+[162.331] [Bootstrapper] debug: 9020 memory ELF: util (10187032 bytes)
+[163.440] [Bootstrapper] debug:   running: onion_util.elf
+[163.442] [Bootstrapper] debug: kstuff disabled (kstuff.autoload=false)
+[163.443] [Bootstrapper] debug: Starting daemon via 9020 (toolbox inject) ...
+[163.449] [Bootstrapper] debug: 9020 memory ELF: daemon (13651640 bytes)
+[163.831] [OnionHEN] info: [Daemon] Loading Settings from shared schema...
+[163.836] [OnionHEN] info: [Daemon] Reading Settings from /data/OnionHEN/config.ini
+[163.840] [OnionHEN] info: =========== starting OnionHEN (0x1342) ... ===========
+[163.845] [OnionHEN] warn: [sprx-manager] line=0: cannot open manifest: No such file or directory
+[163.850] [OnionHEN] info: [JB] runtime started (PID + sandbox vnode monitoring)
+[163.855] [OnionHEN] debug: [JB] kernel symbols: ALLPROC=0xffffffffdd889e80 ROOTVNODE=0xffffffffde0f7510
+[163.860] [OnionHEN] info: [JB] runtime active: PID/vnode monitoring, jailbreak=off
+[163.865] [OnionHEN] debug: [ipc] Deleted Socket /system_tmp/onionhen/ipc/crit_service
+[163.865] [OnionHEN] info: control_tcp: listening on 0.0.0.0:9048 (PC shutdown)
+[163.865] [OnionHEN] info: runtime supervisor started (:9021 recovery -> :9020 -> util)
+[163.865] [OnionHEN] debug: [ipc] Deleted Socket /system_tmp/onionhen/ipc/plugin_service
+[163.865] [OnionHEN] info: fan maintenance started (rewrite every 2 s)
+[163.865] [OnionHEN] info: fps sampler started (skip-hook, 33333 us)
+[163.865] [OnionHEN] info: vsync fps sampler started (scanout, 33333 us)
+[163.865] [OnionHEN] debug: [ipc] Deleted Socket /system_tmp/onionhen/ipc/shellui_plugin_bridge
+[163.866] [OnionHEN] info: system language poll started (every 5 s)
+[163.866] [OnionHEN] debug: rest: power state event flag opened handle=8254
+[163.866] [OnionHEN] info: [lifecycle] SceSysCore listener active pid=55
+[163.870] [OnionHEN] debug: rest: [crit] listening path=/system_tmp/onionhen/ipc/crit_service fd=16
+[163.884] [OnionHEN] info: [plugin-ipc] listening on /system_tmp/onionhen/ipc/plugin_service
+[163.892] [OnionHEN] debug: fps-diag: render config overlay=0 fps=1 enabled=0
+[163.901] [OnionHEN] info: [plugin-bridge] listening on /system_tmp/onionhen/ipc/shellui_plugin_bridge
+[163.910] [OnionHEN] info: rest: power state -> WORKING
+[163.916] [OnionHEN] info: [plugins] startup: discovered=0 running=0 started=0 failed=0
+[163.943] [OnionHEN] debug: is toolbox only: No | ver: 13420000
+[163.943] [OnionHEN] info: [plugins] watching /data/OnionHEN/plugins
+[163.947] [OnionHEN] debug: rest: cmd_enable_toolbox shellui_pid=59
+[163.954] [OnionHEN] info: Activating toolbox...
+[163.958] [OnionHEN] debug: Injecting toolbox into SceShellUI pid=59
+[163.962] [OnionHEN] debug: [+] Elevating for ptrace (PTRACE_AUTHID)...[+]
+[163.966] [OnionHEN] debug: [+] inject: backup authid=0x480000001000000e
+[163.971] [OnionHEN] debug: [+] Attached to 59! [+]
+[163.985] [OnionHEN] debug: [+] Loading ELF on 59...[+]
+[164.024] [OnionHEN] debug: [+] elfldr_load ok entry=0x262531258
+[164.024] [OnionHEN] debug: [+] Allocating payload args on 59...[+]
+[164.088] [OnionHEN] debug: [+] ELF entrypoint: 0x262531258 [+]
+[+] Payload Args: 0x2626e8000 [+]
+[164.096] [OnionHEN] debug: [+] Bootstrap code allocated at 0x2626ec000 [+]
+[164.106] [OnionHEN] debug: [+] Triggering entrypoint... [+]
+[164.109] [OnionHEN] debug: [+] ELF injection finished! [+]
+[164.110] [OnionHEN] debug: [+] Detached [+]
+[164.111] [OnionHEN] debug: [+] inject: restored authid=0x480000001000000e
+[164.407] [ShellUI] info: [plugin-bridge] connected to daemon
+[164.407] [OnionHEN] info: [plugin-bridge] ShellUI connected
+[164.407] [ShellUI] debug: Loaded settings from /user/data/OnionHEN/config.ini
+[164.413] [ShellUI] debug: Settings loaded successfully
+[164.416] [ShellUI] debug: Shellui Root Domain: 8817dc000
+[164.419] [ShellUI] debug: Decrypted Version: OnionHEN v0.9.0-beta1 (13.420.000 )
+[164.474] [ShellUI] debug: Game ContainerScene: 884d107c0
+[164.475] [ShellUI] debug: Starting hooking...
+[164.478] [ShellUI] debug: has_hv_bypass=1 (mprotect for detours)
+[164.481] [ShellUI] debug: changing permissions on (0x8086b7550).
+[164.485] [ShellUI] debug: Hooking 0x8086b7550 => 2624a9309
+[164.489] [ShellUI] debug: DetourFunction: target=0x8086b7550 hook=2624a9309 trampoline=8089ac000 stolen=17 emitted=31
+[164.494] [ShellUI] debug: Main thread check patched
+[164.497] [ShellUI] debug: Hooking 0x83c5fc270 => 2624a98e8
+[164.501] [ShellUI] debug: DetourFunction: target=0x83c5fc270 hook=2624a98e8 trampoline=8089b0000 stolen=16 emitted=30
+[164.507] [ShellUI] debug: Installing mono hook: OptionMenu.createJson target=0x808fa5ac0 hook=2624a9a27
+[164.512] [ShellUI] debug: Hooking 0x808fa5ac0 => 2624a9a27
+[164.515] [ShellUI] debug: DetourFunction: target=0x808fa5ac0 hook=2624a9a27 trampoline=8089b4000 stolen=14 emitted=28
+[164.521] [ShellUI] debug: Installing mono hook: GamePad.GetData target=0x8086bdf30 hook=2624a7fa0
+[164.526] [ShellUI] debug: Hooking 0x8086bdf30 => 2624a7fa0
+[164.530] [ShellUI] debug: DetourFunction: target=0x8086bdf30 hook=2624a7fa0 trampoline=8089b8000 stolen=15 emitted=29
+[164.537] [ShellUI] debug: Installing mono hook: SettingsPlugin.CxmlUri target=0x8322dc080 hook=2624a8e80
+[164.541] [ShellUI] debug: Hooking 0x8322dc080 => 2624a8e80
+[164.545] [ShellUI] debug: DetourFunction: target=0x8322dc080 hook=2624a8e80 trampoline=8089bc000 stolen=14 emitted=28
+[164.551] [ShellUI] debug: Installing mono hook: SettingPage.OnPressed target=0x8322cd8d0 hook=2624cdc31
+[164.556] [ShellUI] debug: Hooking 0x8322cd8d0 => 2624cdc31
+[164.560] [Bootstrapper] debug:   running: onion_daemon.elf
+[164.560] [ShellUI] debug: DetourFunction: target=0x8322cd8d0 hook=2624cdc31 trampoline=8089c0000 stolen=18 emitted=32
+[164.564] [Bootstrapper] debug: Successfully loaded 0 payloads
+[164.572] [Bootstrapper] debug: ============== Spawner (Bootstrapper) Finished =================
+[164.570] [ShellUI] debug: Installing mono hook: SettingPage.OnCreating target=0x8322cd4f0 hook=2624cd7e8
+[164.582] [ShellUI] debug: Hooking 0x8322cd4f0 => 2624cd7e8
+[164.589] [ShellUI] debug: DetourFunction: target=0x8322cd4f0 hook=2624cd7e8 trampoline=8089c4000 stolen=17 emitted=31
+[164.597] [ShellUI] debug: Installing mono hook: SettingPage.OnActivated target=0x8322cd240 hook=2624ceb8d
+[164.602] [ShellUI] debug: Hooking 0x8322cd240 => 2624ceb8d
+[164.606] [ShellUI] debug: DetourFunction: target=0x8322cd240 hook=2624ceb8d trampoline=8089c8000 stolen=17 emitted=31
+[164.612] [ShellUI] debug: Installing mono hook: SettingList.Cleanup target=0x8322c7a40 hook=2624cec0f
+[164.617] [ShellUI] debug: Hooking 0x8322c7a40 => 2624cec0f
+[164.621] [ShellUI] debug: DetourFunction: target=0x8322c7a40 hook=2624cec0f trampoline=8089cc000 stolen=24 emitted=38
+[164.626] [ShellUI] debug: Installing mono hook: UserCustomElementUI.Reset target=0x8322e60f0 hook=2624ceccf
+[164.632] [ShellUI] debug: Hooking 0x8322e60f0 => 2624ceccf
+[164.635] [ShellUI] debug: DetourFunction: target=0x8322e60f0 hook=2624ceccf trampoline=8089d0000 stolen=14 emitted=28
+[164.641] [ShellUI] debug: Installing mono hook: SettingPageStack.OnPopping target=0x8322d0f20 hook=2624ce896
+[164.647] [ShellUI] debug: Hooking 0x8322d0f20 => 2624ce896
+[164.650] [ShellUI] debug: DetourFunction: target=0x8322d0f20 hook=2624ce896 trampoline=8089d4000 stolen=16 emitted=30
+[164.656] [ShellUI] debug: Installing mono hook: SettingsPlugin.GetString target=0x8322dbe40 hook=2624a8822
+[164.661] [ShellUI] debug: Hooking 0x8322dbe40 => 2624a8822
+[164.665] [ShellUI] debug: DetourFunction: target=0x8322dbe40 hook=2624a8822 trampoline=8089d8000 stolen=18 emitted=32
+[164.671] [ShellUI] debug: Installing mono hook: EventManager.OnShareButton target=0x83442dd30 hook=2624a86cd
+[164.676] [ShellUI] debug: Hooking 0x83442dd30 => 2624a86cd
+[164.680] [ShellUI] debug: DetourFunction: target=0x83442dd30 hook=2624a86cd trampoline=8089dc000 stolen=17 emitted=31
+[164.685] [ShellUI] error: Get_Address_of_Method: failed to find method "UpdateNavigationState" in class "ReactNavigatorManager"
+[164.692] [ShellUI] error: [DBG-NAV] UpdateNavigationState not found
+[164.695] [ShellUI] debug: Hooking 0x8316e9d50 => 2624a4d10
+[164.699] [ShellUI] debug: DetourFunction: target=0x8316e9d50 hook=2624a4d10 trampoline=8089e0000 stolen=16 emitted=30
+[164.705] [ShellUI] debug: homeui_top_nav_patch: SetIconSource hooked (invertedIcon mirror for OnionHEN)
+[164.710] [ShellUI] debug: Hooking 0x8090a5210 => 2624cd2b8
+[164.713] [ShellUI] debug: DetourFunction: target=0x8090a5210 hook=2624cd2b8 trampoline=8089e4000 stolen=16 emitted=30
+[164.719] [ShellUI] debug: [DBG-GETMODEL] GetModel hooked
+[164.723] [ShellUI] debug: Installing mono hook: LncUtilWrapper.LaunchApp target=0x80c618750 hook=2624a9755
+[164.728] [ShellUI] debug: Hooking 0x80c618750 => 2624a9755
+[164.731] [ShellUI] debug: DetourFunction: target=0x80c618750 hook=2624a9755 trampoline=8089e8000 stolen=14 emitted=28
+[164.737] [ShellUI] debug: Hooking 0x80c618a10 => 2624e24df
+[164.741] [ShellUI] debug: DetourFunction: target=0x80c618a10 hook=2624e24df trampoline=8089ec000 stolen=14 emitted=39
+[164.747] [ShellUI] debug: Found ioctl at 808d0c8d0
+[164.750] [ShellUI] debug: Hooking 0x808d0c8d0 => 2624a8d0c
+[164.753] [ShellUI] debug: DetourFunction: target=0x808d0c8d0 hook=2624a8d0c trampoline=8089f0000 stolen=14 emitted=42
+[164.759] [ShellUI] debug: Detoured ioctl to ioctl_hook
+[164.762] [ShellUI] debug: Installing mono hook: BootHelper.Boot(3) target=0x80c0ecb20 hook=2624a7adb
+[164.767] [ShellUI] debug: Hooking 0x80c0ecb20 => 2624a7adb
+[164.771] [ShellUI] debug: DetourFunction: target=0x80c0ecb20 hook=2624a7adb trampoline=8089f4000 stolen=17 emitted=31
+[164.777] [ShellUI] error: Get_Address_of_Method: failed to find method "CaptureScreen" in class "CaptureController"
+[164.782] [ShellUI] error: Hook target missing: CaptureScreen(4)
+[164.786] [ShellUI] debug: Installing mono hook: CaptureScreen(5) target=0x834428570 hook=2624a85b9
+[164.791] [ShellUI] debug: Hooking 0x834428570 => 2624a85b9
+[164.794] [ShellUI] debug: DetourFunction: target=0x834428570 hook=2624a85b9 trampoline=8089f8000 stolen=15 emitted=29
+[164.800] [ShellUI] debug: Installing mono hook: GetManifestResourceStream target=0x83dad7d80 hook=2624cb296
+[164.806] [ShellUI] debug: Hooking 0x83dad7d80 => 2624cb296
+[164.809] [ShellUI] debug: DetourFunction: target=0x83dad7d80 hook=2624cb296 trampoline=8089fc000 stolen=17 emitted=31
+[164.815] [ShellUI] debug: Installing mono hook: PUI.Application.Update target=0x80e55b6f0 hook=2624e2938
+[164.820] [ShellUI] debug: Hooking 0x80e55b6f0 => 2624e2938
+[164.824] [ShellUI] debug: DetourFunction: target=0x80e55b6f0 hook=2624e2938 trampoline=808a00000 stolen=16 emitted=30
+[164.830] [ShellUI] debug: Performing Magic ....
+[164.833] [ShellUI] debug: Performed Magic
+[164.835] [ShellUI] debug: queued NPXS40002 home reload for next UI tick
+[164.836] [ShellUI] debug: applying NPXS40002 home reload on UI thread
+[164.839] [ShellUI] debug: sleeping ....
+[164.843] [ShellUI] debug: Reloading NPXS40002 scenes
+[164.867] [OnionHEN] info: Toolbox online for SceShellUI pid=59 (ready protocol)
+[164.870] [OnionHEN] debug: rest: ensure Injected pid=59
+[164.874] [OnionHEN] info: StartUp thread created!! - welcome to OnionHEN
+[164.878] [OnionHEN] debug: Startup destination: none
+[164.931] [ShellUI] debug: ioctl_hook called with fd: 132, request: 0xC0105203, argp: 7dfb62fa8
+[164.936] [ShellUI] debug: homeui_top_nav_patch: ioctl RNPS buffer=209204000 size=1798720 head=52 4e 50 53
+[165.371] [ShellUI] debug: overlay: RootWidget logical size 1920.0 x 1080.0
+[168.905] [OnionHEN] debug: Sending command to util daemon: 0x8000019
+[168.906] [OnionHEN] debug: IPCSendData sent 4108 bytes
+[168.911] [OnionHEN] debug: Waiting for daemon response (util)...
+[168.931] [OnionHEN] debug: Daemon returned: 0
+[168.934] [OnionHEN] debug: Daemon IPC return obj: Nothing
+[168.937] [OnionHEN] error: [Daemon] Daemon returned NO ERROR
+[168.941] [OnionHEN] debug: pushed console system language 3 to util
+[193.950] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[223.951] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[246.649] [ShellUI] debug: ioctl_hook called with fd: 151, request: 0xC0105203, argp: 7e0ca6fa8
+[246.650] [ShellUI] debug: homeui_top_nav_patch: ioctl RNPS buffer=20c404000 size=4560656 head=52 4e 50 53
+[249.304] [ShellUI] debug: Boot: OnionHEN?NavUI=1 (NULL), OPT 1
+[249.305] [ShellUI] debug: HomeUI top-nav OnionHEN URI detected
+[249.347] [ShellUI] debug: ioctl_hook called with fd: 162, request: 0xC0105203, argp: 7df95afa8
+[249.352] [ShellUI] debug: homeui_top_nav_patch: ioctl RNPS buffer=20f004000 size=5163712 head=52 4e 50 53
+[249.369] [ShellUI] debug: settings_bundle_patch: Hermes NPXS40008 label=1 footer=updated (stock icon id preserved)
+[249.677] [ShellUI] debug: GetManifestResourceStream_Hook: Sce.Vsh.ShellUI.Legacy.src.Sce.Vsh.ShellUI.Settings.Plugins.DebugSettings.data.debug_settings.xml domain=8817dc000 root=8817dc000
+[249.689] [ShellUI] debug: Loaded settings from /user/data/OnionHEN/config.ini
+[249.693] [ShellUI] debug: Current user => <oculto>
+[249.696] [ShellUI] debug: Account register number => <oculto>
+[249.699] [ShellUI] debug: User Account ID => <oculto>
+[249.702] [ShellUI] debug: AccountType => np
+[249.705] [ShellUI] debug: Account Flags => <oculto>
+[249.709] [ShellUI] debug: [GMRS] New_Mono_XML_From_String: xml_size=18115 domain=8817dc000 Root_Domain=8817dc000 MemoryStream_IO=8883bf5b0
+[249.715] [ShellUI] debug: [GMRS] New_Mono_XML_From_String: ok instance=8818b8bf0 gchandle=156
+[249.756] [ShellUI] debug: Resource Name: ★Caja de herramientas OnionHEN
+[249.757] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[249.799] [ShellUI] debug: Resource Name: Instalación y gestión de contenido
+[249.800] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[249.805] [ShellUI] debug: Resource Name: Instalar PKG y gestionar contenido adicional
+[249.808] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[249.813] [ShellUI] debug: uri_string: //user//data//OnionHEN//assets//icon_xml_package.png
+[249.817] [ShellUI] debug: CxmlUri_Hook: /user/data/OnionHEN/assets/icon_xml_package.png
+[249.824] [ShellUI] debug: Resource Name: Payloads y núcleo
+[249.825] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[249.829] [ShellUI] debug: Resource Name: Payloads del usuario y de inicio automático; Kstuff y plugins instalados
+[249.835] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[249.845] [ShellUI] debug: uri_string: //user//data//OnionHEN//assets//icon_xml_plugins.png
+[249.849] [ShellUI] debug: CxmlUri_Hook: /user/data/OnionHEN/assets/icon_xml_plugins.png
+[249.854] [ShellUI] debug: Resource Name: Herramientas de juego
+[249.857] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[249.861] [ShellUI] debug: Resource Name: Gestionar trucos y descargar la colección de trucos
+[249.867] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[249.871] [ShellUI] debug: uri_string: //user//data//OnionHEN//assets//icon_xml_game.png
+[249.875] [ShellUI] debug: CxmlUri_Hook: /user/data/OnionHEN/assets/icon_xml_game.png
+[249.880] [ShellUI] debug: Resource Name: Cuenta y juego remoto
+[249.883] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[249.887] [ShellUI] debug: Resource Name: Activación de cuenta y emparejamiento de juego remoto
+[249.892] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[249.896] [ShellUI] debug: uri_string: //user//data//OnionHEN//assets//icon_xml_account.png
+[249.901] [ShellUI] debug: CxmlUri_Hook: /user/data/OnionHEN/assets/icon_xml_account.png
+[249.906] [ShellUI] debug: Resource Name: Supervisión y pantalla
+[249.909] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[249.913] [ShellUI] debug: Resource Name: Superposición en partida, indicadores en la pantalla de inicio y entrada a las opciones del juego
+[249.920] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[249.924] [ShellUI] debug: uri_string: //user//data//OnionHEN//assets//icon_xml_monitor.png
+[249.929] [ShellUI] debug: CxmlUri_Hook: /user/data/OnionHEN/assets/icon_xml_monitor.png
+[249.934] [ShellUI] debug: Resource Name: Sistema y hardware
+[249.937] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[249.941] [ShellUI] debug: Resource Name: Ventilador, almacenamiento externo y activación de licencia de disco
+[249.946] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[249.950] [ShellUI] debug: uri_string: //user//data//OnionHEN//assets//icon_xml_settings.png
+[249.955] [ShellUI] debug: CxmlUri_Hook: /user/data/OnionHEN/assets/icon_xml_settings.png
+[249.960] [ShellUI] debug: Resource Name: Preferencias
+[249.963] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[249.967] [ShellUI] debug: Resource Name: Comportamiento al iniciar, idioma de la caja de herramientas, origen de trucos y atajos del mando
+[249.974] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[249.978] [ShellUI] debug: uri_string: //user//data//OnionHEN//assets//icon_xml_shortcuts.png
+[249.983] [ShellUI] debug: CxmlUri_Hook: /user/data/OnionHEN/assets/icon_xml_shortcuts.png
+[249.988] [ShellUI] debug: Resource Name: Depuración avanzada
+[249.991] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[249.995] [ShellUI] debug: Resource Name: Registros, control del jailbreak de aplicaciones y entorno NP
+[250.000] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[250.004] [ShellUI] debug: uri_string: //user//data//OnionHEN//assets//icon_xml_debug.png
+[250.009] [ShellUI] debug: CxmlUri_Hook: /user/data/OnionHEN/assets/icon_xml_debug.png
+[250.014] [ShellUI] debug: Resource Name: Acerca de
+[250.016] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[250.020] [ShellUI] debug: Resource Name: Créditos, donaciones e información del proyecto
+[250.025] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[250.029] [ShellUI] debug: uri_string: //user//data//OnionHEN//assets//icon_xml_about.png
+[250.034] [ShellUI] debug: CxmlUri_Hook: /user/data/OnionHEN/assets/icon_xml_about.png
+[253.952] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[259.431] [ShellUI] debug: [LM HOOK] OnPress_Hook: page=1 Id=id_group_pkg Value=
+[259.433] [ShellUI] debug: GetManifestResourceStream_Hook: Sce.Vsh.ShellUI.Legacy.src.Sce.Vsh.ShellUI.Settings.Plugins.DebugSettings.data.debug_settings.xml domain=8817dc000 root=8817dc000
+[259.441] [ShellUI] debug: Loaded settings from /user/data/OnionHEN/config.ini
+[259.445] [ShellUI] debug: Current user => <oculto>
+[259.448] [ShellUI] debug: Account register number => <oculto>
+[259.451] [ShellUI] debug: User Account ID => <oculto>
+[259.455] [ShellUI] debug: AccountType => np
+[259.458] [ShellUI] debug: Account Flags => <oculto>
+[259.462] [ShellUI] debug: [GMRS] New_Mono_XML_From_String: xml_size=18115 domain=8817dc000 Root_Domain=8817dc000 MemoryStream_IO=8883bf5b0
+[259.467] [ShellUI] debug: [GMRS] New_Mono_XML_From_String: ok instance=881b4cdb8 gchandle=20
+[259.477] [ShellUI] debug: Resource Name: Instalación y gestión de contenido
+[259.477] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[259.484] [ShellUI] debug: Resource Name: Instalador de paquetes
+[259.485] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[259.488] [ShellUI] debug: Resource Name: Abrir el instalador del sistema para instalar juegos o aplicaciones PKG
+[259.494] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[259.498] [ShellUI] debug: Resource Name: Gestor de contenido adicional
+[259.502] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[259.506] [ShellUI] debug: Resource Name: Gestionar extras, parches y DLC de los juegos instalados
+[259.511] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[260.550] [ShellUI] debug: [LM HOOK] OnPress_Hook: page=1 Id=id_game_package_installer Value=
+[260.550] [ShellUI] debug: GetManifestResourceStream_Hook: Sce.Vsh.ShellUI.Legacy.src.Sce.Vsh.ShellUI.Settings.Plugins.PkgInstaller.data.pkginstaller.xml domain=8817dc000 root=8817dc000
+[260.599] [ShellUI] debug: Resource Name: Package Installer
+[260.600] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[260.617] [ShellUI] debug: Resource Name: No Packages found.
+[260.618] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[262.784] [ShellUI] debug: GetManifestResourceStream_Hook: Sce.Vsh.ShellUI.Legacy.src.Sce.Vsh.ShellUI.Settings.Plugins.DebugSettings.data.debug_settings.xml domain=8817dc000 root=8817dc000
+[262.788] [ShellUI] debug: Loaded settings from /user/data/OnionHEN/config.ini
+[262.792] [ShellUI] debug: Current user => <oculto>
+[262.795] [ShellUI] debug: Account register number => <oculto>
+[262.798] [ShellUI] debug: User Account ID => <oculto>
+[262.802] [ShellUI] debug: AccountType => np
+[262.805] [ShellUI] debug: Account Flags => <oculto>
+[262.808] [ShellUI] debug: [GMRS] New_Mono_XML_From_String: xml_size=18115 domain=8817dc000 Root_Domain=8817dc000 MemoryStream_IO=8883bf5b0
+[262.814] [ShellUI] debug: [GMRS] New_Mono_XML_From_String: ok instance=8818daeb0 gchandle=28
+[262.823] [ShellUI] debug: Resource Name: Payloads y núcleo
+[262.823] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[262.835] [ShellUI] debug: Resource Name: Payloads del usuario
+[262.836] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[262.840] [ShellUI] debug: Resource Name: Explorar y lanzar tus archivos ELF de las carpetas payloads
+[262.845] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[262.849] [ShellUI] debug: uri_string: //user//data//OnionHEN//assets//icon_xml_plugins.png
+[262.854] [ShellUI] debug: CxmlUri_Hook: /user/data/OnionHEN/assets/icon_xml_plugins.png
+[262.859] [ShellUI] debug: Resource Name: Plugins
+[262.861] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[262.865] [ShellUI] debug: Resource Name: Gestiona Kstuff y los plugins instalados
+[262.870] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[262.874] [ShellUI] debug: uri_string: //user//data//OnionHEN//assets//icon_xml_plugins.png
+[262.878] [ShellUI] debug: CxmlUri_Hook: /user/data/OnionHEN/assets/icon_xml_plugins.png
+[264.019] [ShellUI] debug: [LM HOOK] OnPress_Hook: page=1 Id=id_payloads Value=
+[264.019] [ShellUI] debug: GetManifestResourceStream_Hook: Sce.Vsh.ShellUI.Legacy.src.Sce.Vsh.ShellUI.Settings.Plugins.payloads.xml domain=8817dc000 root=8817dc000
+[264.027] [ShellUI] error: Failed to open directory: /user/data/onionhen/payloads
+[264.031] [ShellUI] error: Failed to open directory: /data/OnionHEN/payloads
+[264.035] [ShellUI] error: Failed to open directory: /data/onionhen/payloads
+[264.040] [ShellUI] error: Failed to open directory: /usb0/OnionHEN/payloads
+[264.044] [ShellUI] error: Failed to open directory: /usb0/onionhen/payloads
+[264.048] [ShellUI] error: Failed to open directory: /usb1/OnionHEN/payloads
+[264.052] [ShellUI] error: Failed to open directory: /usb1/onionhen/payloads
+[264.056] [ShellUI] error: Failed to open directory: /usb2/OnionHEN/payloads
+[264.060] [ShellUI] error: Failed to open directory: /usb2/onionhen/payloads
+[264.064] [ShellUI] error: Failed to open directory: /usb3/OnionHEN/payloads
+[264.068] [ShellUI] error: Failed to open directory: /usb3/onionhen/payloads
+[264.072] [ShellUI] debug: [GMRS] New_Mono_XML_From_String: xml_size=185 domain=8817dc000 Root_Domain=8817dc000 MemoryStream_IO=8883bf5b0
+[264.079] [ShellUI] debug: [GMRS] New_Mono_XML_From_String: ok instance=881b8af98 gchandle=36
+[264.088] [ShellUI] debug: Resource Name: Payload
+[264.089] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[264.094] [ShellUI] debug: settings_refresh: bound id_payload page=881b8ecd8
+[266.371] [ShellUI] debug: [LM HOOK] OnPress_Hook: page=2 Id=id_plugins Value=
+[266.372] [ShellUI] debug: GetManifestResourceStream_Hook: Sce.Vsh.ShellUI.Legacy.src.Sce.Vsh.ShellUI.Settings.Plugins.plugins.xml domain=8817dc000 root=8817dc000
+[266.379] [ShellUI] debug: Sending command to crit daemon: 0x9000100
+[266.383] [ShellUI] debug: IPCSendData sent 4108 bytes
+[266.387] [ShellUI] debug: Waiting for daemon response (crit)...
+[266.383] [OnionHEN] debug: [crit] Connection Accepted cl_nmb 0
+[266.394] [OnionHEN] debug: [crit] Thread created for Socket 20
+[266.397] [OnionHEN] debug: Received IPC command 0x9000100
+[266.401] [OnionHEN] debug: IPC reply ok
+[266.404] [ShellUI] debug: Daemon returned: 0
+[266.407] [ShellUI] debug: Daemon IPC return obj: {"plugins":[],"next":-1}
+[266.411] [ShellUI] error: [Daemon] Daemon returned NO ERROR
+[266.414] [ShellUI] debug: [GMRS] New_Mono_XML_From_String: xml_size=308 domain=8817dc000 Root_Domain=8817dc000 MemoryStream_IO=8883bf5b0
+[266.421] [ShellUI] debug: [GMRS] New_Mono_XML_From_String: ok instance=881bba140 gchandle=52
+[266.429] [ShellUI] debug: Resource Name: ★ Plugins de OnionHEN
+[266.430] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[266.433] [ShellUI] debug: settings_refresh: bound id_plugins page=881bbc278
+[266.440] [ShellUI] debug: Resource Name: Kstuff
+[266.440] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[266.444] [ShellUI] debug: Resource Name: No se carga automáticamente
+[266.448] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[269.925] [ShellUI] debug: [LM HOOK] OnPress_Hook: page=8 Id=id_group_game Value=
+[269.925] [ShellUI] debug: GetManifestResourceStream_Hook: Sce.Vsh.ShellUI.Legacy.src.Sce.Vsh.ShellUI.Settings.Plugins.DebugSettings.data.debug_settings.xml domain=8817dc000 root=8817dc000
+[269.934] [ShellUI] debug: Loaded settings from /user/data/OnionHEN/config.ini
+[269.938] [ShellUI] debug: Current user => <oculto>
+[269.941] [ShellUI] debug: Account register number => <oculto>
+[269.944] [ShellUI] debug: User Account ID => <oculto>
+[269.948] [ShellUI] debug: AccountType => np
+[269.951] [ShellUI] debug: Account Flags => <oculto>
+[269.954] [ShellUI] debug: [GMRS] New_Mono_XML_From_String: xml_size=18115 domain=8817dc000 Root_Domain=8817dc000 MemoryStream_IO=8883bf5b0
+[269.961] [ShellUI] debug: [GMRS] New_Mono_XML_From_String: ok instance=881bc8ab0 gchandle=68
+[269.969] [ShellUI] debug: Resource Name: Herramientas de juego
+[269.970] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[269.976] [ShellUI] debug: Resource Name: Trucos
+[269.976] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[269.980] [ShellUI] debug: Resource Name: Activar o desactivar los trucos del juego en ejecución
+[269.985] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[269.989] [ShellUI] debug: uri_string: //user//data//OnionHEN//assets//icon_xml_cheats.png
+[269.993] [ShellUI] debug: CxmlUri_Hook: /user/data/OnionHEN/assets/icon_xml_cheats.png
+[269.998] [ShellUI] debug: Resource Name: Descargar colección de trucos
+[270.002] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[270.006] [ShellUI] debug: Resource Name: Créditos a TeeKay87 (repositorio oficial de trucos) y PS5_Xiexiyu (repositorio espejo chino).
+[270.013] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[270.017] [ShellUI] debug: uri_string: //user//data//OnionHEN//assets//icon_xml_download.png
+[270.021] [ShellUI] debug: CxmlUri_Hook: /user/data/OnionHEN/assets/icon_xml_download.png
+[270.942] [ShellUI] debug: [LM HOOK] OnPress_Hook: page=1 Id=id_cheats Value=
+[270.943] [ShellUI] debug: GetManifestResourceStream_Hook: Sce.Vsh.ShellUI.Legacy.src.Sce.Vsh.ShellUI.Settings.Plugins.cheats.xml domain=8817dc000 root=8817dc000
+[270.951] [ShellUI] debug: [GMRS] New_Mono_XML_From_String: xml_size=338 domain=8817dc000 Root_Domain=8817dc000 MemoryStream_IO=8883bf5b0
+[270.957] [ShellUI] debug: [GMRS] New_Mono_XML_From_String: ok instance=881aa5068 gchandle=76
+[270.966] [ShellUI] debug: Resource Name: Trucos OnionHEN - no hay ningún juego abierto
+[270.967] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[270.976] [ShellUI] debug: Resource Name: Inicie primero un juego y luego abra el menú de trucos
+[270.982] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[275.330] [ShellUI] debug: [LM HOOK] OnPress_Hook: page=10 Id=id_group_preferences Value=
+[275.331] [ShellUI] debug: GetManifestResourceStream_Hook: Sce.Vsh.ShellUI.Legacy.src.Sce.Vsh.ShellUI.Settings.Plugins.DebugSettings.data.debug_settings.xml domain=8817dc000 root=8817dc000
+[275.340] [ShellUI] debug: Loaded settings from /user/data/OnionHEN/config.ini
+[275.344] [ShellUI] debug: Current user => <oculto>
+[275.347] [ShellUI] debug: Account register number => <oculto>
+[275.350] [ShellUI] debug: User Account ID => <oculto>
+[275.353] [ShellUI] debug: AccountType => np
+[275.356] [ShellUI] debug: Account Flags => <oculto>
+[275.360] [ShellUI] debug: [GMRS] New_Mono_XML_From_String: xml_size=18115 domain=8817dc000 Root_Domain=8817dc000 MemoryStream_IO=8883bf5b0
+[275.366] [ShellUI] debug: [GMRS] New_Mono_XML_From_String: ok instance=881b96948 gchandle=84
+[275.379] [ShellUI] debug: Resource Name: Preferencias
+[275.380] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[275.398] [ShellUI] debug: Resource Name: Abrir automáticamente al cargar OnionHEN
+[275.399] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[275.403] [ShellUI] debug: Resource Name: Ninguno
+[275.406] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[275.410] [ShellUI] debug: Resource Name: Pantalla de inicio
+[275.413] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[275.418] [ShellUI] debug: Resource Name: Aviso de agradecimiento
+[275.421] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[275.425] [ShellUI] debug: Resource Name: Muestra el agradecimiento a los colaboradores al iniciar OnionHEN
+[275.430] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[275.435] [ShellUI] debug: Resource Name: Idioma de la caja de herramientas
+[275.438] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[275.442] [ShellUI] debug: Resource Name: Idioma del sistema
+[275.446] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[275.450] [ShellUI] debug: Resource Name: 简体中文
+[275.453] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[275.457] [ShellUI] debug: Resource Name: 繁體中文
+[275.460] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[275.464] [ShellUI] debug: Resource Name: English
+[275.467] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[275.471] [ShellUI] debug: Resource Name: 日本語
+[275.474] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[275.478] [ShellUI] debug: Resource Name: 한국어
+[275.481] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[275.485] [ShellUI] debug: Resource Name: Français
+[275.488] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[275.492] [ShellUI] debug: Resource Name: Deutsch
+[275.495] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[275.499] [ShellUI] debug: Resource Name: Italiano
+[275.502] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[275.506] [ShellUI] debug: Resource Name: Español
+[275.509] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[275.513] [ShellUI] debug: Resource Name: Português (Brasil)
+[275.517] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[275.521] [ShellUI] debug: Resource Name: Polski
+[275.524] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[275.528] [ShellUI] debug: Resource Name: Русский
+[275.531] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[275.535] [ShellUI] debug: Resource Name: العربية
+[275.538] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[275.542] [ShellUI] debug: Resource Name: ไทย
+[275.545] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[275.549] [ShellUI] debug: Resource Name: Nederlands
+[275.552] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[275.556] [ShellUI] debug: Resource Name: Suomi
+[275.559] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[275.563] [ShellUI] debug: Resource Name: Svenska
+[275.566] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[275.570] [ShellUI] debug: Resource Name: Dansk
+[275.573] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[275.577] [ShellUI] debug: Resource Name: Norsk
+[275.580] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[275.584] [ShellUI] debug: Resource Name: Türkçe
+[275.587] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[275.591] [ShellUI] debug: Resource Name: Čeština
+[275.594] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[275.598] [ShellUI] debug: Resource Name: Magyar
+[275.601] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[275.605] [ShellUI] debug: Resource Name: Ελληνικά
+[275.608] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[275.612] [ShellUI] debug: Resource Name: Română
+[275.615] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[275.619] [ShellUI] debug: Resource Name: Tiếng Việt
+[275.622] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[275.626] [ShellUI] debug: Resource Name: Indonesia
+[275.629] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[275.633] [ShellUI] debug: Resource Name: Українська
+[275.637] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[275.641] [ShellUI] debug: Resource Name: Português (Portugal)
+[275.644] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[275.649] [ShellUI] debug: Resource Name: Abrir la caja de herramientas OnionHEN
+[275.653] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[275.657] [ShellUI] debug: Resource Name: Desactivado (sin atajo)
+[275.660] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[275.664] [ShellUI] debug: Resource Name: Mantener L2 + R3
+[275.668] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[275.672] [ShellUI] debug: Resource Name: Mantener Share
+[275.675] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[275.679] [ShellUI] debug: Resource Name: Pulsar Share
+[275.682] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[275.686] [ShellUI] debug: Resource Name: Abrir el menú de trucos
+[275.690] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[275.694] [ShellUI] debug: Resource Name: Desactivado (sin atajo)
+[275.697] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[275.701] [ShellUI] debug: Resource Name: Mantener R3 + L3
+[275.705] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[275.709] [ShellUI] debug: Resource Name: Mantener L2 + △
+[275.712] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[275.716] [ShellUI] debug: Resource Name: Mantener Options
+[275.719] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[275.723] [ShellUI] debug: Resource Name: Mantener Share
+[275.727] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[275.731] [ShellUI] debug: Resource Name: Pulsar Share
+[275.734] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[275.738] [ShellUI] debug: Resource Name: Origen de descarga de trucos
+[275.742] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[275.746] [ShellUI] debug: Resource Name: Auto
+[275.748] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[275.752] [ShellUI] debug: Resource Name: GitHub
+[275.755] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[275.759] [ShellUI] debug: Resource Name: cnb.cool (China)
+[275.763] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[283.953] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[285.156] [ShellUI] debug: [LM HOOK] OnPress_Hook: page=1 Id=id_group_system Value=
+[285.157] [ShellUI] debug: GetManifestResourceStream_Hook: Sce.Vsh.ShellUI.Legacy.src.Sce.Vsh.ShellUI.Settings.Plugins.DebugSettings.data.debug_settings.xml domain=8817dc000 root=8817dc000
+[285.166] [ShellUI] debug: Loaded settings from /user/data/OnionHEN/config.ini
+[285.170] [ShellUI] debug: Current user => <oculto>
+[285.173] [ShellUI] debug: Account register number => <oculto>
+[285.176] [ShellUI] debug: User Account ID => <oculto>
+[285.180] [ShellUI] debug: AccountType => np
+[285.183] [ShellUI] debug: Account Flags => <oculto>
+[285.186] [ShellUI] debug: [GMRS] New_Mono_XML_From_String: xml_size=18115 domain=8817dc000 Root_Domain=8817dc000 MemoryStream_IO=8883bf5b0
+[285.192] [ShellUI] debug: [GMRS] New_Mono_XML_From_String: ok instance=881b42488 gchandle=92
+[285.200] [ShellUI] debug: Resource Name: Sistema y hardware
+[285.201] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[285.207] [ShellUI] debug: Resource Name: Control del ventilador
+[285.208] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[285.212] [ShellUI] debug: Resource Name: Ajustar la velocidad del ventilador según un umbral de temperatura
+[285.218] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[285.222] [ShellUI] debug: uri_string: //user//data//OnionHEN//assets//icon_xml_fan.png
+[285.226] [ShellUI] debug: CxmlUri_Hook: /user/data/OnionHEN/assets/icon_xml_fan.png
+[285.231] [ShellUI] debug: Resource Name: Modo de reposo
+[285.235] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[285.238] [ShellUI] debug: Resource Name: Reducir cuelgues y fallos al entrar en modo de reposo
+[285.243] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[285.247] [ShellUI] debug: uri_string: //user//data//OnionHEN//assets//icon_xml_restmode.png
+[285.252] [ShellUI] debug: CxmlUri_Hook: /user/data/OnionHEN/assets/icon_xml_restmode.png
+[285.257] [ShellUI] debug: Resource Name: Disco duro externo
+[285.260] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[285.264] [ShellUI] debug: Resource Name: Abrir la página del sistema para formatear y gestionar el disco externo
+[285.269] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[285.274] [ShellUI] debug: uri_string: //user//data//OnionHEN//assets//icon_xml_hardrive.png
+[285.278] [ShellUI] debug: CxmlUri_Hook: /user/data/OnionHEN/assets/icon_xml_hardrive.png
+[285.283] [ShellUI] debug: Resource Name: Activación de Blu-ray (licencia)
+[285.287] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[285.291] [ShellUI] debug: Resource Name: Abrir la página de activación de licencia de discos Blu-ray
+[285.296] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[285.300] [ShellUI] debug: uri_string: //user//data//OnionHEN//assets//icon_xml_disc_license.png
+[285.305] [ShellUI] debug: CxmlUri_Hook: /user/data/OnionHEN/assets/icon_xml_disc_license.png
+[292.230] [ShellUI] debug: Option button pressed
+[292.247] [ShellUI] debug: Option button pressed
+[292.263] [ShellUI] debug: Option button pressed
+[292.280] [ShellUI] debug: Option button pressed
+[292.297] [ShellUI] debug: Option button pressed
+[292.313] [ShellUI] debug: Option button pressed
+[292.330] [ShellUI] debug: Option button pressed
+[292.348] [ShellUI] debug: Option button pressed
+[292.368] [ShellUI] debug: createJson_hook: 881b3c5b0 id: MENU_ID_CHECK_PATCH, label: , actionUrl: pspatchcheck:check-for-update?titleid=PPSA99008, actionId: , messageId: msgid_check_update
+[292.373] [ShellUI] debug: createJson_hook: 62450ef0 id: MENU_ID_SAVE_DATA_MANAGEMENT_PS5_MANUAL, label: , actionUrl: pssettings:play?function=savedata&feature=options_menu_ps5&npTitleId=PPSA99008, actionId: , messageId: msgid_ps_plus_transfer_saved_data
+[292.384] [ShellUI] debug: createJson_hook: 881b3e86c id: MENU_ID_GAME_DATA_MANAGEMENT, label: , actionUrl: psgamedatamgmt:play?titleId=PPSA99008, actionId: , messageId: msgid_manage_game_data
+[292.393] [ShellUI] debug: Updated menu titleId: PPSA99008
+[292.396] [ShellUI] debug: createJson_hook: 881b4d564 id: MENU_ID_APPLICATION_DELETE, label: , actionUrl: pssmdlg:open?dialogName=AppDeleteDialog&customParam=%7B%22titleIds%22%3A%5B%22PPSA99008%22%5D%7D, actionId: , messageId: msgid_delete
+[292.409] [ShellUI] debug: createJson_hook: 881b696aa id: MENU_ID_APPLICATION_INFORMATION, label: , actionUrl: pscontentinfo:info?titleId=PPSA99008, actionId: , messageId: msgid_information
+[292.416] [ShellUI] debug: createJson_hook: 881b7cd2c id: MENU_ID_INTELLECTUAL_PROPERTY_NOTICES, label: , actionUrl: pscontentinfo:copyright?titleId=PPSA99008, actionId: , messageId: msgid_intellectual_property_notices
+[313.954] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[343.954] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[366.404] [ShellUI] debug: Boot: psgm:play?id=PPSA30140 (NULL), OPT 1
+[366.455] [ShellUI] debug: patch payload not running .. returning with orig
+[368.328] [OnionHEN] debug: [lifecycle] collect skip source=fork reason=running-query-not-ready exec_pid=94 exec_tid=- running_pid=-1 running_tid=- query_ok=0
+[368.335] [OnionHEN] debug: [lifecycle] collect skip source=fork reason=running-query-not-ready exec_pid=55 exec_tid=- running_pid=-1 running_tid=- query_ok=0
+[368.704] [OnionHEN] info: [lifecycle] Big App started pid=94 appid=24 tid=PPSA30140 via=exec source=exec
+[368.706] [OnionHEN] debug: [JB] Big App start ignored while AppJailbreak is disabled pid=94 tid=PPSA30140
+[368.713] [OnionHEN] debug: [proc] matched bigapp pid=94 appid=24 process='eboot.bin' comm='eboot.bin'
+[368.717] [OnionHEN] warn: [sprx-manager] line=0 plugin=-: cannot open manifest: No such file or directory
+[368.723] [OnionHEN] info: [sprx-manager] big-app-start catalog=0 entries=0 loaded=0 failed=0 skipped=0
+[369.916] [OnionHEN] debug: [proc] matched bigapp pid=94 appid=24 process='eboot.bin' comm='eboot.bin'
+[370.014] [OnionHEN] debug: [proc] matched bigapp pid=94 appid=24 process='eboot.bin' comm='eboot.bin'
+[370.017] [OnionHEN] debug: [lifecycle] collect skip source=fork reason=already-tracked exec_pid=95 exec_tid=- running_pid=94 running_tid=PPSA30140 query_ok=1
+[370.027] [OnionHEN] debug: [proc] matched bigapp pid=94 appid=24 process='eboot.bin' comm='eboot.bin'
+[370.030] [OnionHEN] debug: [lifecycle] collect skip source=fork reason=already-tracked exec_pid=55 exec_tid=- running_pid=94 running_tid=PPSA30140 query_ok=1
+[370.042] [OnionHEN] debug: [proc] matched bigapp pid=94 appid=24 process='eboot.bin' comm='eboot.bin'
+[370.047] [OnionHEN] debug: [lifecycle] collect skip source=exec reason=already-tracked exec_pid=95 exec_tid=NPXS40093 running_pid=94 running_tid=PPSA30140 query_ok=1
+[371.915] [OnionHEN] debug: [proc] matched bigapp pid=94 appid=24 process='eboot.bin' comm='eboot.bin'
+[373.915] [OnionHEN] debug: [proc] matched bigapp pid=94 appid=24 process='eboot.bin' comm='eboot.bin'
+[373.956] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[375.915] [OnionHEN] debug: [proc] matched bigapp pid=94 appid=24 process='eboot.bin' comm='eboot.bin'
+[377.915] [OnionHEN] debug: [proc] matched bigapp pid=94 appid=24 process='eboot.bin' comm='eboot.bin'
+[379.915] [OnionHEN] debug: [proc] matched bigapp pid=94 appid=24 process='eboot.bin' comm='eboot.bin'
+[380.766] [ShellUI] debug: Option button pressed
+[380.799] [ShellUI] debug: Option button pressed
+[380.833] [ShellUI] debug: Option button pressed
+[380.866] [ShellUI] debug: Option button pressed
+[381.915] [OnionHEN] debug: [proc] matched bigapp pid=94 appid=24 process='eboot.bin' comm='eboot.bin'
+[383.169] [ShellUI] debug: Option button pressed
+[383.202] [ShellUI] debug: Option button pressed
+[383.235] [ShellUI] debug: Option button pressed
+[383.268] [ShellUI] debug: Option button pressed
+[383.302] [ShellUI] debug: Option button pressed
+[383.916] [OnionHEN] debug: [proc] matched bigapp pid=94 appid=24 process='eboot.bin' comm='eboot.bin'
+[384.169] [ShellUI] debug: Option button pressed
+[384.202] [ShellUI] debug: Option button pressed
+[384.236] [ShellUI] debug: Option button pressed
+[384.269] [ShellUI] debug: Option button pressed
+[384.303] [ShellUI] debug: Option button pressed
+[384.436] [ShellUI] debug: Option button pressed
+[384.470] [ShellUI] debug: Option button pressed
+[384.503] [ShellUI] debug: Option button pressed
+[385.915] [OnionHEN] debug: [proc] matched bigapp pid=94 appid=24 process='eboot.bin' comm='eboot.bin'
+[387.915] [OnionHEN] debug: [proc] matched bigapp pid=94 appid=24 process='eboot.bin' comm='eboot.bin'
+[389.915] [OnionHEN] debug: [proc] matched bigapp pid=94 appid=24 process='eboot.bin' comm='eboot.bin'
+[391.915] [OnionHEN] debug: [proc] matched bigapp pid=94 appid=24 process='eboot.bin' comm='eboot.bin'
+[393.915] [OnionHEN] debug: [proc] matched bigapp pid=94 appid=24 process='eboot.bin' comm='eboot.bin'
+[395.915] [OnionHEN] debug: [proc] matched bigapp pid=94 appid=24 process='eboot.bin' comm='eboot.bin'
+[397.915] [OnionHEN] debug: [proc] matched bigapp pid=94 appid=24 process='eboot.bin' comm='eboot.bin'
+[399.915] [OnionHEN] debug: [proc] matched bigapp pid=94 appid=24 process='eboot.bin' comm='eboot.bin'
+[401.915] [OnionHEN] debug: [proc] matched bigapp pid=94 appid=24 process='eboot.bin' comm='eboot.bin'
+[403.915] [OnionHEN] debug: [proc] matched bigapp pid=94 appid=24 process='eboot.bin' comm='eboot.bin'
+[403.958] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[405.915] [OnionHEN] debug: [proc] matched bigapp pid=94 appid=24 process='eboot.bin' comm='eboot.bin'
+[407.915] [OnionHEN] debug: [proc] matched bigapp pid=94 appid=24 process='eboot.bin' comm='eboot.bin'
+[409.915] [OnionHEN] debug: [proc] matched bigapp pid=94 appid=24 process='eboot.bin' comm='eboot.bin'
+[411.916] [OnionHEN] debug: [proc] matched bigapp pid=94 appid=24 process='eboot.bin' comm='eboot.bin'
+[413.916] [OnionHEN] debug: [proc] matched bigapp pid=94 appid=24 process='eboot.bin' comm='eboot.bin'
+[415.915] [OnionHEN] debug: [proc] matched bigapp pid=94 appid=24 process='eboot.bin' comm='eboot.bin'
+[417.915] [OnionHEN] debug: [proc] matched bigapp pid=94 appid=24 process='eboot.bin' comm='eboot.bin'
+[419.915] [OnionHEN] debug: [proc] matched bigapp pid=94 appid=24 process='eboot.bin' comm='eboot.bin'
+[421.915] [OnionHEN] debug: [proc] matched bigapp pid=94 appid=24 process='eboot.bin' comm='eboot.bin'
+[422.366] [ShellUI] debug: Option button pressed
+[422.397] [ShellUI] debug: Option button pressed
+[422.434] [ShellUI] debug: Option button pressed
+[422.472] [ShellUI] debug: Option button pressed
+[423.916] [OnionHEN] debug: [proc] matched bigapp pid=94 appid=24 process='eboot.bin' comm='eboot.bin'
+[425.918] [OnionHEN] debug: [proc] matched bigapp pid=94 appid=24 process='eboot.bin' comm='eboot.bin'
+[427.915] [OnionHEN] debug: [proc] matched bigapp pid=94 appid=24 process='eboot.bin' comm='eboot.bin'
+[429.915] [OnionHEN] debug: [proc] matched bigapp pid=94 appid=24 process='eboot.bin' comm='eboot.bin'
+[430.832] [ShellUI] debug: Option button pressed
+[430.848] [ShellUI] debug: Option button pressed
+[430.865] [ShellUI] debug: Option button pressed
+[430.881] [ShellUI] debug: Option button pressed
+[430.898] [ShellUI] debug: Option button pressed
+[430.914] [ShellUI] debug: Option button pressed
+[430.931] [ShellUI] debug: Option button pressed
+[430.948] [ShellUI] debug: Option button pressed
+[430.970] [ShellUI] debug: createJson_hook: 881883a70 id: MENU_ID_APPLICATION_CLOSE, label: , actionUrl: , actionId: ACTION_ID_CLOSE_APPLICATION, messageId: msgid_close_game
+[430.973] [ShellUI] debug: createJson_hook: 8818a0078 id: MENU_ID_CHECK_PATCH, label: , actionUrl: pspatchcheck:check-for-update?titleid=PPSA30140, actionId: , messageId: msgid_check_update
+[430.985] [ShellUI] debug: createJson_hook: 62450ef0 id: MENU_ID_SAVE_DATA_MANAGEMENT_PS5_MANUAL, label: , actionUrl: pssettings:play?function=savedata&feature=options_menu_ps5&npTitleId=PPSA30140, actionId: , messageId: msgid_ps_plus_transfer_saved_data
+[430.997] [ShellUI] debug: createJson_hook: 8818a6c34 id: MENU_ID_GAME_DATA_MANAGEMENT, label: , actionUrl: psgamedatamgmt:play?titleId=PPSA30140, actionId: , messageId: msgid_manage_game_data
+[431.003] [ShellUI] debug: Updated menu titleId: PPSA30140
+[431.007] [ShellUI] debug: createJson_hook: 8818b8ed4 id: MENU_ID_APPLICATION_DELETE, label: , actionUrl: pssmdlg:open?dialogName=AppDeleteDialog&customParam=%7B%22titleIds%22%3A%5B%22PPSA30140%22%5D%7D, actionId: , messageId: msgid_delete
+[431.020] [ShellUI] debug: createJson_hook: 8818d57da id: MENU_ID_APPLICATION_INFORMATION, label: , actionUrl: pscontentinfo:info?titleId=PPSA30140, actionId: , messageId: msgid_information
+[431.027] [ShellUI] debug: createJson_hook: 8818d5d9c id: MENU_ID_INTELLECTUAL_PROPERTY_NOTICES, label: , actionUrl: pscontentinfo:copyright?titleId=PPSA30140, actionId: , messageId: msgid_intellectual_property_notices
+[431.915] [OnionHEN] debug: [proc] matched bigapp pid=94 appid=24 process='eboot.bin' comm='eboot.bin'
+[433.915] [OnionHEN] debug: [proc] matched bigapp pid=94 appid=24 process='eboot.bin' comm='eboot.bin'
+[433.959] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[439.427] [ShellUI] debug: Boot: OnionHEN?NavUI=1 (NULL), OPT 1
+[439.428] [ShellUI] debug: HomeUI top-nav OnionHEN URI detected
+[439.478] [ShellUI] debug: ioctl_hook called with fd: 163, request: 0xC0105203, argp: 7e570afa8
+[439.481] [ShellUI] debug: homeui_top_nav_patch: ioctl RNPS buffer=211304000 size=5163712 head=52 4e 50 53
+[439.498] [ShellUI] debug: settings_bundle_patch: Hermes NPXS40008 label=1 footer=updated (stock icon id preserved)
+[439.794] [ShellUI] debug: GetManifestResourceStream_Hook: Sce.Vsh.ShellUI.Legacy.src.Sce.Vsh.ShellUI.Settings.Plugins.DebugSettings.data.debug_settings.xml domain=8817dc000 root=8817dc000
+[439.804] [ShellUI] debug: Loaded settings from /user/data/OnionHEN/config.ini
+[439.808] [ShellUI] debug: Current user => <oculto>
+[439.811] [ShellUI] debug: Account register number => <oculto>
+[439.814] [ShellUI] debug: User Account ID => <oculto>
+[439.817] [ShellUI] debug: AccountType => np
+[439.820] [ShellUI] debug: Account Flags => <oculto>
+[439.824] [ShellUI] debug: [GMRS] New_Mono_XML_From_String: xml_size=18115 domain=8817dc000 Root_Domain=8817dc000 MemoryStream_IO=8883bf5b0
+[439.830] [ShellUI] debug: [GMRS] New_Mono_XML_From_String: ok instance=881989610 gchandle=140
+[439.844] [ShellUI] debug: Resource Name: ★Caja de herramientas OnionHEN
+[439.845] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[439.862] [ShellUI] debug: Resource Name: Instalación y gestión de contenido
+[439.863] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[439.868] [ShellUI] debug: Resource Name: Instalar PKG y gestionar contenido adicional
+[439.872] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[439.876] [ShellUI] debug: uri_string: //user//data//OnionHEN//assets//icon_xml_package.png
+[439.881] [ShellUI] debug: CxmlUri_Hook: /user/data/OnionHEN/assets/icon_xml_package.png
+[439.886] [ShellUI] debug: Resource Name: Payloads y núcleo
+[439.889] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[439.893] [ShellUI] debug: Resource Name: Payloads del usuario y de inicio automático; Kstuff y plugins instalados
+[439.899] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[439.903] [ShellUI] debug: uri_string: //user//data//OnionHEN//assets//icon_xml_plugins.png
+[439.907] [ShellUI] debug: CxmlUri_Hook: /user/data/OnionHEN/assets/icon_xml_plugins.png
+[439.912] [ShellUI] debug: Resource Name: Herramientas de juego
+[439.916] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[439.920] [ShellUI] debug: Resource Name: Gestionar trucos y descargar la colección de trucos
+[439.924] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[439.928] [ShellUI] debug: uri_string: //user//data//OnionHEN//assets//icon_xml_game.png
+[439.933] [ShellUI] debug: CxmlUri_Hook: /user/data/OnionHEN/assets/icon_xml_game.png
+[439.938] [ShellUI] debug: Resource Name: Cuenta y juego remoto
+[439.941] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[439.945] [ShellUI] debug: Resource Name: Activación de cuenta y emparejamiento de juego remoto
+[439.950] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[439.954] [ShellUI] debug: uri_string: //user//data//OnionHEN//assets//icon_xml_account.png
+[439.965] [ShellUI] debug: CxmlUri_Hook: /user/data/OnionHEN/assets/icon_xml_account.png
+[439.969] [ShellUI] debug: Resource Name: Supervisión y pantalla
+[439.973] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[439.977] [ShellUI] debug: Resource Name: Superposición en partida, indicadores en la pantalla de inicio y entrada a las opciones del juego
+[439.984] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[439.988] [ShellUI] debug: uri_string: //user//data//OnionHEN//assets//icon_xml_monitor.png
+[439.992] [ShellUI] debug: CxmlUri_Hook: /user/data/OnionHEN/assets/icon_xml_monitor.png
+[439.997] [ShellUI] debug: Resource Name: Sistema y hardware
+[440.000] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[440.004] [ShellUI] debug: Resource Name: Ventilador, almacenamiento externo y activación de licencia de disco
+[440.010] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[440.014] [ShellUI] debug: uri_string: //user//data//OnionHEN//assets//icon_xml_settings.png
+[440.019] [ShellUI] debug: CxmlUri_Hook: /user/data/OnionHEN/assets/icon_xml_settings.png
+[440.024] [ShellUI] debug: Resource Name: Preferencias
+[440.027] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[440.031] [ShellUI] debug: Resource Name: Comportamiento al iniciar, idioma de la caja de herramientas, origen de trucos y atajos del mando
+[440.037] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[440.041] [ShellUI] debug: uri_string: //user//data//OnionHEN//assets//icon_xml_shortcuts.png
+[440.046] [ShellUI] debug: CxmlUri_Hook: /user/data/OnionHEN/assets/icon_xml_shortcuts.png
+[440.051] [ShellUI] debug: Resource Name: Depuración avanzada
+[440.054] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[440.058] [ShellUI] debug: Resource Name: Registros, control del jailbreak de aplicaciones y entorno NP
+[440.064] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[440.068] [ShellUI] debug: uri_string: //user//data//OnionHEN//assets//icon_xml_debug.png
+[440.072] [ShellUI] debug: CxmlUri_Hook: /user/data/OnionHEN/assets/icon_xml_debug.png
+[440.077] [ShellUI] debug: Resource Name: Acerca de
+[440.080] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[440.084] [ShellUI] debug: Resource Name: Créditos, donaciones e información del proyecto
+[440.089] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[440.093] [ShellUI] debug: uri_string: //user//data//OnionHEN//assets//icon_xml_about.png
+[440.097] [ShellUI] debug: CxmlUri_Hook: /user/data/OnionHEN/assets/icon_xml_about.png
+[440.812] [ShellUI] debug: [LM HOOK] OnPress_Hook: page=1 Id=id_group_pkg Value=
+[440.813] [ShellUI] debug: GetManifestResourceStream_Hook: Sce.Vsh.ShellUI.Legacy.src.Sce.Vsh.ShellUI.Settings.Plugins.DebugSettings.data.debug_settings.xml domain=8817dc000 root=8817dc000
+[440.822] [ShellUI] debug: Loaded settings from /user/data/OnionHEN/config.ini
+[440.826] [ShellUI] debug: Current user => <oculto>
+[440.829] [ShellUI] debug: Account register number => <oculto>
+[440.832] [ShellUI] debug: User Account ID => <oculto>
+[440.835] [ShellUI] debug: AccountType => np
+[440.838] [ShellUI] debug: Account Flags => <oculto>
+[440.842] [ShellUI] debug: [GMRS] New_Mono_XML_From_String: xml_size=18115 domain=8817dc000 Root_Domain=8817dc000 MemoryStream_IO=8883bf5b0
+[440.848] [ShellUI] debug: [GMRS] New_Mono_XML_From_String: ok instance=8819d3c20 gchandle=12
+[440.856] [ShellUI] debug: Resource Name: Instalación y gestión de contenido
+[440.857] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[440.863] [ShellUI] debug: Resource Name: Instalador de paquetes
+[440.864] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[440.868] [ShellUI] debug: Resource Name: Abrir el instalador del sistema para instalar juegos o aplicaciones PKG
+[440.874] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[440.878] [ShellUI] debug: Resource Name: Gestor de contenido adicional
+[440.882] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[440.886] [ShellUI] debug: Resource Name: Gestionar extras, parches y DLC de los juegos instalados
+[440.891] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[442.964] [ShellUI] debug: [LM HOOK] OnPress_Hook: page=1 Id=id_group_network Value=
+[442.965] [ShellUI] debug: GetManifestResourceStream_Hook: Sce.Vsh.ShellUI.Legacy.src.Sce.Vsh.ShellUI.Settings.Plugins.DebugSettings.data.debug_settings.xml domain=8817dc000 root=8817dc000
+[442.974] [ShellUI] debug: Loaded settings from /user/data/OnionHEN/config.ini
+[442.978] [ShellUI] debug: Current user => <oculto>
+[442.981] [ShellUI] debug: Account register number => <oculto>
+[442.984] [ShellUI] debug: User Account ID => <oculto>
+[442.988] [ShellUI] debug: AccountType => np
+[442.990] [ShellUI] debug: Account Flags => <oculto>
+[442.994] [ShellUI] debug: [GMRS] New_Mono_XML_From_String: xml_size=18115 domain=8817dc000 Root_Domain=8817dc000 MemoryStream_IO=8883bf5b0
+[443.000] [ShellUI] debug: [GMRS] New_Mono_XML_From_String: ok instance=881aec390 gchandle=20
+[443.008] [ShellUI] debug: Resource Name: Cuenta y juego remoto
+[443.009] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[443.015] [ShellUI] debug: Resource Name: Uso a distancia
+[443.016] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[443.020] [ShellUI] debug: Resource Name: Emparejar un dispositivo de Uso a distancia y mostrar el PIN de conexión
+[443.025] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[443.030] [ShellUI] debug: Resource Name: Activación de cuenta
+[443.033] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[443.037] [ShellUI] debug: Resource Name: Activar la cuenta del usuario actual
+[443.041] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[463.960] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[493.961] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[523.961] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[553.962] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[583.963] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[613.964] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[643.965] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[673.966] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[703.967] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[733.968] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[763.968] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[793.969] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[823.970] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[853.971] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[883.972] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[913.973] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[943.974] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[973.975] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[1003.976] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[1033.977] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[1063.978] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[1093.979] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[1123.980] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[1153.981] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[1183.982] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[1213.983] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[1243.984] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[1273.985] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[1303.985] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[1333.986] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[1363.987] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[1393.988] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[1423.989] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[1453.990] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[1483.991] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[1513.992] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[1543.993] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[1573.994] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[1603.995] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[1633.996] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[1663.997] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[1693.998] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[1723.999] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[1754.000] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[1784.001] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[1814.002] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[1844.002] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[1874.003] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[1904.004] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[1934.005] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[1964.006] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[1994.007] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[2024.008] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[2054.009] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[2084.009] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[2114.010] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[2144.011] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[2174.012] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[2204.015] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[2234.016] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[2264.016] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[2294.017] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[2324.018] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[2336.311] [OnionHEN] debug: rest: release listen fd=17
+[2354.019] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[2384.020] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[2414.021] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[2444.023] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[2474.026] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[2504.027] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[2534.028] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[2543.046] [ShellUI] debug: Boot: OnionHEN?NavUI=1 (NULL), OPT 1
+[2543.046] [ShellUI] debug: HomeUI top-nav OnionHEN URI detected
+[2543.091] [ShellUI] debug: ioctl_hook called with fd: 163, request: 0xC0105203, argp: 7e068efa8
+[2543.094] [ShellUI] debug: homeui_top_nav_patch: ioctl RNPS buffer=211304000 size=5163712 head=52 4e 50 53
+[2543.110] [ShellUI] debug: settings_bundle_patch: Hermes NPXS40008 label=1 footer=updated (stock icon id preserved)
+[2543.413] [ShellUI] debug: GetManifestResourceStream_Hook: Sce.Vsh.ShellUI.Legacy.src.Sce.Vsh.ShellUI.Settings.Plugins.DebugSettings.data.debug_settings.xml domain=8817dc000 root=8817dc000
+[2543.422] [ShellUI] debug: Loaded settings from /user/data/OnionHEN/config.ini
+[2543.426] [ShellUI] debug: Current user => <oculto>
+[2543.429] [ShellUI] debug: Account register number => <oculto>
+[2543.432] [ShellUI] debug: User Account ID => <oculto>
+[2543.436] [ShellUI] debug: AccountType => np
+[2543.439] [ShellUI] debug: Account Flags => <oculto>
+[2543.442] [ShellUI] debug: [GMRS] New_Mono_XML_From_String: xml_size=18115 domain=8817dc000 Root_Domain=8817dc000 MemoryStream_IO=8883bf5b0
+[2543.449] [ShellUI] debug: [GMRS] New_Mono_XML_From_String: ok instance=881a1e8b0 gchandle=36
+[2543.463] [ShellUI] debug: Resource Name: ★Caja de herramientas OnionHEN
+[2543.463] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[2543.480] [ShellUI] debug: Resource Name: Instalación y gestión de contenido
+[2543.482] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[2543.487] [ShellUI] debug: Resource Name: Instalar PKG y gestionar contenido adicional
+[2543.491] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[2543.495] [ShellUI] debug: uri_string: //user//data//OnionHEN//assets//icon_xml_package.png
+[2543.500] [ShellUI] debug: CxmlUri_Hook: /user/data/OnionHEN/assets/icon_xml_package.png
+[2543.505] [ShellUI] debug: Resource Name: Payloads y núcleo
+[2543.508] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[2543.512] [ShellUI] debug: Resource Name: Payloads del usuario y de inicio automático; Kstuff y plugins instalados
+[2543.518] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[2543.522] [ShellUI] debug: uri_string: //user//data//OnionHEN//assets//icon_xml_plugins.png
+[2543.527] [ShellUI] debug: CxmlUri_Hook: /user/data/OnionHEN/assets/icon_xml_plugins.png
+[2543.532] [ShellUI] debug: Resource Name: Herramientas de juego
+[2543.535] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[2543.539] [ShellUI] debug: Resource Name: Gestionar trucos y descargar la colección de trucos
+[2543.544] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[2543.548] [ShellUI] debug: uri_string: //user//data//OnionHEN//assets//icon_xml_game.png
+[2543.553] [ShellUI] debug: CxmlUri_Hook: /user/data/OnionHEN/assets/icon_xml_game.png
+[2543.558] [ShellUI] debug: Resource Name: Cuenta y juego remoto
+[2543.561] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[2543.565] [ShellUI] debug: Resource Name: Activación de cuenta y emparejamiento de juego remoto
+[2543.576] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[2543.580] [ShellUI] debug: uri_string: //user//data//OnionHEN//assets//icon_xml_account.png
+[2543.584] [ShellUI] debug: CxmlUri_Hook: /user/data/OnionHEN/assets/icon_xml_account.png
+[2543.589] [ShellUI] debug: Resource Name: Supervisión y pantalla
+[2543.593] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[2543.597] [ShellUI] debug: Resource Name: Superposición en partida, indicadores en la pantalla de inicio y entrada a las opciones del juego
+[2543.604] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[2543.608] [ShellUI] debug: uri_string: //user//data//OnionHEN//assets//icon_xml_monitor.png
+[2543.618] [ShellUI] debug: CxmlUri_Hook: /user/data/OnionHEN/assets/icon_xml_monitor.png
+[2543.623] [ShellUI] debug: Resource Name: Sistema y hardware
+[2543.626] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[2543.630] [ShellUI] debug: Resource Name: Ventilador, almacenamiento externo y activación de licencia de disco
+[2543.636] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[2543.640] [ShellUI] debug: uri_string: //user//data//OnionHEN//assets//icon_xml_settings.png
+[2543.645] [ShellUI] debug: CxmlUri_Hook: /user/data/OnionHEN/assets/icon_xml_settings.png
+[2543.650] [ShellUI] debug: Resource Name: Preferencias
+[2543.653] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[2543.657] [ShellUI] debug: Resource Name: Comportamiento al iniciar, idioma de la caja de herramientas, origen de trucos y atajos del mando
+[2543.664] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[2543.668] [ShellUI] debug: uri_string: //user//data//OnionHEN//assets//icon_xml_shortcuts.png
+[2543.672] [ShellUI] debug: CxmlUri_Hook: /user/data/OnionHEN/assets/icon_xml_shortcuts.png
+[2543.678] [ShellUI] debug: Resource Name: Depuración avanzada
+[2543.681] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[2543.685] [ShellUI] debug: Resource Name: Registros, control del jailbreak de aplicaciones y entorno NP
+[2543.690] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[2543.694] [ShellUI] debug: uri_string: //user//data//OnionHEN//assets//icon_xml_debug.png
+[2543.699] [ShellUI] debug: CxmlUri_Hook: /user/data/OnionHEN/assets/icon_xml_debug.png
+[2543.704] [ShellUI] debug: Resource Name: Acerca de
+[2543.707] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[2543.711] [ShellUI] debug: Resource Name: Créditos, donaciones e información del proyecto
+[2543.715] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[2543.719] [ShellUI] debug: uri_string: //user//data//OnionHEN//assets//icon_xml_about.png
+[2543.724] [ShellUI] debug: CxmlUri_Hook: /user/data/OnionHEN/assets/icon_xml_about.png
+[2560.980] [ShellUI] debug: [LM HOOK] OnPress_Hook: page=1 Id=id_group_game Value=
+[2560.981] [ShellUI] debug: GetManifestResourceStream_Hook: Sce.Vsh.ShellUI.Legacy.src.Sce.Vsh.ShellUI.Settings.Plugins.DebugSettings.data.debug_settings.xml domain=8817dc000 root=8817dc000
+[2560.990] [ShellUI] debug: Loaded settings from /user/data/OnionHEN/config.ini
+[2560.995] [ShellUI] debug: Current user => <oculto>
+[2560.997] [ShellUI] debug: Account register number => <oculto>
+[2561.001] [ShellUI] debug: User Account ID => <oculto>
+[2561.004] [ShellUI] debug: AccountType => np
+[2561.008] [ShellUI] debug: Account Flags => <oculto>
+[2561.011] [ShellUI] debug: [GMRS] New_Mono_XML_From_String: xml_size=18115 domain=8817dc000 Root_Domain=8817dc000 MemoryStream_IO=8883bf5b0
+[2561.017] [ShellUI] debug: [GMRS] New_Mono_XML_From_String: ok instance=8819b23e8 gchandle=172
+[2561.025] [ShellUI] debug: Resource Name: Herramientas de juego
+[2561.026] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[2561.032] [ShellUI] debug: Resource Name: Trucos
+[2561.033] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[2561.036] [ShellUI] debug: Resource Name: Activar o desactivar los trucos del juego en ejecución
+[2561.041] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[2561.045] [ShellUI] debug: uri_string: //user//data//OnionHEN//assets//icon_xml_cheats.png
+[2561.050] [ShellUI] debug: CxmlUri_Hook: /user/data/OnionHEN/assets/icon_xml_cheats.png
+[2561.055] [ShellUI] debug: Resource Name: Descargar colección de trucos
+[2561.059] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[2561.063] [ShellUI] debug: Resource Name: Créditos a TeeKay87 (repositorio oficial de trucos) y PS5_Xiexiyu (repositorio espejo chino).
+[2561.069] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[2561.074] [ShellUI] debug: uri_string: //user//data//OnionHEN//assets//icon_xml_download.png
+[2561.078] [ShellUI] debug: CxmlUri_Hook: /user/data/OnionHEN/assets/icon_xml_download.png
+[2562.065] [ShellUI] debug: [LM HOOK] OnPress_Hook: page=1 Id=id_cheats Value=
+[2562.065] [ShellUI] debug: GetManifestResourceStream_Hook: Sce.Vsh.ShellUI.Legacy.src.Sce.Vsh.ShellUI.Settings.Plugins.cheats.xml domain=8817dc000 root=8817dc000
+[2562.073] [ShellUI] debug: [GMRS] New_Mono_XML_From_String: xml_size=338 domain=8817dc000 Root_Domain=8817dc000 MemoryStream_IO=8883bf5b0
+[2562.080] [ShellUI] debug: [GMRS] New_Mono_XML_From_String: ok instance=88181ff20 gchandle=180
+[2562.089] [ShellUI] debug: Resource Name: Trucos OnionHEN - no hay ningún juego abierto
+[2562.089] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[2562.099] [ShellUI] debug: Resource Name: Inicie primero un juego y luego abra el menú de trucos
+[2562.104] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[2563.833] [ShellUI] debug: Resource Name: Descargar colección de trucos
+[2563.834] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[2563.838] [ShellUI] debug: Resource Name: Se descargará la colección completa por red y puede tardar varios minutos. ¿Continuar?
+[2563.844] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[2563.849] [ShellUI] debug: Resource Name: OK
+[2563.851] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[2563.855] [ShellUI] debug: Resource Name: Cancelar
+[2563.858] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[2564.029] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[2565.452] [ShellUI] debug: [LM HOOK] OnPress_Hook: page=10 Id=id_download_cheats Value=
+[2583.320] [ShellUI] debug: Resource Name: Descargar colección de trucos
+[2583.321] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[2583.325] [ShellUI] debug: Resource Name: Se descargará la colección completa por red y puede tardar varios minutos. ¿Continuar?
+[2583.331] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[2583.335] [ShellUI] debug: Resource Name: OK
+[2583.338] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[2583.342] [ShellUI] debug: Resource Name: Cancelar
+[2583.345] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[2587.040] [ShellUI] debug: Resource Name: Descargar colección de trucos
+[2587.040] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[2587.044] [ShellUI] debug: Resource Name: Se descargará la colección completa por red y puede tardar varios minutos. ¿Continuar?
+[2587.051] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[2587.055] [ShellUI] debug: Resource Name: OK
+[2587.058] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[2587.062] [ShellUI] debug: Resource Name: Cancelar
+[2587.065] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[2587.724] [ShellUI] debug: [LM HOOK] OnPress_Hook: page=10 Id=id_download_cheats Value=
+[2594.030] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[2624.031] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[2654.032] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[2684.033] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[2714.033] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[2738.324] [ShellUI] debug: Boot: pssettings:play?mode=settings (NULL), OPT 1
+[2738.365] [ShellUI] debug: ioctl_hook called with fd: 163, request: 0xC0105203, argp: 7dff72fa8
+[2738.368] [ShellUI] debug: homeui_top_nav_patch: ioctl RNPS buffer=211304000 size=5163712 head=52 4e 50 53
+[2738.385] [ShellUI] debug: settings_bundle_patch: Hermes NPXS40008 label=1 footer=updated (stock icon id preserved)
+[2741.889] [ShellUI] debug: [DBG-GETMODEL] pageId=id_debug_settings
+[2741.889] [ShellUI] debug: [DBG-GETMODEL] param=<empty>
+[2741.893] [ShellUI] debug: [DBG-GETMODEL] id_debug_settings → BootHelper legacy
+[2741.898] [ShellUI] debug: [DBG-NAV] BootHelper.Boot(3) → legacy (GetModel) ret=1
+[2741.942] [ShellUI] debug: ioctl_hook called with fd: 163, request: 0xC0105203, argp: 7e318efa8
+[2741.945] [ShellUI] debug: homeui_top_nav_patch: ioctl RNPS buffer=211d04000 size=5163712 head=52 4e 50 53
+[2741.962] [ShellUI] debug: settings_bundle_patch: Hermes NPXS40008 label=1 footer=updated (stock icon id preserved)
+[2742.451] [ShellUI] debug: GetManifestResourceStream_Hook: Sce.Vsh.ShellUI.Legacy.src.Sce.Vsh.ShellUI.Settings.Plugins.DebugSettings.data.debug_settings.xml domain=8817dc000 root=8817dc000
+[2742.459] [ShellUI] debug: Loaded settings from /user/data/OnionHEN/config.ini
+[2742.463] [ShellUI] debug: Current user => <oculto>
+[2742.466] [ShellUI] debug: Account register number => <oculto>
+[2742.469] [ShellUI] debug: User Account ID => <oculto>
+[2742.473] [ShellUI] debug: AccountType => np
+[2742.475] [ShellUI] debug: Account Flags => <oculto>
+[2742.479] [ShellUI] debug: [GMRS] New_Mono_XML_From_String: xml_size=18115 domain=8817dc000 Root_Domain=8817dc000 MemoryStream_IO=8883bf5b0
+[2742.485] [ShellUI] debug: [GMRS] New_Mono_XML_From_String: ok instance=881807458 gchandle=236
+[2742.495] [ShellUI] debug: Resource Name: ★Caja de herramientas OnionHEN
+[2742.495] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[2742.513] [ShellUI] debug: Resource Name: Instalación y gestión de contenido
+[2742.514] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[2742.518] [ShellUI] debug: Resource Name: Instalar PKG y gestionar contenido adicional
+[2742.522] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[2742.526] [ShellUI] debug: uri_string: //user//data//OnionHEN//assets//icon_xml_package.png
+[2742.531] [ShellUI] debug: CxmlUri_Hook: /user/data/OnionHEN/assets/icon_xml_package.png
+[2742.536] [ShellUI] debug: Resource Name: Payloads y núcleo
+[2742.539] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[2742.543] [ShellUI] debug: Resource Name: Payloads del usuario y de inicio automático; Kstuff y plugins instalados
+[2742.549] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[2742.553] [ShellUI] debug: uri_string: //user//data//OnionHEN//assets//icon_xml_plugins.png
+[2742.558] [ShellUI] debug: CxmlUri_Hook: /user/data/OnionHEN/assets/icon_xml_plugins.png
+[2742.563] [ShellUI] debug: Resource Name: Herramientas de juego
+[2742.566] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[2742.570] [ShellUI] debug: Resource Name: Gestionar trucos y descargar la colección de trucos
+[2742.575] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[2742.579] [ShellUI] debug: uri_string: //user//data//OnionHEN//assets//icon_xml_game.png
+[2742.584] [ShellUI] debug: CxmlUri_Hook: /user/data/OnionHEN/assets/icon_xml_game.png
+[2742.589] [ShellUI] debug: Resource Name: Cuenta y juego remoto
+[2742.592] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[2742.596] [ShellUI] debug: Resource Name: Activación de cuenta y emparejamiento de juego remoto
+[2742.601] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[2742.605] [ShellUI] debug: uri_string: //user//data//OnionHEN//assets//icon_xml_account.png
+[2742.610] [ShellUI] debug: CxmlUri_Hook: /user/data/OnionHEN/assets/icon_xml_account.png
+[2742.615] [ShellUI] debug: Resource Name: Supervisión y pantalla
+[2742.618] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[2742.622] [ShellUI] debug: Resource Name: Superposición en partida, indicadores en la pantalla de inicio y entrada a las opciones del juego
+[2742.629] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[2742.633] [ShellUI] debug: uri_string: //user//data//OnionHEN//assets//icon_xml_monitor.png
+[2742.638] [ShellUI] debug: CxmlUri_Hook: /user/data/OnionHEN/assets/icon_xml_monitor.png
+[2742.643] [ShellUI] debug: Resource Name: Sistema y hardware
+[2742.646] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[2742.650] [ShellUI] debug: Resource Name: Ventilador, almacenamiento externo y activación de licencia de disco
+[2742.656] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[2742.660] [ShellUI] debug: uri_string: //user//data//OnionHEN//assets//icon_xml_settings.png
+[2742.665] [ShellUI] debug: CxmlUri_Hook: /user/data/OnionHEN/assets/icon_xml_settings.png
+[2742.670] [ShellUI] debug: Resource Name: Preferencias
+[2742.673] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[2742.677] [ShellUI] debug: Resource Name: Comportamiento al iniciar, idioma de la caja de herramientas, origen de trucos y atajos del mando
+[2742.684] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[2742.688] [ShellUI] debug: uri_string: //user//data//OnionHEN//assets//icon_xml_shortcuts.png
+[2742.692] [ShellUI] debug: CxmlUri_Hook: /user/data/OnionHEN/assets/icon_xml_shortcuts.png
+[2742.698] [ShellUI] debug: Resource Name: Depuración avanzada
+[2742.701] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[2742.705] [ShellUI] debug: Resource Name: Registros, control del jailbreak de aplicaciones y entorno NP
+[2742.710] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[2742.714] [ShellUI] debug: uri_string: //user//data//OnionHEN//assets//icon_xml_debug.png
+[2742.719] [ShellUI] debug: CxmlUri_Hook: /user/data/OnionHEN/assets/icon_xml_debug.png
+[2742.724] [ShellUI] debug: Resource Name: Acerca de
+[2742.727] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[2742.731] [ShellUI] debug: Resource Name: Créditos, donaciones e información del proyecto
+[2742.735] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[2742.739] [ShellUI] debug: uri_string: //user//data//OnionHEN//assets//icon_xml_about.png
+[2742.745] [ShellUI] debug: CxmlUri_Hook: /user/data/OnionHEN/assets/icon_xml_about.png
+[2744.034] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[2745.148] [ShellUI] debug: [LM HOOK] OnPress_Hook: page=1 Id=id_group_game Value=
+[2745.148] [ShellUI] debug: GetManifestResourceStream_Hook: Sce.Vsh.ShellUI.Legacy.src.Sce.Vsh.ShellUI.Settings.Plugins.DebugSettings.data.debug_settings.xml domain=8817dc000 root=8817dc000
+[2745.157] [ShellUI] debug: Loaded settings from /user/data/OnionHEN/config.ini
+[2745.161] [ShellUI] debug: Current user => <oculto>
+[2745.164] [ShellUI] debug: Account register number => <oculto>
+[2745.168] [ShellUI] debug: User Account ID => <oculto>
+[2745.171] [ShellUI] debug: AccountType => np
+[2745.174] [ShellUI] debug: Account Flags => <oculto>
+[2745.177] [ShellUI] debug: [GMRS] New_Mono_XML_From_String: xml_size=18115 domain=8817dc000 Root_Domain=8817dc000 MemoryStream_IO=8883bf5b0
+[2745.184] [ShellUI] debug: [GMRS] New_Mono_XML_From_String: ok instance=881bbb4f0 gchandle=244
+[2745.192] [ShellUI] debug: Resource Name: Herramientas de juego
+[2745.193] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[2745.199] [ShellUI] debug: Resource Name: Trucos
+[2745.200] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[2745.203] [ShellUI] debug: Resource Name: Activar o desactivar los trucos del juego en ejecución
+[2745.208] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[2745.212] [ShellUI] debug: uri_string: //user//data//OnionHEN//assets//icon_xml_cheats.png
+[2745.217] [ShellUI] debug: CxmlUri_Hook: /user/data/OnionHEN/assets/icon_xml_cheats.png
+[2745.222] [ShellUI] debug: Resource Name: Descargar colección de trucos
+[2745.226] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[2745.230] [ShellUI] debug: Resource Name: Créditos a TeeKay87 (repositorio oficial de trucos) y PS5_Xiexiyu (repositorio espejo chino).
+[2745.237] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[2745.241] [ShellUI] debug: uri_string: //user//data//OnionHEN//assets//icon_xml_download.png
+[2745.245] [ShellUI] debug: CxmlUri_Hook: /user/data/OnionHEN/assets/icon_xml_download.png
+[2746.098] [ShellUI] debug: [LM HOOK] OnPress_Hook: page=1 Id=id_cheats Value=
+[2746.099] [ShellUI] debug: GetManifestResourceStream_Hook: Sce.Vsh.ShellUI.Legacy.src.Sce.Vsh.ShellUI.Settings.Plugins.cheats.xml domain=8817dc000 root=8817dc000
+[2746.107] [ShellUI] debug: [GMRS] New_Mono_XML_From_String: xml_size=338 domain=8817dc000 Root_Domain=8817dc000 MemoryStream_IO=8883bf5b0
+[2746.114] [ShellUI] debug: [GMRS] New_Mono_XML_From_String: ok instance=881a4a740 gchandle=252
+[2746.122] [ShellUI] debug: Resource Name: Trucos OnionHEN - no hay ningún juego abierto
+[2746.123] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[2746.133] [ShellUI] debug: Resource Name: Inicie primero un juego y luego abra el menú de trucos
+[2746.138] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[2747.900] [ShellUI] debug: Resource Name: Descargar colección de trucos
+[2747.901] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[2747.905] [ShellUI] debug: Resource Name: Se descargará la colección completa por red y puede tardar varios minutos. ¿Continuar?
+[2747.912] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[2747.916] [ShellUI] debug: Resource Name: OK
+[2747.918] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[2747.922] [ShellUI] debug: Resource Name: Cancelar
+[2747.925] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[2749.352] [ShellUI] debug: [LM HOOK] OnPress_Hook: page=10 Id=id_download_cheats Value=
+[2774.035] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[2776.548] [ShellUI] debug: ioctl_hook called with fd: 163, request: 0xC0105203, argp: 7e9a62fa8
+[2776.554] [ShellUI] debug: homeui_top_nav_patch: ioctl RNPS buffer=211304000 size=3128560 head=52 4e 50 53
+[2776.830] [ShellUI] debug: createJson_hook: 88184eb40 id: MENU_ID_CHECK_PATCH, label: , actionUrl: pspatchcheck:check-for-update?titleid=PPSA24913, actionId: , messageId: msgid_check_update
+[2776.835] [ShellUI] debug: createJson_hook: 62450ef0 id: MENU_ID_SAVE_DATA_MANAGEMENT_PS5_MANUAL, label: , actionUrl: pssettings:play?function=savedata&feature=options_menu_ps5&npTitleId=PPSA24913, actionId: , messageId: msgid_ps_plus_transfer_saved_data
+[2776.846] [ShellUI] debug: createJson_hook: 8818a28e4 id: MENU_ID_GAME_DATA_MANAGEMENT, label: , actionUrl: psgamedatamgmt:play?titleId=PPSA24913, actionId: , messageId: msgid_manage_game_data
+[2776.855] [ShellUI] debug: Updated menu titleId: PPSA24913
+[2776.858] [ShellUI] debug: createJson_hook: 8818ce9dc id: MENU_ID_APPLICATION_DELETE, label: , actionUrl: pssmdlg:open?dialogName=AppDeleteDialog&customParam=%7B%22titleIds%22%3A%5B%22PPSA24913%22%5D%7D, actionId: , messageId: msgid_delete
+[2776.872] [ShellUI] debug: createJson_hook: 8818ea67a id: MENU_ID_APPLICATION_INFORMATION, label: , actionUrl: pscontentinfo:info?titleId=PPSA24913, actionId: , messageId: msgid_information
+[2776.879] [ShellUI] debug: createJson_hook: 8818ebf5c id: MENU_ID_INTELLECTUAL_PROPERTY_NOTICES, label: , actionUrl: pscontentinfo:copyright?titleId=PPSA24913, actionId: , messageId: msgid_intellectual_property_notices
+[2776.893] [ShellUI] debug: createJson_hook: 881943428 id: MENU_ID_CHECK_PATCH, label: , actionUrl: pspatchcheck:check-for-update?titleid=PPSA02572, actionId: , messageId: msgid_check_update
+[2776.899] [ShellUI] debug: createJson_hook: 62450ef0 id: MENU_ID_SAVE_DATA_MANAGEMENT_PS5_MANUAL, label: , actionUrl: pssettings:play?function=savedata&feature=options_menu_ps5&npTitleId=PPSA02572, actionId: , messageId: msgid_ps_plus_transfer_saved_data
+[2776.910] [ShellUI] debug: createJson_hook: 88198076c id: MENU_ID_GAME_DATA_MANAGEMENT, label: , actionUrl: psgamedatamgmt:play?titleId=PPSA02572, actionId: , messageId: msgid_manage_game_data
+[2776.919] [ShellUI] debug: Updated menu titleId: PPSA02572
+[2776.922] [ShellUI] debug: createJson_hook: 8819aa2c4 id: MENU_ID_APPLICATION_DELETE, label: , actionUrl: pssmdlg:open?dialogName=AppDeleteDialog&customParam=%7B%22titleIds%22%3A%5B%22PPSA02572%22%5D%7D, actionId: , messageId: msgid_delete
+[2776.936] [ShellUI] debug: createJson_hook: 8819d27aa id: MENU_ID_APPLICATION_INFORMATION, label: , actionUrl: pscontentinfo:info?titleId=PPSA02572, actionId: , messageId: msgid_information
+[2776.942] [ShellUI] debug: createJson_hook: 8819d2dcc id: MENU_ID_INTELLECTUAL_PROPERTY_NOTICES, label: , actionUrl: pscontentinfo:copyright?titleId=PPSA02572, actionId: , messageId: msgid_intellectual_property_notices
+[2776.957] [ShellUI] debug: createJson_hook: 881a1c090 id: MENU_ID_CHECK_PATCH, label: , actionUrl: pspatchcheck:check-for-update?titleid=PPSA29343, actionId: , messageId: msgid_check_update
+[2776.963] [ShellUI] debug: createJson_hook: 62450ef0 id: MENU_ID_SAVE_DATA_MANAGEMENT_PS5_MANUAL, label: , actionUrl: pssettings:play?function=savedata&feature=options_menu_ps5&npTitleId=PPSA29343, actionId: , messageId: msgid_ps_plus_transfer_saved_data
+[2776.974] [ShellUI] debug: createJson_hook: 881a1fdec id: MENU_ID_GAME_DATA_MANAGEMENT, label: , actionUrl: psgamedatamgmt:play?titleId=PPSA29343, actionId: , messageId: msgid_manage_game_data
+[2776.983] [ShellUI] debug: Updated menu titleId: PPSA29343
+[2776.986] [ShellUI] debug: createJson_hook: 881a32684 id: MENU_ID_APPLICATION_DELETE, label: , actionUrl: pssmdlg:open?dialogName=AppDeleteDialog&customParam=%7B%22titleIds%22%3A%5B%22PPSA29343%22%5D%7D, actionId: , messageId: msgid_delete
+[2777.000] [ShellUI] debug: createJson_hook: 881a564fa id: MENU_ID_APPLICATION_INFORMATION, label: , actionUrl: pscontentinfo:info?titleId=PPSA29343, actionId: , messageId: msgid_information
+[2777.006] [ShellUI] debug: createJson_hook: 881a56b1c id: MENU_ID_INTELLECTUAL_PROPERTY_NOTICES, label: , actionUrl: pscontentinfo:copyright?titleId=PPSA29343, actionId: , messageId: msgid_intellectual_property_notices
+[2777.020] [ShellUI] debug: createJson_hook: 881b6fac8 id: MENU_ID_CHECK_PATCH, label: , actionUrl: pspatchcheck:check-for-update?titleid=CUSA03173, actionId: , messageId: msgid_check_update
+[2777.026] [ShellUI] debug: createJson_hook: 62450ef0 id: MENU_ID_SAVE_DATA_MANAGEMENT_PS4_MANUAL, label: , actionUrl: pssettings:play?function=savedata&feature=options_menu_ps4&npTitleId=CUSA03173, actionId: , messageId: msgid_ps_plus_transfer_saved_data
+[2777.042] [ShellUI] debug: createJson_hook: 881805ad4 id: MENU_ID_GAME_DATA_MANAGEMENT, label: , actionUrl: psgamedatamgmt:play?titleId=CUSA03173, actionId: , messageId: msgid_manage_game_data
+[2777.047] [ShellUI] debug: Updated menu titleId: CUSA03173
+[2777.050] [ShellUI] debug: createJson_hook: 8818e6f6c id: MENU_ID_APPLICATION_DELETE, label: , actionUrl: pssmdlg:open?dialogName=AppDeleteDialog&customParam=%7B%22titleIds%22%3A%5B%22CUSA03173%22%5D%7D, actionId: , messageId: msgid_delete
+[2777.068] [ShellUI] debug: createJson_hook: 881ae6a34 id: MENU_ID_UPDATE_HISTORY, label: , actionUrl: pspatchcheck:update-history?titleid=CUSA03173, actionId: , messageId: msgid_update_history
+[2777.076] [ShellUI] debug: createJson_hook: 881a1c5f2 id: MENU_ID_APPLICATION_INFORMATION, label: , actionUrl: pscontentinfo:info?titleId=CUSA03173, actionId: , messageId: msgid_information
+[2777.091] [ShellUI] debug: createJson_hook: 88183cab4 id: MENU_ID_INTELLECTUAL_PROPERTY_NOTICES, label: , actionUrl: pscontentinfo:copyright?titleId=CUSA03173, actionId: , messageId: msgid_intellectual_property_notices
+[2777.105] [ShellUI] debug: createJson_hook: 8819ffcb8 id: MENU_ID_CHECK_PATCH, label: , actionUrl: pspatchcheck:check-for-update?titleid=PPSA17599, actionId: , messageId: msgid_check_update
+[2777.111] [ShellUI] debug: createJson_hook: 62450ef0 id: MENU_ID_SAVE_DATA_MANAGEMENT_PS5_MANUAL, label: , actionUrl: pssettings:play?function=savedata&feature=options_menu_ps5&npTitleId=PPSA17599, actionId: , messageId: msgid_ps_plus_transfer_saved_data
+[2777.121] [ShellUI] debug: createJson_hook: 881a42784 id: MENU_ID_GAME_DATA_MANAGEMENT, label: , actionUrl: psgamedatamgmt:play?titleId=PPSA17599, actionId: , messageId: msgid_manage_game_data
+[2777.131] [ShellUI] debug: Updated menu titleId: PPSA17599
+[2777.134] [ShellUI] debug: createJson_hook: 881bfe20c id: MENU_ID_APPLICATION_DELETE, label: , actionUrl: pssmdlg:open?dialogName=AppDeleteDialog&customParam=%7B%22titleIds%22%3A%5B%22PPSA17599%22%5D%7D, actionId: , messageId: msgid_delete
+[2777.155] [ShellUI] debug: createJson_hook: 88188cc0a id: MENU_ID_APPLICATION_INFORMATION, label: , actionUrl: pscontentinfo:info?titleId=PPSA17599, actionId: , messageId: msgid_information
+[2777.160] [ShellUI] debug: createJson_hook: 8818a9b7c id: MENU_ID_INTELLECTUAL_PROPERTY_NOTICES, label: , actionUrl: pscontentinfo:copyright?titleId=PPSA17599, actionId: , messageId: msgid_intellectual_property_notices
+[2777.278] [ShellUI] debug: createJson_hook: 881b73808 id: MENU_ID_CHECK_PATCH, label: , actionUrl: pspatchcheck:check-for-update?titleid=PPSA24913, actionId: , messageId: msgid_check_update
+[2777.285] [ShellUI] debug: createJson_hook: 62450ef0 id: MENU_ID_SAVE_DATA_MANAGEMENT_PS5_MANUAL, label: , actionUrl: pssettings:play?function=savedata&feature=options_menu_ps5&npTitleId=PPSA24913, actionId: , messageId: msgid_ps_plus_transfer_saved_data
+[2777.296] [ShellUI] debug: createJson_hook: 881bcee94 id: MENU_ID_GAME_DATA_MANAGEMENT, label: , actionUrl: psgamedatamgmt:play?titleId=PPSA24913, actionId: , messageId: msgid_manage_game_data
+[2777.310] [ShellUI] debug: Updated menu titleId: PPSA24913
+[2777.311] [ShellUI] debug: createJson_hook: 881815a74 id: MENU_ID_APPLICATION_DELETE, label: , actionUrl: pssmdlg:open?dialogName=AppDeleteDialog&customParam=%7B%22titleIds%22%3A%5B%22PPSA24913%22%5D%7D, actionId: , messageId: msgid_delete
+[2777.323] [ShellUI] debug: createJson_hook: 8818d4372 id: MENU_ID_APPLICATION_INFORMATION, label: , actionUrl: pscontentinfo:info?titleId=PPSA24913, actionId: , messageId: msgid_information
+[2777.329] [ShellUI] debug: createJson_hook: 8818e827c id: MENU_ID_INTELLECTUAL_PROPERTY_NOTICES, label: , actionUrl: pscontentinfo:copyright?titleId=PPSA24913, actionId: , messageId: msgid_intellectual_property_notices
+[2777.343] [ShellUI] debug: createJson_hook: 8819d0048 id: MENU_ID_CHECK_PATCH, label: , actionUrl: pspatchcheck:check-for-update?titleid=PPSA02572, actionId: , messageId: msgid_check_update
+[2777.350] [ShellUI] debug: createJson_hook: 62450ef0 id: MENU_ID_SAVE_DATA_MANAGEMENT_PS5_MANUAL, label: , actionUrl: pssettings:play?function=savedata&feature=options_menu_ps5&npTitleId=PPSA02572, actionId: , messageId: msgid_ps_plus_transfer_saved_data
+[2777.360] [ShellUI] debug: createJson_hook: 8819f320c id: MENU_ID_GAME_DATA_MANAGEMENT, label: , actionUrl: psgamedatamgmt:play?titleId=PPSA02572, actionId: , messageId: msgid_manage_game_data
+[2777.369] [ShellUI] debug: Updated menu titleId: PPSA02572
+[2777.373] [ShellUI] debug: createJson_hook: 881ab03ec id: MENU_ID_APPLICATION_DELETE, label: , actionUrl: pssmdlg:open?dialogName=AppDeleteDialog&customParam=%7B%22titleIds%22%3A%5B%22PPSA02572%22%5D%7D, actionId: , messageId: msgid_delete
+[2777.387] [ShellUI] debug: createJson_hook: 881b0af12 id: MENU_ID_APPLICATION_INFORMATION, label: , actionUrl: pscontentinfo:info?titleId=PPSA02572, actionId: , messageId: msgid_information
+[2777.393] [ShellUI] debug: createJson_hook: 881b0b534 id: MENU_ID_INTELLECTUAL_PROPERTY_NOTICES, label: , actionUrl: pscontentinfo:copyright?titleId=PPSA02572, actionId: , messageId: msgid_intellectual_property_notices
+[2777.406] [ShellUI] debug: createJson_hook: 881b6ba70 id: MENU_ID_CHECK_PATCH, label: , actionUrl: pspatchcheck:check-for-update?titleid=PPSA29343, actionId: , messageId: msgid_check_update
+[2777.413] [ShellUI] debug: createJson_hook: 62450ef0 id: MENU_ID_SAVE_DATA_MANAGEMENT_PS5_MANUAL, label: , actionUrl: pssettings:play?function=savedata&feature=options_menu_ps5&npTitleId=PPSA29343, actionId: , messageId: msgid_ps_plus_transfer_saved_data
+[2777.424] [ShellUI] debug: createJson_hook: 881b70904 id: MENU_ID_GAME_DATA_MANAGEMENT, label: , actionUrl: psgamedatamgmt:play?titleId=PPSA29343, actionId: , messageId: msgid_manage_game_data
+[2777.433] [ShellUI] debug: Updated menu titleId: PPSA29343
+[2777.437] [ShellUI] debug: createJson_hook: 881ab0b84 id: MENU_ID_APPLICATION_DELETE, label: , actionUrl: pssmdlg:open?dialogName=AppDeleteDialog&customParam=%7B%22titleIds%22%3A%5B%22PPSA29343%22%5D%7D, actionId: , messageId: msgid_delete
+[2777.457] [ShellUI] debug: createJson_hook: 88182dbda id: MENU_ID_APPLICATION_INFORMATION, label: , actionUrl: pscontentinfo:info?titleId=PPSA29343, actionId: , messageId: msgid_information
+[2777.462] [ShellUI] debug: createJson_hook: 88182e1fc id: MENU_ID_INTELLECTUAL_PROPERTY_NOTICES, label: , actionUrl: pscontentinfo:copyright?titleId=PPSA29343, actionId: , messageId: msgid_intellectual_property_notices
+[2777.476] [ShellUI] debug: createJson_hook: 88191e6f0 id: MENU_ID_CHECK_PATCH, label: , actionUrl: pspatchcheck:check-for-update?titleid=CUSA03173, actionId: , messageId: msgid_check_update
+[2777.483] [ShellUI] debug: createJson_hook: 62450ef0 id: MENU_ID_SAVE_DATA_MANAGEMENT_PS4_MANUAL, label: , actionUrl: pssettings:play?function=savedata&feature=options_menu_ps4&npTitleId=CUSA03173, actionId: , messageId: msgid_ps_plus_transfer_saved_data
+[2777.493] [ShellUI] debug: createJson_hook: 881938f6c id: MENU_ID_GAME_DATA_MANAGEMENT, label: , actionUrl: psgamedatamgmt:play?titleId=CUSA03173, actionId: , messageId: msgid_manage_game_data
+[2777.502] [ShellUI] debug: Updated menu titleId: CUSA03173
+[2777.506] [ShellUI] debug: createJson_hook: 88197c5fc id: MENU_ID_APPLICATION_DELETE, label: , actionUrl: pssmdlg:open?dialogName=AppDeleteDialog&customParam=%7B%22titleIds%22%3A%5B%22CUSA03173%22%5D%7D, actionId: , messageId: msgid_delete
+[2777.523] [ShellUI] debug: createJson_hook: 8819b8e3c id: MENU_ID_UPDATE_HISTORY, label: , actionUrl: pspatchcheck:update-history?titleid=CUSA03173, actionId: , messageId: msgid_update_history
+[2777.532] [ShellUI] debug: createJson_hook: 8819d134a id: MENU_ID_APPLICATION_INFORMATION, label: , actionUrl: pscontentinfo:info?titleId=CUSA03173, actionId: , messageId: msgid_information
+[2777.541] [ShellUI] debug: createJson_hook: 8819d190c id: MENU_ID_INTELLECTUAL_PROPERTY_NOTICES, label: , actionUrl: pscontentinfo:copyright?titleId=CUSA03173, actionId: , messageId: msgid_intellectual_property_notices
+[2777.662] [ShellUI] debug: createJson_hook: 881847b40 id: MENU_ID_CHECK_PATCH, label: , actionUrl: pspatchcheck:check-for-update?titleid=PPSA07631, actionId: , messageId: msgid_check_update
+[2777.673] [ShellUI] debug: createJson_hook: 62450ef0 id: MENU_ID_SAVE_DATA_MANAGEMENT_PS5_MANUAL, label: , actionUrl: pssettings:play?function=savedata&feature=options_menu_ps5&npTitleId=PPSA07631, actionId: , messageId: msgid_ps_plus_transfer_saved_data
+[2777.683] [ShellUI] debug: createJson_hook: 88193496c id: MENU_ID_GAME_DATA_MANAGEMENT, label: , actionUrl: psgamedatamgmt:play?titleId=PPSA07631, actionId: , messageId: msgid_manage_game_data
+[2777.692] [ShellUI] debug: Updated menu titleId: PPSA07631
+[2777.696] [ShellUI] debug: createJson_hook: 88197697c id: MENU_ID_APPLICATION_DELETE, label: , actionUrl: pssmdlg:open?dialogName=AppDeleteDialog&customParam=%7B%22titleIds%22%3A%5B%22PPSA07631%22%5D%7D, actionId: , messageId: msgid_delete
+[2777.710] [ShellUI] debug: createJson_hook: 8819a6aba id: MENU_ID_APPLICATION_INFORMATION, label: , actionUrl: pscontentinfo:info?titleId=PPSA07631, actionId: , messageId: msgid_information
+[2777.716] [ShellUI] debug: createJson_hook: 8819c6bcc id: MENU_ID_INTELLECTUAL_PROPERTY_NOTICES, label: , actionUrl: pscontentinfo:copyright?titleId=PPSA07631, actionId: , messageId: msgid_intellectual_property_notices
+[2777.731] [ShellUI] debug: createJson_hook: 881a79d08 id: MENU_ID_CHECK_PATCH, label: , actionUrl: pspatchcheck:check-for-update?titleid=PPSA04970, actionId: , messageId: msgid_check_update
+[2777.742] [ShellUI] debug: createJson_hook: 62450ef0 id: MENU_ID_SAVE_DATA_MANAGEMENT_PS5_MANUAL, label: , actionUrl: pssettings:play?function=savedata&feature=options_menu_ps5&npTitleId=PPSA04970, actionId: , messageId: msgid_ps_plus_transfer_saved_data
+[2777.752] [ShellUI] debug: createJson_hook: 881ad5344 id: MENU_ID_GAME_DATA_MANAGEMENT, label: , actionUrl: psgamedatamgmt:play?titleId=PPSA04970, actionId: , messageId: msgid_manage_game_data
+[2777.761] [ShellUI] debug: Updated menu titleId: PPSA04970
+[2777.765] [ShellUI] debug: createJson_hook: 881aeda1c id: MENU_ID_APPLICATION_DELETE, label: , actionUrl: pssmdlg:open?dialogName=AppDeleteDialog&customParam=%7B%22titleIds%22%3A%5B%22PPSA04970%22%5D%7D, actionId: , messageId: msgid_delete
+[2777.779] [ShellUI] debug: createJson_hook: 881b1b03a id: MENU_ID_APPLICATION_INFORMATION, label: , actionUrl: pscontentinfo:info?titleId=PPSA04970, actionId: , messageId: msgid_information
+[2777.785] [ShellUI] debug: createJson_hook: 881b1b65c id: MENU_ID_INTELLECTUAL_PROPERTY_NOTICES, label: , actionUrl: pscontentinfo:copyright?titleId=PPSA04970, actionId: , messageId: msgid_intellectual_property_notices
+[2777.799] [ShellUI] debug: createJson_hook: 881b6f7d0 id: MENU_ID_CHECK_PATCH, label: , actionUrl: pspatchcheck:check-for-update?titleid=PPSA33286, actionId: , messageId: msgid_check_update
+[2777.805] [ShellUI] debug: createJson_hook: 62450ef0 id: MENU_ID_SAVE_DATA_MANAGEMENT_PS5_MANUAL, label: , actionUrl: pssettings:play?function=savedata&feature=options_menu_ps5&npTitleId=PPSA33286, actionId: , messageId: msgid_ps_plus_transfer_saved_data
+[2777.816] [ShellUI] debug: createJson_hook: 881b7421c id: MENU_ID_GAME_DATA_MANAGEMENT, label: , actionUrl: psgamedatamgmt:play?titleId=PPSA33286, actionId: , messageId: msgid_manage_game_data
+[2777.825] [ShellUI] debug: Updated menu titleId: PPSA33286
+[2777.829] [ShellUI] debug: createJson_hook: 881b834cc id: MENU_ID_APPLICATION_DELETE, label: , actionUrl: pssmdlg:open?dialogName=AppDeleteDialog&customParam=%7B%22titleIds%22%3A%5B%22PPSA33286%22%5D%7D, actionId: , messageId: msgid_delete
+[2777.842] [ShellUI] debug: createJson_hook: 881bb0ef2 id: MENU_ID_APPLICATION_INFORMATION, label: , actionUrl: pscontentinfo:info?titleId=PPSA33286, actionId: , messageId: msgid_information
+[2777.849] [ShellUI] debug: createJson_hook: 881bb1514 id: MENU_ID_INTELLECTUAL_PROPERTY_NOTICES, label: , actionUrl: pscontentinfo:copyright?titleId=PPSA33286, actionId: , messageId: msgid_intellectual_property_notices
+[2777.868] [ShellUI] debug: createJson_hook: 8818111c0 id: MENU_ID_CHECK_PATCH, label: , actionUrl: pspatchcheck:check-for-update?titleid=PPSA13197, actionId: , messageId: msgid_check_update
+[2777.874] [ShellUI] debug: createJson_hook: 62450ef0 id: MENU_ID_SAVE_DATA_MANAGEMENT_PS5_MANUAL, label: , actionUrl: pssettings:play?function=savedata&feature=options_menu_ps5&npTitleId=PPSA13197, actionId: , messageId: msgid_ps_plus_transfer_saved_data
+[2777.886] [ShellUI] debug: createJson_hook: 881861eb4 id: MENU_ID_GAME_DATA_MANAGEMENT, label: , actionUrl: psgamedatamgmt:play?titleId=PPSA13197, actionId: , messageId: msgid_manage_game_data
+[2777.895] [ShellUI] debug: Updated menu titleId: PPSA13197
+[2777.898] [ShellUI] debug: createJson_hook: 88188ef84 id: MENU_ID_APPLICATION_DELETE, label: , actionUrl: pssmdlg:open?dialogName=AppDeleteDialog&customParam=%7B%22titleIds%22%3A%5B%22PPSA13197%22%5D%7D, actionId: , messageId: msgid_delete
+[2777.912] [ShellUI] debug: createJson_hook: 8818ab5da id: MENU_ID_APPLICATION_INFORMATION, label: , actionUrl: pscontentinfo:info?titleId=PPSA13197, actionId: , messageId: msgid_information
+[2777.918] [ShellUI] debug: createJson_hook: 8818abbfc id: MENU_ID_INTELLECTUAL_PROPERTY_NOTICES, label: , actionUrl: pscontentinfo:copyright?titleId=PPSA13197, actionId: , messageId: msgid_intellectual_property_notices
+[2777.932] [ShellUI] debug: createJson_hook: 8818ea048 id: MENU_ID_CHECK_PATCH, label: , actionUrl: pspatchcheck:check-for-update?titleid=PPSA30140, actionId: , messageId: msgid_check_update
+[2777.938] [ShellUI] debug: createJson_hook: 62450ef0 id: MENU_ID_SAVE_DATA_MANAGEMENT_PS5_MANUAL, label: , actionUrl: pssettings:play?function=savedata&feature=options_menu_ps5&npTitleId=PPSA30140, actionId: , messageId: msgid_ps_plus_transfer_saved_data
+[2777.949] [ShellUI] debug: createJson_hook: 8818eddc4 id: MENU_ID_GAME_DATA_MANAGEMENT, label: , actionUrl: psgamedatamgmt:play?titleId=PPSA30140, actionId: , messageId: msgid_manage_game_data
+[2777.959] [ShellUI] debug: Updated menu titleId: PPSA30140
+[2777.962] [ShellUI] debug: createJson_hook: 8819003cc id: MENU_ID_APPLICATION_DELETE, label: , actionUrl: pssmdlg:open?dialogName=AppDeleteDialog&customParam=%7B%22titleIds%22%3A%5B%22PPSA30140%22%5D%7D, actionId: , messageId: msgid_delete
+[2777.975] [ShellUI] debug: createJson_hook: 88192a6fa id: MENU_ID_APPLICATION_INFORMATION, label: , actionUrl: pscontentinfo:info?titleId=PPSA30140, actionId: , messageId: msgid_information
+[2777.982] [ShellUI] debug: createJson_hook: 88192ad1c id: MENU_ID_INTELLECTUAL_PROPERTY_NOTICES, label: , actionUrl: pscontentinfo:copyright?titleId=PPSA30140, actionId: , messageId: msgid_intellectual_property_notices
+[2778.016] [ShellUI] debug: createJson_hook: 881827280 id: MENU_ID_CHECK_PATCH, label: , actionUrl: pspatchcheck:check-for-update?titleid=PPSA32310, actionId: , messageId: msgid_check_update
+[2778.025] [ShellUI] debug: createJson_hook: 62450ef0 id: MENU_ID_SAVE_DATA_MANAGEMENT_PS5_MANUAL, label: , actionUrl: pssettings:play?function=savedata&feature=options_menu_ps5&npTitleId=PPSA32310, actionId: , messageId: msgid_ps_plus_transfer_saved_data
+[2778.035] [ShellUI] debug: createJson_hook: 8818923fc id: MENU_ID_GAME_DATA_MANAGEMENT, label: , actionUrl: psgamedatamgmt:play?titleId=PPSA32310, actionId: , messageId: msgid_manage_game_data
+[2778.044] [ShellUI] debug: Updated menu titleId: PPSA32310
+[2778.048] [ShellUI] debug: createJson_hook: 8818b46dc id: MENU_ID_APPLICATION_DELETE, label: , actionUrl: pssmdlg:open?dialogName=AppDeleteDialog&customParam=%7B%22titleIds%22%3A%5B%22PPSA32310%22%5D%7D, actionId: , messageId: msgid_delete
+[2778.062] [ShellUI] debug: createJson_hook: 8818df31e id: MENU_ID_GO_TO_LEM_SETTINGS, label: , actionUrl: pssettings:play?function=low_energy_mode&titleId=PPSA32310, actionId: , messageId: msgid_power_saver_games
+[2778.069] [ShellUI] debug: createJson_hook: 8818df93a id: MENU_ID_APPLICATION_INFORMATION, label: , actionUrl: pscontentinfo:info?titleId=PPSA32310, actionId: , messageId: msgid_information
+[2778.078] [ShellUI] debug: createJson_hook: 8818dfefc id: MENU_ID_INTELLECTUAL_PROPERTY_NOTICES, label: , actionUrl: pscontentinfo:copyright?titleId=PPSA32310, actionId: , messageId: msgid_intellectual_property_notices
+[2778.092] [ShellUI] debug: createJson_hook: 88199dbc8 id: MENU_ID_CHECK_PATCH, label: , actionUrl: pspatchcheck:check-for-update?titleid=PPSA16384, actionId: , messageId: msgid_check_update
+[2778.098] [ShellUI] debug: createJson_hook: 62450ef0 id: MENU_ID_SAVE_DATA_MANAGEMENT_PS5_MANUAL, label: , actionUrl: pssettings:play?function=savedata&feature=options_menu_ps5&npTitleId=PPSA16384, actionId: , messageId: msgid_ps_plus_transfer_saved_data
+[2778.109] [ShellUI] debug: createJson_hook: 8819af544 id: MENU_ID_GAME_DATA_MANAGEMENT, label: , actionUrl: psgamedatamgmt:play?titleId=PPSA16384, actionId: , messageId: msgid_manage_game_data
+[2778.118] [ShellUI] debug: Updated menu titleId: PPSA16384
+[2778.122] [ShellUI] debug: createJson_hook: 8819cda04 id: MENU_ID_APPLICATION_DELETE, label: , actionUrl: pssmdlg:open?dialogName=AppDeleteDialog&customParam=%7B%22titleIds%22%3A%5B%22PPSA16384%22%5D%7D, actionId: , messageId: msgid_delete
+[2778.135] [ShellUI] debug: createJson_hook: 8819eebfa id: MENU_ID_APPLICATION_INFORMATION, label: , actionUrl: pscontentinfo:info?titleId=PPSA16384, actionId: , messageId: msgid_information
+[2778.142] [ShellUI] debug: createJson_hook: 8819f28f4 id: MENU_ID_INTELLECTUAL_PROPERTY_NOTICES, label: , actionUrl: pscontentinfo:copyright?titleId=PPSA16384, actionId: , messageId: msgid_intellectual_property_notices
+[2778.156] [ShellUI] debug: createJson_hook: 881a41420 id: MENU_ID_CHECK_PATCH, label: , actionUrl: pspatchcheck:check-for-update?titleid=PPSA20447, actionId: , messageId: msgid_check_update
+[2778.162] [ShellUI] debug: createJson_hook: 62450ef0 id: MENU_ID_SAVE_DATA_MANAGEMENT_PS5_MANUAL, label: , actionUrl: pssettings:play?function=savedata&feature=options_menu_ps5&npTitleId=PPSA20447, actionId: , messageId: msgid_ps_plus_transfer_saved_data
+[2778.173] [ShellUI] debug: createJson_hook: 881a552a4 id: MENU_ID_GAME_DATA_MANAGEMENT, label: , actionUrl: psgamedatamgmt:play?titleId=PPSA20447, actionId: , messageId: msgid_manage_game_data
+[2778.182] [ShellUI] debug: Updated menu titleId: PPSA20447
+[2778.186] [ShellUI] debug: createJson_hook: 881a5f37c id: MENU_ID_APPLICATION_DELETE, label: , actionUrl: pssmdlg:open?dialogName=AppDeleteDialog&customParam=%7B%22titleIds%22%3A%5B%22PPSA20447%22%5D%7D, actionId: , messageId: msgid_delete
+[2778.200] [ShellUI] debug: createJson_hook: 881a95f6a id: MENU_ID_APPLICATION_INFORMATION, label: , actionUrl: pscontentinfo:info?titleId=PPSA20447, actionId: , messageId: msgid_information
+[2778.206] [ShellUI] debug: createJson_hook: 881a9658c id: MENU_ID_INTELLECTUAL_PROPERTY_NOTICES, label: , actionUrl: pscontentinfo:copyright?titleId=PPSA20447, actionId: , messageId: msgid_intellectual_property_notices
+[2778.219] [ShellUI] debug: createJson_hook: 881adc118 id: MENU_ID_CHECK_PATCH, label: , actionUrl: pspatchcheck:check-for-update?titleid=PPSA03718, actionId: , messageId: msgid_check_update
+[2778.226] [ShellUI] debug: createJson_hook: 62450ef0 id: MENU_ID_SAVE_DATA_MANAGEMENT_PS5_MANUAL, label: , actionUrl: pssettings:play?function=savedata&feature=options_menu_ps5&npTitleId=PPSA03718, actionId: , messageId: msgid_ps_plus_transfer_saved_data
+[2778.237] [ShellUI] debug: createJson_hook: 881ae11cc id: MENU_ID_GAME_DATA_MANAGEMENT, label: , actionUrl: psgamedatamgmt:play?titleId=PPSA03718, actionId: , messageId: msgid_manage_game_data
+[2778.246] [ShellUI] debug: Updated menu titleId: PPSA03718
+[2778.249] [ShellUI] debug: createJson_hook: 881af9c3c id: MENU_ID_APPLICATION_DELETE, label: , actionUrl: pssmdlg:open?dialogName=AppDeleteDialog&customParam=%7B%22titleIds%22%3A%5B%22PPSA03718%22%5D%7D, actionId: , messageId: msgid_delete
+[2778.263] [ShellUI] debug: createJson_hook: 881b109ea id: MENU_ID_APPLICATION_INFORMATION, label: , actionUrl: pscontentinfo:info?titleId=PPSA03718, actionId: , messageId: msgid_information
+[2778.270] [ShellUI] debug: createJson_hook: 881b1f004 id: MENU_ID_INTELLECTUAL_PROPERTY_NOTICES, label: , actionUrl: pscontentinfo:copyright?titleId=PPSA03718, actionId: , messageId: msgid_intellectual_property_notices
+[2778.284] [ShellUI] debug: createJson_hook: 881b6e640 id: MENU_ID_CHECK_PATCH, label: , actionUrl: pspatchcheck:check-for-update?titleid=PPSA18154, actionId: , messageId: msgid_check_update
+[2778.290] [ShellUI] debug: createJson_hook: 62450ef0 id: MENU_ID_SAVE_DATA_MANAGEMENT_PS5_MANUAL, label: , actionUrl: pssettings:play?function=savedata&feature=options_menu_ps5&npTitleId=PPSA18154, actionId: , messageId: msgid_ps_plus_transfer_saved_data
+[2778.301] [ShellUI] debug: createJson_hook: 881b6f76c id: MENU_ID_GAME_DATA_MANAGEMENT, label: , actionUrl: psgamedatamgmt:play?titleId=PPSA18154, actionId: , messageId: msgid_manage_game_data
+[2778.310] [ShellUI] debug: Updated menu titleId: PPSA18154
+[2778.313] [ShellUI] debug: createJson_hook: 881b89a0c id: MENU_ID_APPLICATION_DELETE, label: , actionUrl: pssmdlg:open?dialogName=AppDeleteDialog&customParam=%7B%22titleIds%22%3A%5B%22PPSA18154%22%5D%7D, actionId: , messageId: msgid_delete
+[2780.131] [ShellUI] debug: createJson_hook: 881b2b822 id: MENU_ID_APPLICATION_INFORMATION, label: , actionUrl: pscontentinfo:info?titleId=PPSA18154, actionId: , messageId: msgid_information
+[2780.138] [ShellUI] debug: createJson_hook: 881b30114 id: MENU_ID_INTELLECTUAL_PROPERTY_NOTICES, label: , actionUrl: pscontentinfo:copyright?titleId=PPSA18154, actionId: , messageId: msgid_intellectual_property_notices
+[2780.166] [ShellUI] debug: Boot: pshome:gamehub?titleId=PPSA13197 (NULL), OPT 1
+[2780.226] [ShellUI] debug: ioctl_hook called with fd: 151, request: 0xC0105203, argp: 7e14c6fa8
+[2780.229] [ShellUI] debug: homeui_top_nav_patch: ioctl RNPS buffer=20c404000 size=4560656 head=52 4e 50 53
+[2780.259] [ShellUI] debug: createJson_hook: 88192d170 id: MENU_ID_CHECK_PATCH, label: , actionUrl: pspatchcheck:check-for-update?titleid=PPSA08773, actionId: , messageId: msgid_check_update
+[2780.269] [ShellUI] debug: createJson_hook: 62450ef0 id: MENU_ID_SAVE_DATA_MANAGEMENT_PS5_MANUAL, label: , actionUrl: pssettings:play?function=savedata&feature=options_menu_ps5&npTitleId=PPSA08773, actionId: , messageId: msgid_ps_plus_transfer_saved_data
+[2780.278] [ShellUI] debug: createJson_hook: 88193adbc id: MENU_ID_GAME_DATA_MANAGEMENT, label: , actionUrl: psgamedatamgmt:play?titleId=PPSA08773, actionId: , messageId: msgid_manage_game_data
+[2780.287] [ShellUI] debug: Updated menu titleId: PPSA08773
+[2780.291] [ShellUI] debug: createJson_hook: 8819d3eec id: MENU_ID_APPLICATION_DELETE, label: , actionUrl: pssmdlg:open?dialogName=AppDeleteDialog&customParam=%7B%22titleIds%22%3A%5B%22PPSA08773%22%5D%7D, actionId: , messageId: msgid_delete
+[2780.306] [ShellUI] debug: createJson_hook: 881aca2e2 id: MENU_ID_APPLICATION_INFORMATION, label: , actionUrl: pscontentinfo:info?titleId=PPSA08773, actionId: , messageId: msgid_information
+[2780.311] [ShellUI] debug: createJson_hook: 881aca904 id: MENU_ID_INTELLECTUAL_PROPERTY_NOTICES, label: , actionUrl: pscontentinfo:copyright?titleId=PPSA08773, actionId: , messageId: msgid_intellectual_property_notices
+[2780.325] [ShellUI] debug: createJson_hook: 881bbf738 id: MENU_ID_CHECK_PATCH, label: , actionUrl: pspatchcheck:check-for-update?titleid=PPSA99177, actionId: , messageId: msgid_check_update
+[2780.331] [ShellUI] debug: createJson_hook: 62450ef0 id: MENU_ID_SAVE_DATA_MANAGEMENT_PS5_MANUAL, label: , actionUrl: pssettings:play?function=savedata&feature=options_menu_ps5&npTitleId=PPSA99177, actionId: , messageId: msgid_ps_plus_transfer_saved_data
+[2780.342] [ShellUI] debug: createJson_hook: 881bc2494 id: MENU_ID_GAME_DATA_MANAGEMENT, label: , actionUrl: psgamedatamgmt:play?titleId=PPSA99177, actionId: , messageId: msgid_manage_game_data
+[2780.354] [ShellUI] debug: Updated menu titleId: PPSA99177
+[2780.355] [ShellUI] debug: createJson_hook: 881824eb4 id: MENU_ID_APPLICATION_DELETE, label: , actionUrl: pssmdlg:open?dialogName=AppDeleteDialog&customParam=%7B%22titleIds%22%3A%5B%22PPSA99177%22%5D%7D, actionId: , messageId: msgid_delete
+[2780.369] [ShellUI] debug: createJson_hook: 8819930b2 id: MENU_ID_APPLICATION_INFORMATION, label: , actionUrl: pscontentinfo:info?titleId=PPSA99177, actionId: , messageId: msgid_information
+[2780.375] [ShellUI] debug: createJson_hook: 881a120ac id: MENU_ID_INTELLECTUAL_PROPERTY_NOTICES, label: , actionUrl: pscontentinfo:copyright?titleId=PPSA99177, actionId: , messageId: msgid_intellectual_property_notices
+[2780.393] [ShellUI] debug: createJson_hook: 881b1e220 id: MENU_ID_CHECK_PATCH, label: , actionUrl: pspatchcheck:check-for-update?titleid=PPSA99008, actionId: , messageId: msgid_check_update
+[2780.401] [ShellUI] debug: createJson_hook: 62450ef0 id: MENU_ID_SAVE_DATA_MANAGEMENT_PS5_MANUAL, label: , actionUrl: pssettings:play?function=savedata&feature=options_menu_ps5&npTitleId=PPSA99008, actionId: , messageId: msgid_ps_plus_transfer_saved_data
+[2780.415] [ShellUI] debug: createJson_hook: 881805ad4 id: MENU_ID_GAME_DATA_MANAGEMENT, label: , actionUrl: psgamedatamgmt:play?titleId=PPSA99008, actionId: , messageId: msgid_manage_game_data
+[2780.420] [ShellUI] debug: Updated menu titleId: PPSA99008
+[2780.424] [ShellUI] debug: createJson_hook: 8818aa764 id: MENU_ID_APPLICATION_DELETE, label: , actionUrl: pssmdlg:open?dialogName=AppDeleteDialog&customParam=%7B%22titleIds%22%3A%5B%22PPSA99008%22%5D%7D, actionId: , messageId: msgid_delete
+[2780.439] [ShellUI] debug: createJson_hook: 8818ffae2 id: MENU_ID_APPLICATION_INFORMATION, label: , actionUrl: pscontentinfo:info?titleId=PPSA99008, actionId: , messageId: msgid_information
+[2780.444] [ShellUI] debug: createJson_hook: 881937624 id: MENU_ID_INTELLECTUAL_PROPERTY_NOTICES, label: , actionUrl: pscontentinfo:copyright?titleId=PPSA99008, actionId: , messageId: msgid_intellectual_property_notices
+[2780.458] [ShellUI] debug: createJson_hook: 881a34458 id: MENU_ID_CHECK_PATCH, label: , actionUrl: pspatchcheck:check-for-update?titleid=PPSA23372, actionId: , messageId: msgid_check_update
+[2780.464] [ShellUI] debug: createJson_hook: 62450ef0 id: MENU_ID_SAVE_DATA_MANAGEMENT_PS5_MANUAL, label: , actionUrl: pssettings:play?function=savedata&feature=options_menu_ps5&npTitleId=PPSA23372, actionId: , messageId: msgid_ps_plus_transfer_saved_data
+[2780.475] [ShellUI] debug: createJson_hook: 881a3d04c id: MENU_ID_GAME_DATA_MANAGEMENT, label: , actionUrl: psgamedatamgmt:play?titleId=PPSA23372, actionId: , messageId: msgid_manage_game_data
+[2780.484] [ShellUI] debug: Updated menu titleId: PPSA23372
+[2780.488] [ShellUI] debug: createJson_hook: 881a9b124 id: MENU_ID_APPLICATION_DELETE, label: , actionUrl: pssmdlg:open?dialogName=AppDeleteDialog&customParam=%7B%22titleIds%22%3A%5B%22PPSA23372%22%5D%7D, actionId: , messageId: msgid_delete
+[2780.501] [ShellUI] debug: createJson_hook: 881ab8b1a id: MENU_ID_APPLICATION_INFORMATION, label: , actionUrl: pscontentinfo:info?titleId=PPSA23372, actionId: , messageId: msgid_information
+[2780.508] [ShellUI] debug: createJson_hook: 881ab913c id: MENU_ID_INTELLECTUAL_PROPERTY_NOTICES, label: , actionUrl: pscontentinfo:copyright?titleId=PPSA23372, actionId: , messageId: msgid_intellectual_property_notices
+[2780.522] [ShellUI] debug: createJson_hook: 881afe830 id: MENU_ID_CHECK_PATCH, label: , actionUrl: pspatchcheck:check-for-update?titleid=PPSA04289, actionId: , messageId: msgid_check_update
+[2780.528] [ShellUI] debug: createJson_hook: 62450ef0 id: MENU_ID_SAVE_DATA_MANAGEMENT_PS5_MANUAL, label: , actionUrl: pssettings:play?function=savedata&feature=options_menu_ps5&npTitleId=PPSA04289, actionId: , messageId: msgid_ps_plus_transfer_saved_data
+[2780.539] [ShellUI] debug: createJson_hook: 881aff5bc id: MENU_ID_GAME_DATA_MANAGEMENT, label: , actionUrl: psgamedatamgmt:play?titleId=PPSA04289, actionId: , messageId: msgid_manage_game_data
+[2780.548] [ShellUI] debug: Updated menu titleId: PPSA04289
+[2780.551] [ShellUI] debug: createJson_hook: 881b0b3cc id: MENU_ID_APPLICATION_DELETE, label: , actionUrl: pssmdlg:open?dialogName=AppDeleteDialog&customParam=%7B%22titleIds%22%3A%5B%22PPSA04289%22%5D%7D, actionId: , messageId: msgid_delete
+[2780.565] [ShellUI] debug: createJson_hook: 881b1ffe2 id: MENU_ID_APPLICATION_INFORMATION, label: , actionUrl: pscontentinfo:info?titleId=PPSA04289, actionId: , messageId: msgid_information
+[2780.572] [ShellUI] debug: createJson_hook: 881b27c4c id: MENU_ID_INTELLECTUAL_PROPERTY_NOTICES, label: , actionUrl: pscontentinfo:copyright?titleId=PPSA04289, actionId: , messageId: msgid_intellectual_property_notices
+[2780.589] [ShellUI] debug: createJson_hook: 881bb4b48 id: MENU_ID_CHECK_PATCH, label: , actionUrl: pspatchcheck:check-for-update?titleid=PPSA03952, actionId: , messageId: msgid_check_update
+[2780.597] [ShellUI] debug: createJson_hook: 62450ef0 id: MENU_ID_SAVE_DATA_MANAGEMENT_PS5_MANUAL, label: , actionUrl: pssettings:play?function=savedata&feature=options_menu_ps5&npTitleId=PPSA03952, actionId: , messageId: msgid_ps_plus_transfer_saved_data
+[2780.608] [ShellUI] debug: createJson_hook: 881bc0d1c id: MENU_ID_GAME_DATA_MANAGEMENT, label: , actionUrl: psgamedatamgmt:play?titleId=PPSA03952, actionId: , messageId: msgid_manage_game_data
+[2780.617] [ShellUI] debug: Updated menu titleId: PPSA03952
+[2780.625] [ShellUI] debug: createJson_hook: 88180d004 id: MENU_ID_APPLICATION_DELETE, label: , actionUrl: pssmdlg:open?dialogName=AppDeleteDialog&customParam=%7B%22titleIds%22%3A%5B%22PPSA03952%22%5D%7D, actionId: , messageId: msgid_delete
+[2780.635] [ShellUI] debug: createJson_hook: 8818587aa id: MENU_ID_APPLICATION_INFORMATION, label: , actionUrl: pscontentinfo:info?titleId=PPSA03952, actionId: , messageId: msgid_information
+[2780.641] [ShellUI] debug: createJson_hook: 8818cdea4 id: MENU_ID_INTELLECTUAL_PROPERTY_NOTICES, label: , actionUrl: pscontentinfo:copyright?titleId=PPSA03952, actionId: , messageId: msgid_intellectual_property_notices
+[2780.659] [ShellUI] debug: createJson_hook: 88199a2f8 id: MENU_ID_CHECK_PATCH, label: , actionUrl: pspatchcheck:check-for-update?titleid=PPSA14251, actionId: , messageId: msgid_check_update
+[2780.667] [ShellUI] debug: createJson_hook: 62450ef0 id: MENU_ID_SAVE_DATA_MANAGEMENT_PS5_MANUAL, label: , actionUrl: pssettings:play?function=savedata&feature=options_menu_ps5&npTitleId=PPSA14251, actionId: , messageId: msgid_ps_plus_transfer_saved_data
+[2780.678] [ShellUI] debug: createJson_hook: 881a22804 id: MENU_ID_GAME_DATA_MANAGEMENT, label: , actionUrl: psgamedatamgmt:play?titleId=PPSA14251, actionId: , messageId: msgid_manage_game_data
+[2780.687] [ShellUI] debug: Updated menu titleId: PPSA14251
+[2780.690] [ShellUI] debug: createJson_hook: 881bb5d7c id: MENU_ID_APPLICATION_DELETE, label: , actionUrl: pssmdlg:open?dialogName=AppDeleteDialog&customParam=%7B%22titleIds%22%3A%5B%22PPSA14251%22%5D%7D, actionId: , messageId: msgid_delete
+[2780.709] [ShellUI] debug: createJson_hook: 8818c0e62 id: MENU_ID_APPLICATION_INFORMATION, label: , actionUrl: pscontentinfo:info?titleId=PPSA14251, actionId: , messageId: msgid_information
+[2780.716] [ShellUI] debug: createJson_hook: 88198b204 id: MENU_ID_INTELLECTUAL_PROPERTY_NOTICES, label: , actionUrl: pscontentinfo:copyright?titleId=PPSA14251, actionId: , messageId: msgid_intellectual_property_notices
+[2780.731] [ShellUI] debug: createJson_hook: 881bdabc8 id: MENU_ID_CHECK_PATCH, label: , actionUrl: pspatchcheck:check-for-update?titleid=PPSA20800, actionId: , messageId: msgid_check_update
+[2780.748] [ShellUI] debug: createJson_hook: 62450ef0 id: MENU_ID_SAVE_DATA_MANAGEMENT_PS5_MANUAL, label: , actionUrl: pssettings:play?function=savedata&feature=options_menu_ps5&npTitleId=PPSA20800, actionId: , messageId: msgid_ps_plus_transfer_saved_data
+[2780.759] [ShellUI] debug: createJson_hook: 881818fec id: MENU_ID_GAME_DATA_MANAGEMENT, label: , actionUrl: psgamedatamgmt:play?titleId=PPSA20800, actionId: , messageId: msgid_manage_game_data
+[2780.767] [ShellUI] debug: Updated menu titleId: PPSA20800
+[2780.771] [ShellUI] debug: createJson_hook: 881a6291c id: MENU_ID_APPLICATION_DELETE, label: , actionUrl: pssmdlg:open?dialogName=AppDeleteDialog&customParam=%7B%22titleIds%22%3A%5B%22PPSA20800%22%5D%7D, actionId: , messageId: msgid_delete
+[2780.794] [ShellUI] debug: createJson_hook: 88183453a id: MENU_ID_APPLICATION_INFORMATION, label: , actionUrl: pscontentinfo:info?titleId=PPSA20800, actionId: , messageId: msgid_information
+[2780.802] [ShellUI] debug: createJson_hook: 881834b5c id: MENU_ID_INTELLECTUAL_PROPERTY_NOTICES, label: , actionUrl: pscontentinfo:copyright?titleId=PPSA20800, actionId: , messageId: msgid_intellectual_property_notices
+[2780.820] [ShellUI] debug: createJson_hook: 881a875f0 id: MENU_ID_CHECK_PATCH, label: , actionUrl: pspatchcheck:check-for-update?titleid=PPSA34008, actionId: , messageId: msgid_check_update
+[2780.828] [ShellUI] debug: createJson_hook: 62450ef0 id: MENU_ID_SAVE_DATA_MANAGEMENT_PS5_MANUAL, label: , actionUrl: pssettings:play?function=savedata&feature=options_menu_ps5&npTitleId=PPSA34008, actionId: , messageId: msgid_ps_plus_transfer_saved_data
+[2780.839] [ShellUI] debug: createJson_hook: 881a9a2bc id: MENU_ID_GAME_DATA_MANAGEMENT, label: , actionUrl: psgamedatamgmt:play?titleId=PPSA34008, actionId: , messageId: msgid_manage_game_data
+[2780.848] [ShellUI] debug: Updated menu titleId: PPSA34008
+[2780.851] [ShellUI] debug: createJson_hook: 881b9e0e4 id: MENU_ID_APPLICATION_DELETE, label: , actionUrl: pssmdlg:open?dialogName=AppDeleteDialog&customParam=%7B%22titleIds%22%3A%5B%22PPSA34008%22%5D%7D, actionId: , messageId: msgid_delete
+[2780.869] [ShellUI] debug: createJson_hook: 88182edc6 id: MENU_ID_GO_TO_LEM_SETTINGS, label: , actionUrl: pssettings:play?function=low_energy_mode&titleId=PPSA34008, actionId: , messageId: msgid_power_saver_games
+[2780.878] [ShellUI] debug: createJson_hook: 88182f3e2 id: MENU_ID_APPLICATION_INFORMATION, label: , actionUrl: pscontentinfo:info?titleId=PPSA34008, actionId: , messageId: msgid_information
+[2780.887] [ShellUI] debug: createJson_hook: 88182f9a4 id: MENU_ID_INTELLECTUAL_PROPERTY_NOTICES, label: , actionUrl: pscontentinfo:copyright?titleId=PPSA34008, actionId: , messageId: msgid_intellectual_property_notices
+[2780.901] [ShellUI] debug: createJson_hook: 8819f1438 id: MENU_ID_CHECK_PATCH, label: , actionUrl: pspatchcheck:check-for-update?titleid=PPSA32785, actionId: , messageId: msgid_check_update
+[2780.907] [ShellUI] debug: createJson_hook: 62450ef0 id: MENU_ID_SAVE_DATA_MANAGEMENT_PS5_MANUAL, label: , actionUrl: pssettings:play?function=savedata&feature=options_menu_ps5&npTitleId=PPSA32785, actionId: , messageId: msgid_ps_plus_transfer_saved_data
+[2780.918] [ShellUI] debug: createJson_hook: 8819f518c id: MENU_ID_GAME_DATA_MANAGEMENT, label: , actionUrl: psgamedatamgmt:play?titleId=PPSA32785, actionId: , messageId: msgid_manage_game_data
+[2780.927] [ShellUI] debug: Updated menu titleId: PPSA32785
+[2780.931] [ShellUI] debug: createJson_hook: 881a085cc id: MENU_ID_APPLICATION_DELETE, label: , actionUrl: pssmdlg:open?dialogName=AppDeleteDialog&customParam=%7B%22titleIds%22%3A%5B%22PPSA32785%22%5D%7D, actionId: , messageId: msgid_delete
+[2780.945] [ShellUI] debug: createJson_hook: 881ac2302 id: MENU_ID_APPLICATION_INFORMATION, label: , actionUrl: pscontentinfo:info?titleId=PPSA32785, actionId: , messageId: msgid_information
+[2780.951] [ShellUI] debug: createJson_hook: 881ac2924 id: MENU_ID_INTELLECTUAL_PROPERTY_NOTICES, label: , actionUrl: pscontentinfo:copyright?titleId=PPSA32785, actionId: , messageId: msgid_intellectual_property_notices
+[2780.970] [ShellUI] debug: createJson_hook: 881913190 id: MENU_ID_CHECK_PATCH, label: , actionUrl: pspatchcheck:check-for-update?titleid=PPSA27836, actionId: , messageId: msgid_check_update
+[2780.977] [ShellUI] debug: createJson_hook: 62450ef0 id: MENU_ID_SAVE_DATA_MANAGEMENT_PS5_MANUAL, label: , actionUrl: pssettings:play?function=savedata&feature=options_menu_ps5&npTitleId=PPSA27836, actionId: , messageId: msgid_ps_plus_transfer_saved_data
+[2780.987] [ShellUI] debug: createJson_hook: 8819e9c04 id: MENU_ID_GAME_DATA_MANAGEMENT, label: , actionUrl: psgamedatamgmt:play?titleId=PPSA27836, actionId: , messageId: msgid_manage_game_data
+[2780.997] [ShellUI] debug: Updated menu titleId: PPSA27836
+[2781.000] [ShellUI] debug: createJson_hook: 881a84b44 id: MENU_ID_APPLICATION_DELETE, label: , actionUrl: pssmdlg:open?dialogName=AppDeleteDialog&customParam=%7B%22titleIds%22%3A%5B%22PPSA27836%22%5D%7D, actionId: , messageId: msgid_delete
+[2781.014] [ShellUI] debug: createJson_hook: 881ab2002 id: MENU_ID_APPLICATION_INFORMATION, label: , actionUrl: pscontentinfo:info?titleId=PPSA27836, actionId: , messageId: msgid_information
+[2781.020] [ShellUI] debug: createJson_hook: 881aba9d4 id: MENU_ID_INTELLECTUAL_PROPERTY_NOTICES, label: , actionUrl: pscontentinfo:copyright?titleId=PPSA27836, actionId: , messageId: msgid_intellectual_property_notices
+[2781.334] [ShellUI] debug: Boot: psgm:play?id=PPSA13197 (NULL), OPT 1
+[2781.384] [ShellUI] debug: patch payload not running .. returning with orig
+[2783.208] [OnionHEN] debug: [lifecycle] collect skip source=fork reason=running-query-not-ready exec_pid=100 exec_tid=- running_pid=-1 running_tid=- query_ok=0
+[2783.215] [OnionHEN] debug: [lifecycle] collect skip source=fork reason=running-query-not-ready exec_pid=55 exec_tid=- running_pid=-1 running_tid=- query_ok=0
+[2784.629] [OnionHEN] info: [lifecycle] Big App started pid=100 appid=8216 tid=PPSA13197 via=exec source=exec
+[2784.629] [OnionHEN] debug: [JB] Big App start ignored while AppJailbreak is disabled pid=100 tid=PPSA13197
+[2784.637] [OnionHEN] debug: [proc] matched bigapp pid=100 appid=8216 process='eboot.bin' comm='eboot.bin'
+[2784.657] [OnionHEN] warn: [sprx-manager] line=0 plugin=-: cannot open manifest: No such file or directory
+[2784.680] [OnionHEN] info: [sprx-manager] big-app-start catalog=0 entries=0 loaded=0 failed=0 skipped=0
+[2785.915] [OnionHEN] debug: [proc] matched bigapp pid=100 appid=8216 process='eboot.bin' comm='eboot.bin'
+[2786.061] [OnionHEN] debug: [proc] matched bigapp pid=100 appid=8216 process='eboot.bin' comm='eboot.bin'
+[2786.066] [OnionHEN] debug: [lifecycle] collect skip source=fork reason=already-tracked exec_pid=103 exec_tid=- running_pid=100 running_tid=PPSA13197 query_ok=1
+[2786.076] [OnionHEN] debug: [proc] matched bigapp pid=100 appid=8216 process='eboot.bin' comm='eboot.bin'
+[2786.080] [OnionHEN] debug: [lifecycle] collect skip source=fork reason=already-tracked exec_pid=55 exec_tid=- running_pid=100 running_tid=PPSA13197 query_ok=1
+[2786.096] [OnionHEN] debug: [proc] matched bigapp pid=100 appid=8216 process='eboot.bin' comm='eboot.bin'
+[2786.098] [OnionHEN] debug: [lifecycle] collect skip source=exec reason=already-tracked exec_pid=103 exec_tid=NPXS40093 running_pid=100 running_tid=PPSA13197 query_ok=1
+[2787.915] [OnionHEN] debug: [proc] matched bigapp pid=100 appid=8216 process='eboot.bin' comm='eboot.bin'
+[2789.915] [OnionHEN] debug: [proc] matched bigapp pid=100 appid=8216 process='eboot.bin' comm='eboot.bin'
+[2791.915] [OnionHEN] debug: [proc] matched bigapp pid=100 appid=8216 process='eboot.bin' comm='eboot.bin'
+[2793.915] [OnionHEN] debug: [proc] matched bigapp pid=100 appid=8216 process='eboot.bin' comm='eboot.bin'
+[2795.915] [OnionHEN] debug: [proc] matched bigapp pid=100 appid=8216 process='eboot.bin' comm='eboot.bin'
+[2797.915] [OnionHEN] debug: [proc] matched bigapp pid=100 appid=8216 process='eboot.bin' comm='eboot.bin'
+[2799.915] [OnionHEN] debug: [proc] matched bigapp pid=100 appid=8216 process='eboot.bin' comm='eboot.bin'
+[2801.916] [OnionHEN] debug: [proc] matched bigapp pid=100 appid=8216 process='eboot.bin' comm='eboot.bin'
+[2803.916] [OnionHEN] debug: [proc] matched bigapp pid=100 appid=8216 process='eboot.bin' comm='eboot.bin'
+[2804.036] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[2805.915] [OnionHEN] debug: [proc] matched bigapp pid=100 appid=8216 process='eboot.bin' comm='eboot.bin'
+[2807.915] [OnionHEN] debug: [proc] matched bigapp pid=100 appid=8216 process='eboot.bin' comm='eboot.bin'
+[2809.915] [OnionHEN] debug: [proc] matched bigapp pid=100 appid=8216 process='eboot.bin' comm='eboot.bin'
+[2810.930] [ShellUI] debug: Option button pressed
+[2810.971] [ShellUI] debug: Option button pressed
+[2811.915] [OnionHEN] debug: [proc] matched bigapp pid=100 appid=8216 process='eboot.bin' comm='eboot.bin'
+[2813.915] [OnionHEN] debug: [proc] matched bigapp pid=100 appid=8216 process='eboot.bin' comm='eboot.bin'
+[2815.915] [OnionHEN] debug: [proc] matched bigapp pid=100 appid=8216 process='eboot.bin' comm='eboot.bin'
+[2817.915] [OnionHEN] debug: [proc] matched bigapp pid=100 appid=8216 process='eboot.bin' comm='eboot.bin'
+[2819.915] [OnionHEN] debug: [proc] matched bigapp pid=100 appid=8216 process='eboot.bin' comm='eboot.bin'
+[2821.915] [OnionHEN] debug: [proc] matched bigapp pid=100 appid=8216 process='eboot.bin' comm='eboot.bin'
+[2823.915] [OnionHEN] debug: [proc] matched bigapp pid=100 appid=8216 process='eboot.bin' comm='eboot.bin'
+[2825.916] [OnionHEN] debug: [proc] matched bigapp pid=100 appid=8216 process='eboot.bin' comm='eboot.bin'
+[2827.915] [OnionHEN] debug: [proc] matched bigapp pid=100 appid=8216 process='eboot.bin' comm='eboot.bin'
+[2829.915] [OnionHEN] debug: [proc] matched bigapp pid=100 appid=8216 process='eboot.bin' comm='eboot.bin'
+[2831.916] [OnionHEN] debug: [proc] matched bigapp pid=100 appid=8216 process='eboot.bin' comm='eboot.bin'
+[2833.916] [OnionHEN] debug: [proc] matched bigapp pid=100 appid=8216 process='eboot.bin' comm='eboot.bin'
+[2834.038] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[2835.916] [OnionHEN] debug: [proc] matched bigapp pid=100 appid=8216 process='eboot.bin' comm='eboot.bin'
+[2837.915] [OnionHEN] debug: [proc] matched bigapp pid=100 appid=8216 process='eboot.bin' comm='eboot.bin'
+[2839.916] [OnionHEN] debug: [proc] matched bigapp pid=100 appid=8216 process='eboot.bin' comm='eboot.bin'
+[2841.635] [ShellUI] debug: Option button pressed
+[2841.668] [ShellUI] debug: Option button pressed
+[2841.702] [ShellUI] debug: Option button pressed
+[2841.735] [ShellUI] debug: Option button pressed
+[2841.915] [OnionHEN] debug: [proc] matched bigapp pid=100 appid=8216 process='eboot.bin' comm='eboot.bin'
+[2843.915] [OnionHEN] debug: [proc] matched bigapp pid=100 appid=8216 process='eboot.bin' comm='eboot.bin'
+[2845.915] [OnionHEN] debug: [proc] matched bigapp pid=100 appid=8216 process='eboot.bin' comm='eboot.bin'
+[2847.915] [OnionHEN] debug: [proc] matched bigapp pid=100 appid=8216 process='eboot.bin' comm='eboot.bin'
+[2849.915] [OnionHEN] debug: [proc] matched bigapp pid=100 appid=8216 process='eboot.bin' comm='eboot.bin'
+[2852.213] [ShellUI] debug: ioctl_hook called with fd: 163, request: 0xC0105203, argp: 7dfd6afa8
+[2852.216] [ShellUI] debug: homeui_top_nav_patch: ioctl RNPS buffer=211d04000 size=4560656 head=52 4e 50 53
+[2853.956] [ShellUI] debug: Boot: psgm:play?id=PPSA99008 (NULL), OPT 1
+[2854.007] [ShellUI] debug: patch payload not running .. returning with orig
+[2856.210] [OnionHEN] debug: [lifecycle] collect skip source=fork reason=running-query-not-ready exec_pid=126 exec_tid=- running_pid=-1 running_tid=- query_ok=0
+[2856.218] [OnionHEN] debug: [lifecycle] collect skip source=fork reason=running-query-not-ready exec_pid=55 exec_tid=- running_pid=-1 running_tid=- query_ok=0
+[2856.527] [OnionHEN] info: [lifecycle] Big App started pid=126 appid=16408 tid=PPSA99008 via=exec source=exec
+[2856.529] [OnionHEN] debug: [JB] Big App start ignored while AppJailbreak is disabled pid=126 tid=PPSA99008
+[2856.536] [OnionHEN] debug: [proc] matched bigapp pid=126 appid=16408 process='eboot.bin' comm='eboot.bin'
+[2856.555] [OnionHEN] warn: [sprx-manager] line=0 plugin=-: cannot open manifest: No such file or directory
+[2856.577] [OnionHEN] info: [sprx-manager] big-app-start catalog=0 entries=0 loaded=0 failed=0 skipped=0
+[2857.915] [OnionHEN] debug: [proc] matched bigapp pid=126 appid=16408 process='eboot.bin' comm='eboot.bin'
+[2859.557] [OnionHEN] debug: [proc] matched bigapp pid=126 appid=16408 process='eboot.bin' comm='eboot.bin'
+[2859.561] [OnionHEN] debug: [lifecycle] collect skip source=fork reason=already-tracked exec_pid=128 exec_tid=- running_pid=126 running_tid=PPSA99008 query_ok=1
+[2859.572] [OnionHEN] debug: [proc] matched bigapp pid=126 appid=16408 process='eboot.bin' comm='eboot.bin'
+[2859.580] [OnionHEN] debug: [lifecycle] collect skip source=fork reason=already-tracked exec_pid=55 exec_tid=- running_pid=126 running_tid=PPSA99008 query_ok=1
+[2859.588] [OnionHEN] debug: [proc] matched bigapp pid=126 appid=16408 process='eboot.bin' comm='eboot.bin'
+[2859.592] [OnionHEN] debug: [lifecycle] collect skip source=exec reason=already-tracked exec_pid=128 exec_tid=NPXS40157 running_pid=126 running_tid=PPSA99008 query_ok=1
+[2859.915] [OnionHEN] debug: [proc] matched bigapp pid=126 appid=16408 process='eboot.bin' comm='eboot.bin'
+[2861.915] [OnionHEN] debug: [proc] matched bigapp pid=126 appid=16408 process='eboot.bin' comm='eboot.bin'
+[2863.915] [OnionHEN] debug: [proc] matched bigapp pid=126 appid=16408 process='eboot.bin' comm='eboot.bin'
+[2864.039] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[2865.916] [OnionHEN] debug: [proc] matched bigapp pid=126 appid=16408 process='eboot.bin' comm='eboot.bin'
+[2867.915] [OnionHEN] debug: [proc] matched bigapp pid=126 appid=16408 process='eboot.bin' comm='eboot.bin'
+[2869.915] [OnionHEN] debug: [proc] matched bigapp pid=126 appid=16408 process='eboot.bin' comm='eboot.bin'
+[2894.040] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[2924.041] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[2930.320] [OnionHEN] info: rest: power state -> MAIN_ON_STANDBY
+[2930.852] [OnionHEN] debug: recv_full EOF after 0 / 16
+[2930.852] [OnionHEN] debug: recv_full EOF after 0 / 4108
+[2930.858] [OnionHEN] info: [plugin-bridge] ShellUI disconnected
+[2930.863] [OnionHEN] debug: [crit][client 0] IPC Connection disconnected, Shutting down ...
+[2931.856] [OnionHEN] debug: [lifecycle] collect skip source=fork reason=running-query-not-ready exec_pid=134 exec_tid=- running_pid=-1 running_tid=- query_ok=0
+[2931.864] [OnionHEN] debug: [lifecycle] collect skip source=fork reason=running-query-not-ready exec_pid=55 exec_tid=- running_pid=-1 running_tid=- query_ok=0
+[2931.905] [OnionHEN] debug: [lifecycle] SysCore EXEC SceShellUI pid=134
+[2931.906] [OnionHEN] info: rest: NOTE_EXEC during standby; defer ShellUI injection pid=134
+[2931.917] [OnionHEN] debug: [lifecycle] collect skip source=exec reason=exec-not-running-big-app exec_pid=134 exec_tid=NPXS40087 running_pid=-1 running_tid=- query_ok=0
+[2931.965] [OnionHEN] debug: [lifecycle] collect skip source=fork reason=running-query-not-ready exec_pid=135 exec_tid=- running_pid=-1 running_tid=- query_ok=0
+[2931.970] [OnionHEN] debug: [lifecycle] collect skip source=fork reason=running-query-not-ready exec_pid=55 exec_tid=- running_pid=-1 running_tid=- query_ok=0
+[2931.994] [OnionHEN] debug: [lifecycle] collect skip source=exec reason=exec-not-running-big-app exec_pid=135 exec_tid=NPXS40102 running_pid=-1 running_tid=- query_ok=0
+[2932.059] [OnionHEN] debug: [lifecycle] collect skip source=fork reason=running-query-not-ready exec_pid=136 exec_tid=- running_pid=-1 running_tid=- query_ok=0
+[2932.063] [OnionHEN] debug: [lifecycle] collect skip source=fork reason=running-query-not-ready exec_pid=55 exec_tid=- running_pid=-1 running_tid=- query_ok=0
+[2932.071] [OnionHEN] debug: [lifecycle] collect skip source=exec reason=exec-not-running-big-app exec_pid=136 exec_tid=NPXS40101 running_pid=-1 running_tid=- query_ok=0
+[2945.239] [OnionHEN] info: rest: power state -> SUSPEND_ON_GOING
+[2948.101] [OnionHEN] debug: rest: control_tcp accept failed errno=163 (error_code=0x000000a3)
+[2948.106] [OnionHEN] debug: rest: release listen fd=15
+[2948.109] [OnionHEN] warn: control_tcp: accept failed; re-listening
+[2948.613] [OnionHEN] info: control_tcp: listening on 0.0.0.0:9048 (PC shutdown)
+[2954.043] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[2974.879] [OnionHEN] info: rest: power state -> WORKING
+[2974.880] [OnionHEN] info: rest: WORKING transition; starting recovery transaction
+[2975.883] [OnionHEN] debug: rest: [crit] ipc_server_restart
+[2975.887] [OnionHEN] debug: rest: release listen fd=16
+[2975.890] [OnionHEN] debug: rest: control_tcp_restart fd=15
+[2975.890] [OnionHEN] debug: rest: [crit] accept failed errno=53 (Software caused connection abort); re-listening
+[2975.894] [OnionHEN] debug: rest: release listen fd=15
+[2975.900] [OnionHEN] warn: [crit] networkAccept error Software caused connection abort; re-listening
+[2975.903] [OnionHEN] debug: rest: release listen fd=19
+[2975.903] [OnionHEN] debug: rest: control_tcp accept failed errno=53 (Software caused connection abort)
+[2975.912] [OnionHEN] debug: rest: release listen fd=18
+[2975.917] [OnionHEN] warn: control_tcp: accept failed; re-listening
+[2975.921] [OnionHEN] warn: [plugin-ipc] listener interrupted; re-listening
+[2976.425] [OnionHEN] info: control_tcp: listening on 0.0.0.0:9048 (PC shutdown)
+[2976.909] [OnionHEN] debug: [ipc] Deleted Socket /system_tmp/onionhen/ipc/crit_service
+[2976.910] [OnionHEN] debug: rest: [crit] listening path=/system_tmp/onionhen/ipc/crit_service fd=17
+[2976.912] [OnionHEN] debug: [ipc] Deleted Socket /system_tmp/onionhen/ipc/shellui_plugin_bridge
+[2976.920] [OnionHEN] info: [plugin-bridge] listening on /system_tmp/onionhen/ipc/shellui_plugin_bridge
+[2976.929] [OnionHEN] debug: [ipc] Deleted Socket /system_tmp/onionhen/ipc/plugin_service
+[2976.930] [OnionHEN] info: [plugin-ipc] listening on /system_tmp/onionhen/ipc/plugin_service
+[2977.022] [OnionHEN] info: rest: listener recovery ready (tcp9048=1 crit_ipc=1 plugin_ipc=1)
+[2977.026] [OnionHEN] info: [plugins] stopped all managed plugin processes
+[2977.030] [OnionHEN] info: [plugins] startup: discovered=0 running=0 started=0 failed=0
+[2977.035] [OnionHEN] warn: [sprx-manager] line=0 plugin=-: cannot open manifest: No such file or directory
+[2977.035] [OnionHEN] info: [plugins] watching /data/OnionHEN/plugins
+[2977.040] [OnionHEN] info: [sprx-manager] reconcile catalog=0 entries=0 loaded=0 failed=0 skipped=0
+[2977.052] [OnionHEN] info: rest: resume compensation scheduling ShellUI pid=134
+[2977.055] [OnionHEN] debug: rest: SysCore EXEC shellui pid=134 previous=134 gen=1
+[2977.059] [OnionHEN] debug: rest: shellui pid 134 -> 134, wait trophy sprx
+[2977.067] [OnionHEN] debug: rest: libSceNpTrophy.sprx loaded pid=134 after 0 ms
+[2977.072] [OnionHEN] debug: rest: libSceNpTrophy2.sprx loaded pid=134 after 0 ms
+[2977.073] [OnionHEN] debug: rest: resume delay 10 s after trophy sprx pid=134
+[2987.079] [OnionHEN] debug: rest: cmd_enable_toolbox shellui_pid=134
+[2987.080] [OnionHEN] info: Activating toolbox...
+[2987.085] [OnionHEN] debug: Injecting toolbox into SceShellUI pid=134
+[2987.088] [OnionHEN] debug: [+] Elevating for ptrace (PTRACE_AUTHID)...[+]
+[2987.092] [OnionHEN] debug: [+] inject: backup authid=0x480000001000000e
+[2987.097] [OnionHEN] debug: [+] Attached to 134! [+]
+[2987.112] [OnionHEN] debug: [+] Loading ELF on 134...[+]
+[2987.145] [OnionHEN] debug: [+] elfldr_load ok entry=0x250015258
+[2987.146] [OnionHEN] debug: [+] Allocating payload args on 134...[+]
+[2987.204] [OnionHEN] debug: [+] ELF entrypoint: 0x250015258 [+]
+[+] Payload Args: 0x2501cc000 [+]
+[2987.212] [OnionHEN] debug: [+] Bootstrap code allocated at 0x2501d0000 [+]
+[2987.220] [OnionHEN] debug: [+] Triggering entrypoint... [+]
+[2987.224] [OnionHEN] debug: [+] ELF injection finished! [+]
+[2987.224] [OnionHEN] debug: [+] Detached [+]
+[2987.228] [OnionHEN] debug: [+] inject: restored authid=0x480000001000000e
+[2987.526] [ShellUI] info: [plugin-bridge] connected to daemon
+[2987.526] [OnionHEN] info: [plugin-bridge] ShellUI connected
+[2987.527] [ShellUI] debug: Loaded settings from /user/data/OnionHEN/config.ini
+[2987.535] [ShellUI] debug: Settings loaded successfully
+[2987.538] [ShellUI] debug: Shellui Root Domain: 880b10000
+[2987.541] [ShellUI] debug: Decrypted Version: OnionHEN v0.9.0-beta1 (13.420.000 )
+[2987.741] [OnionHEN] debug: [lifecycle] collect skip source=fork reason=running-query-not-ready exec_pid=140 exec_tid=- running_pid=-1 running_tid=- query_ok=0
+[2987.745] [OnionHEN] debug: [lifecycle] collect skip source=fork reason=running-query-not-ready exec_pid=55 exec_tid=- running_pid=-1 running_tid=- query_ok=0
+[2987.756] [OnionHEN] debug: [lifecycle] collect skip source=exec reason=exec-not-running-big-app exec_pid=140 exec_tid=NPXS40157 running_pid=-1 running_tid=- query_ok=0
+[2997.917] [OnionHEN] debug: recv_full EOF after 0 / 16
+[2997.924] [OnionHEN] info: [plugin-bridge] ShellUI disconnected
+[2998.311] [OnionHEN] debug: [lifecycle] collect skip source=fork reason=running-query-not-ready exec_pid=141 exec_tid=- running_pid=-1 running_tid=- query_ok=0
+[2998.318] [OnionHEN] debug: [lifecycle] collect skip source=fork reason=running-query-not-ready exec_pid=55 exec_tid=- running_pid=-1 running_tid=- query_ok=0
+[2998.353] [OnionHEN] debug: [lifecycle] SysCore EXEC SceShellUI pid=141
+[2998.354] [OnionHEN] debug: rest: SysCore EXEC shellui pid=141 previous=134 gen=2
+[2998.354] [OnionHEN] debug: [lifecycle] collect skip source=exec reason=exec-not-running-big-app exec_pid=141 exec_tid=NPXS40087 running_pid=-1 running_tid=- query_ok=0
+[2998.365] [OnionHEN] debug: rest: shellui pid 134 -> 141, wait trophy sprx
+[3001.395] [OnionHEN] debug: rest: libSceNpTrophy.sprx loaded pid=141 after 3000 ms
+[3001.404] [OnionHEN] debug: rest: libSceNpTrophy2.sprx loaded pid=141 after 0 ms
+[3001.405] [OnionHEN] debug: rest: resume delay 10 s after trophy sprx pid=141
+[3007.045] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[3011.411] [OnionHEN] debug: Notify: [OnionHEN] Saliendo del modo de reposo — reactivando la caja de herramientas OnionHEN...
+[3011.413] [OnionHEN] debug: rest: cmd_enable_toolbox shellui_pid=141
+[3011.417] [OnionHEN] info: Activating toolbox...
+[3032.266] [OnionHEN] debug: rest: ensure ReadyTimeout pid=134
+[3032.267] [OnionHEN] debug: Notify: [OnionHEN] No se pudo cargar la caja de herramientas OnionHEN (tiempo agotado; ShellUI sigue en ejecución)
+[3032.267] [OnionHEN] debug: Injecting toolbox into SceShellUI pid=141
+[3032.272] [OnionHEN] debug: rest: inject retry=1/3 target=134
+[3032.276] [OnionHEN] debug: [+] Elevating for ptrace (PTRACE_AUTHID)...[+]
+[3032.284] [OnionHEN] debug: [+] inject: backup authid=0x480000001000000e
+[3032.289] [OnionHEN] debug: [+] Attached to 141! [+]
+[3032.303] [OnionHEN] debug: [+] Loading ELF on 141...[+]
+[3032.335] [OnionHEN] debug: [+] elfldr_load ok entry=0x2590b9258
+[3032.336] [OnionHEN] debug: [+] Allocating payload args on 141...[+]
+[3032.394] [OnionHEN] debug: [+] ELF entrypoint: 0x2590b9258 [+]
+[+] Payload Args: 0x200150000 [+]
+[3032.402] [OnionHEN] debug: [+] Bootstrap code allocated at 0x24ff6c000 [+]
+[3032.410] [OnionHEN] debug: [+] Triggering entrypoint... [+]
+[3032.413] [OnionHEN] debug: [+] ELF injection finished! [+]
+[3032.414] [OnionHEN] debug: [+] Detached [+]
+[3032.415] [OnionHEN] debug: [+] inject: restored authid=0x480000001000000e
+[3032.701] [ShellUI] info: [plugin-bridge] connected to daemon
+[3032.701] [OnionHEN] info: [plugin-bridge] ShellUI connected
+[3032.702] [ShellUI] debug: Loaded settings from /user/data/OnionHEN/config.ini
+[3032.708] [ShellUI] debug: Settings loaded successfully
+[3032.711] [ShellUI] debug: Shellui Root Domain: 880b10000
+[3032.714] [ShellUI] debug: Decrypted Version: OnionHEN v0.9.0-beta1 (13.420.000 )
+[3032.757] [ShellUI] debug: Game ContainerScene: 8842c8b08
+[3032.758] [ShellUI] debug: Starting hooking...
+[3032.761] [ShellUI] debug: has_hv_bypass=1 (mprotect for detours)
+[3032.765] [ShellUI] debug: changing permissions on (0x809b0b550).
+[3032.768] [ShellUI] debug: Hooking 0x809b0b550 => 259031309
+[3032.772] [ShellUI] debug: DetourFunction: target=0x809b0b550 hook=259031309 trampoline=8105c8000 stolen=17 emitted=31
+[3032.778] [ShellUI] debug: Main thread check patched
+[3032.780] [OnionHEN] debug: rest: inject retry superseded gen=1
+[3032.781] [ShellUI] debug: Hooking 0x8002ac270 => 2590318e8
+[3032.787] [OnionHEN] warn: rest: toolbox recovery exhausted gen=1 requested_pid=134
+[3032.789] [ShellUI] debug: DetourFunction: target=0x8002ac270 hook=2590318e8 trampoline=8105cc000 stolen=16 emitted=30
+[3032.799] [ShellUI] debug: Installing mono hook: OptionMenu.createJson target=0x80bbbdac0 hook=259031a27
+[3032.804] [ShellUI] debug: Hooking 0x80bbbdac0 => 259031a27
+[3032.808] [ShellUI] debug: DetourFunction: target=0x80bbbdac0 hook=259031a27 trampoline=8105d0000 stolen=14 emitted=28
+[3032.813] [ShellUI] debug: Installing mono hook: GamePad.GetData target=0x809b11f30 hook=25902ffa0
+[3032.818] [ShellUI] debug: Hooking 0x809b11f30 => 25902ffa0
+[3032.822] [ShellUI] debug: DetourFunction: target=0x809b11f30 hook=25902ffa0 trampoline=8105d4000 stolen=15 emitted=29
+[3032.828] [ShellUI] debug: Installing mono hook: SettingsPlugin.CxmlUri target=0x80a2c0080 hook=259030e80
+[3032.833] [ShellUI] debug: Hooking 0x80a2c0080 => 259030e80
+[3032.838] [ShellUI] debug: DetourFunction: target=0x80a2c0080 hook=259030e80 trampoline=8105d8000 stolen=14 emitted=28
+[3032.843] [ShellUI] debug: Installing mono hook: SettingPage.OnPressed target=0x80a2b18d0 hook=259055c31
+[3032.848] [ShellUI] debug: Hooking 0x80a2b18d0 => 259055c31
+[3032.852] [ShellUI] debug: DetourFunction: target=0x80a2b18d0 hook=259055c31 trampoline=8105dc000 stolen=18 emitted=32
+[3032.857] [ShellUI] debug: Installing mono hook: SettingPage.OnCreating target=0x80a2b14f0 hook=2590557e8
+[3032.863] [ShellUI] debug: Hooking 0x80a2b14f0 => 2590557e8
+[3032.866] [ShellUI] debug: DetourFunction: target=0x80a2b14f0 hook=2590557e8 trampoline=8105e0000 stolen=17 emitted=31
+[3032.872] [ShellUI] debug: Installing mono hook: SettingPage.OnActivated target=0x80a2b1240 hook=259056b8d
+[3032.878] [ShellUI] debug: Hooking 0x80a2b1240 => 259056b8d
+[3032.881] [ShellUI] debug: DetourFunction: target=0x80a2b1240 hook=259056b8d trampoline=8105e4000 stolen=17 emitted=31
+[3032.887] [ShellUI] debug: Installing mono hook: SettingList.Cleanup target=0x80a2aba40 hook=259056c0f
+[3032.892] [ShellUI] debug: Hooking 0x80a2aba40 => 259056c0f
+[3032.896] [ShellUI] debug: DetourFunction: target=0x80a2aba40 hook=259056c0f trampoline=8105e8000 stolen=24 emitted=38
+[3032.902] [ShellUI] debug: Installing mono hook: UserCustomElementUI.Reset target=0x80a2ca0f0 hook=259056ccf
+[3032.907] [ShellUI] debug: Hooking 0x80a2ca0f0 => 259056ccf
+[3032.911] [ShellUI] debug: DetourFunction: target=0x80a2ca0f0 hook=259056ccf trampoline=8105ec000 stolen=14 emitted=28
+[3032.917] [ShellUI] debug: Installing mono hook: SettingPageStack.OnPopping target=0x80a2b4f20 hook=259056896
+[3032.922] [ShellUI] debug: Hooking 0x80a2b4f20 => 259056896
+[3032.926] [ShellUI] debug: DetourFunction: target=0x80a2b4f20 hook=259056896 trampoline=8105f0000 stolen=16 emitted=30
+[3032.931] [ShellUI] debug: Installing mono hook: SettingsPlugin.GetString target=0x80a2bfe40 hook=259030822
+[3032.937] [ShellUI] debug: Hooking 0x80a2bfe40 => 259030822
+[3032.940] [ShellUI] debug: DetourFunction: target=0x80a2bfe40 hook=259030822 trampoline=8105f4000 stolen=18 emitted=32
+[3032.946] [ShellUI] debug: Installing mono hook: EventManager.OnShareButton target=0x80e6a1d30 hook=2590306cd
+[3032.952] [ShellUI] debug: Hooking 0x80e6a1d30 => 2590306cd
+[3032.955] [ShellUI] debug: DetourFunction: target=0x80e6a1d30 hook=2590306cd trampoline=8105f8000 stolen=17 emitted=31
+[3032.961] [ShellUI] error: Get_Address_of_Method: failed to find method "UpdateNavigationState" in class "ReactNavigatorManager"
+[3032.967] [ShellUI] error: [DBG-NAV] UpdateNavigationState not found
+[3032.971] [ShellUI] debug: Hooking 0x80c389d50 => 25902cd10
+[3032.975] [ShellUI] debug: DetourFunction: target=0x80c389d50 hook=25902cd10 trampoline=8105fc000 stolen=16 emitted=30
+[3032.981] [ShellUI] debug: homeui_top_nav_patch: SetIconSource hooked (invertedIcon mirror for OnionHEN)
+[3032.986] [ShellUI] debug: Hooking 0x80bcbd210 => 2590552b8
+[3032.990] [ShellUI] debug: DetourFunction: target=0x80bcbd210 hook=2590552b8 trampoline=810600000 stolen=16 emitted=30
+[3032.995] [ShellUI] debug: [DBG-GETMODEL] GetModel hooked
+[3032.999] [ShellUI] debug: Installing mono hook: LncUtilWrapper.LaunchApp target=0x80b3d0750 hook=259031755
+[3033.004] [ShellUI] debug: Hooking 0x80b3d0750 => 259031755
+[3033.008] [ShellUI] debug: DetourFunction: target=0x80b3d0750 hook=259031755 trampoline=810604000 stolen=14 emitted=28
+[3033.014] [ShellUI] debug: Hooking 0x80b3d0a10 => 25906a4df
+[3033.017] [ShellUI] debug: DetourFunction: target=0x80b3d0a10 hook=25906a4df trampoline=810608000 stolen=14 emitted=39
+[3033.023] [ShellUI] debug: Found ioctl at 8000008d0
+[3033.026] [ShellUI] debug: Hooking 0x8000008d0 => 259030d0c
+[3033.029] [ShellUI] debug: DetourFunction: target=0x8000008d0 hook=259030d0c trampoline=81060c000 stolen=14 emitted=42
+[3033.035] [ShellUI] debug: Detoured ioctl to ioctl_hook
+[3033.039] [ShellUI] debug: Installing mono hook: BootHelper.Boot(3) target=0x808714b20 hook=25902fadb
+[3033.044] [ShellUI] debug: Hooking 0x808714b20 => 25902fadb
+[3033.047] [ShellUI] debug: DetourFunction: target=0x808714b20 hook=25902fadb trampoline=810610000 stolen=17 emitted=31
+[3033.053] [ShellUI] error: Get_Address_of_Method: failed to find method "CaptureScreen" in class "CaptureController"
+[3033.059] [ShellUI] error: Hook target missing: CaptureScreen(4)
+[3033.063] [ShellUI] debug: Installing mono hook: CaptureScreen(5) target=0x80e69c570 hook=2590305b9
+[3033.068] [ShellUI] debug: Hooking 0x80e69c570 => 2590305b9
+[3033.071] [ShellUI] debug: DetourFunction: target=0x80e69c570 hook=2590305b9 trampoline=810614000 stolen=15 emitted=29
+[3033.077] [ShellUI] debug: Installing mono hook: GetManifestResourceStream target=0x801b6bd80 hook=259053296
+[3033.083] [ShellUI] debug: Hooking 0x801b6bd80 => 259053296
+[3033.086] [ShellUI] debug: DetourFunction: target=0x801b6bd80 hook=259053296 trampoline=810618000 stolen=17 emitted=31
+[3033.092] [ShellUI] debug: Installing mono hook: PUI.Application.Update target=0x808ea36f0 hook=25906a938
+[3033.097] [ShellUI] debug: Hooking 0x808ea36f0 => 25906a938
+[3033.101] [ShellUI] debug: DetourFunction: target=0x808ea36f0 hook=25906a938 trampoline=81061c000 stolen=16 emitted=30
+[3033.107] [ShellUI] debug: Performing Magic ....
+[3033.110] [ShellUI] debug: Performed Magic
+[3033.112] [ShellUI] debug: queued NPXS40002 home reload for next UI tick
+[3033.116] [ShellUI] debug: sleeping ....
+[3033.122] [ShellUI] debug: applying NPXS40002 home reload on UI thread
+[3033.123] [ShellUI] debug: Reloading NPXS40002 scenes
+[3033.172] [OnionHEN] info: Toolbox online for SceShellUI pid=141 (ready protocol)
+[3033.175] [OnionHEN] debug: rest: ensure Injected pid=141
+[3033.208] [ShellUI] debug: ioctl_hook called with fd: 122, request: 0xC0105203, argp: 7e081afa8
+[3033.211] [ShellUI] debug: homeui_top_nav_patch: ioctl RNPS buffer=205704000 size=1798720 head=52 4e 50 53
+[3033.623] [ShellUI] debug: overlay: RootWidget logical size 1920.0 x 1080.0
+[3036.424] [ShellUI] debug: ioctl_hook called with fd: 129, request: 0xC0105203, argp: 7e0b4efa8
+[3036.425] [ShellUI] debug: homeui_top_nav_patch: ioctl RNPS buffer=209704000 size=4560656 head=52 4e 50 53
+[3037.046] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[3039.772] [OnionHEN] debug: rest: release listen fd=16
+[3067.047] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0
+[3070.527] [ShellUI] debug: Boot: pssettings:play?mode=settings (NULL), OPT 1
+[3070.564] [ShellUI] debug: ioctl_hook called with fd: 156, request: 0xC0105203, argp: 7dfffafa8
+[3070.566] [ShellUI] debug: homeui_top_nav_patch: ioctl RNPS buffer=20d604000 size=5163712 head=52 4e 50 53
+[3070.583] [ShellUI] debug: settings_bundle_patch: Hermes NPXS40008 label=1 footer=updated (stock icon id preserved)
+[3073.087] [ShellUI] debug: [DBG-GETMODEL] pageId=id_debug_settings
+[3073.087] [ShellUI] debug: [DBG-GETMODEL] param=<empty>
+[3073.091] [ShellUI] debug: [DBG-GETMODEL] id_debug_settings → BootHelper legacy
+[3073.096] [ShellUI] debug: [DBG-NAV] BootHelper.Boot(3) → legacy (GetModel) ret=1
+[3073.128] [ShellUI] debug: ioctl_hook called with fd: 156, request: 0xC0105203, argp: 7e00fefa8
+[3073.132] [ShellUI] debug: homeui_top_nav_patch: ioctl RNPS buffer=20e504000 size=5163712 head=52 4e 50 53
+[3073.149] [ShellUI] debug: settings_bundle_patch: Hermes NPXS40008 label=1 footer=updated (stock icon id preserved)
+[3073.641] [ShellUI] debug: GetManifestResourceStream_Hook: Sce.Vsh.ShellUI.Legacy.src.Sce.Vsh.ShellUI.Settings.Plugins.DebugSettings.data.debug_settings.xml domain=880b10000 root=880b10000
+[3073.657] [ShellUI] debug: Loaded settings from /user/data/OnionHEN/config.ini
+[3073.661] [ShellUI] debug: Current user => <oculto>
+[3073.663] [ShellUI] debug: Account register number => <oculto>
+[3073.667] [ShellUI] debug: User Account ID => <oculto>
+[3073.670] [ShellUI] debug: AccountType => np
+[3073.673] [ShellUI] debug: Account Flags => <oculto>
+[3073.676] [ShellUI] debug: [GMRS] New_Mono_XML_From_String: xml_size=18115 domain=880b10000 Root_Domain=880b10000 MemoryStream_IO=8878108e8
+[3073.683] [ShellUI] debug: [GMRS] New_Mono_XML_From_String: ok instance=880c33a38 gchandle=12
+[3073.714] [ShellUI] debug: Resource Name: ★Caja de herramientas OnionHEN
+[3073.714] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[3073.759] [ShellUI] debug: Resource Name: Instalación y gestión de contenido
+[3073.761] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[3073.766] [ShellUI] debug: Resource Name: Instalar PKG y gestionar contenido adicional
+[3073.769] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[3073.774] [ShellUI] debug: uri_string: //user//data//OnionHEN//assets//icon_xml_package.png
+[3073.778] [ShellUI] debug: CxmlUri_Hook: /user/data/OnionHEN/assets/icon_xml_package.png
+[3073.785] [ShellUI] debug: Resource Name: Payloads y núcleo
+[3073.786] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[3073.790] [ShellUI] debug: Resource Name: Payloads del usuario y de inicio automático; Kstuff y plugins instalados
+[3073.796] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[3073.800] [ShellUI] debug: uri_string: //user//data//OnionHEN//assets//icon_xml_plugins.png
+[3073.805] [ShellUI] debug: CxmlUri_Hook: /user/data/OnionHEN/assets/icon_xml_plugins.png
+[3073.810] [ShellUI] debug: Resource Name: Herramientas de juego
+[3073.813] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[3073.817] [ShellUI] debug: Resource Name: Gestionar trucos y descargar la colección de trucos
+[3073.822] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[3073.826] [ShellUI] debug: uri_string: //user//data//OnionHEN//assets//icon_xml_game.png
+[3073.831] [ShellUI] debug: CxmlUri_Hook: /user/data/OnionHEN/assets/icon_xml_game.png
+[3073.836] [ShellUI] debug: Resource Name: Cuenta y juego remoto
+[3073.839] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[3073.843] [ShellUI] debug: Resource Name: Activación de cuenta y emparejamiento de juego remoto
+[3073.848] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[3073.852] [ShellUI] debug: uri_string: //user//data//OnionHEN//assets//icon_xml_account.png
+[3073.857] [ShellUI] debug: CxmlUri_Hook: /user/data/OnionHEN/assets/icon_xml_account.png
+[3073.862] [ShellUI] debug: Resource Name: Supervisión y pantalla
+[3073.865] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[3073.870] [ShellUI] debug: Resource Name: Superposición en partida, indicadores en la pantalla de inicio y entrada a las opciones del juego
+[3073.877] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[3073.880] [ShellUI] debug: uri_string: //user//data//OnionHEN//assets//icon_xml_monitor.png
+[3073.885] [ShellUI] debug: CxmlUri_Hook: /user/data/OnionHEN/assets/icon_xml_monitor.png
+[3073.890] [ShellUI] debug: Resource Name: Sistema y hardware
+[3073.893] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[3073.897] [ShellUI] debug: Resource Name: Ventilador, almacenamiento externo y activación de licencia de disco
+[3073.903] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[3073.907] [ShellUI] debug: uri_string: //user//data//OnionHEN//assets//icon_xml_settings.png
+[3073.912] [ShellUI] debug: CxmlUri_Hook: /user/data/OnionHEN/assets/icon_xml_settings.png
+[3073.917] [ShellUI] debug: Resource Name: Preferencias
+[3073.920] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[3073.924] [ShellUI] debug: Resource Name: Comportamiento al iniciar, idioma de la caja de herramientas, origen de trucos y atajos del mando
+[3073.931] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[3073.935] [ShellUI] debug: uri_string: //user//data//OnionHEN//assets//icon_xml_shortcuts.png
+[3073.940] [ShellUI] debug: CxmlUri_Hook: /user/data/OnionHEN/assets/icon_xml_shortcuts.png
+[3073.945] [ShellUI] debug: Resource Name: Depuración avanzada
+[3073.948] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[3073.952] [ShellUI] debug: Resource Name: Registros, control del jailbreak de aplicaciones y entorno NP
+[3073.957] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[3073.961] [ShellUI] debug: uri_string: //user//data//OnionHEN//assets//icon_xml_debug.png
+[3073.966] [ShellUI] debug: CxmlUri_Hook: /user/data/OnionHEN/assets/icon_xml_debug.png
+[3073.971] [ShellUI] debug: Resource Name: Acerca de
+[3073.974] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[3073.978] [ShellUI] debug: Resource Name: Créditos, donaciones e información del proyecto
+[3073.983] [ShellUI] debug: GetString_Hook: literal XML string, passthrough
+[3073.987] [ShellUI] debug: uri_string: //user//data//OnionHEN//assets//icon_xml_about.png
+[3073.991] [ShellUI] debug: CxmlUri_Hook: /user/data/OnionHEN/assets/icon_xml_about.png
+[3097.048] [OnionHEN] info: [plugins] reconcile: discovered=0 running=0 started=0 failed=0

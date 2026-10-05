@@ -1,0 +1,189 @@
+[11:07:00] ShadowMount+ v1.7beta2 exFAT/UFS/PFS/LVD/MD. FW: 13.42. Build: 2026-09-21T21:19:45Z. Thx to VoidWhisper/Gezine/Earthonion/EchoStretch/Drakmor
+[11:07:00]   [CFG] loaded: api_enabled=1 debug=1 quiet=0 language=auto ro=1 force=0 persistent_image_mounts=0 app_install_all=0 auto_remove_missing_games=0 auto_remove_games_with_dlc=0 auto_remove_missing_delay_s=300 api=127.0.0.1:10101 scan_depth=1 legacy_recursive_scan_forced=0 backport_fakelib=1 global_fakelib=1 global_fakelib_priority=game global_fakelib_path=/data/shadowmount/fakelib global_fakelib_exclude=0 update_emulators=1 emulators_path=/data/shadowmount/emus auto_update_ampr=0 ampr_update_url=https://github.com/drakmor/ampr_emu/releases/latest/download/libSceAmpr.sprx kstuff_game_auto_toggle=1 kstuff_crash_detection=1 fan_target_temperature=0 (0=system) kstuff_pause_delay_image_s=25 kstuff_pause_delay_direct_s=15 exfat_backend=LVD ufs_backend=LVD nested_pfs_index_cache=0 lvd_sec(exfat=512 ufs=4096 pfs=4096) md_sec(exfat=512 ufs=4096) scan_interval_s=15 stability_wait_s=10 scan_paths=34 image_rules=0 kstuff_no_pause=0 kstuff_delay_rules=0
+[11:07:00]   [KSTUFF] runtime control ready (image_delay=25 direct_delay=15)
+[11:07:00]   [SHELLCORE] resolved fw=13.42 pid=58 base=0x51fbc000
+[11:07:00]   [SHELLCORE] hooks installed: fw=13.42 pid=58 cave=0x5391db70+0x2e8 launch=1 sandbox=1 trampoline=0x5391ddb0 install=1
+[11:07:00]   [SHELLICON] already installed: FAKE10101
+[11:07:00]   [GAME] lifecycle watcher started
+[11:07:00]   [SHELLFLAG] opened SceShellCoreUtilAppFocus handle=0x0000000000002045
+[11:07:00]   [SHELLFLAG] known SceShellCoreUtilAppFocus masks: APP_ID
+[11:07:00]   [SHELLFLAG] opened SceSystemStateMgrInfo handle=0x0000000000000046
+[11:07:00]   [SHELLFLAG] known SceSystemStateMgrInfo masks: CURRENT_STATE=bits[0..15]|TRIGGER_CODE=bits[32..47]|REBOOT_CAUSE=bits[48..63]|STATE_INVALID=0|STATE_INITIALIZING=10|STATE_SHUTDOWN_ON_GOING=100|STATE_POWER_SAVING=200|STATE_SUSPEND_ON_GOING=300|STATE_MAIN_ON_STANDBY=500|STATE_WORKING=1000|REBOOT_CAUSE_NONE=0|REBOOT_CAUSE_CFF=1|INITIAL=0x10000000A
+[11:07:00]   [SHELLFLAG] opened SceLncUtilSystemStatus handle=0x0000000000000047
+[11:07:00]   [SHELLFLAG] known SceLncUtilSystemStatus masks: EXTRA_AUDIO_CPU_BUDGET_AVAILABLE=0x1|SHELLUI_FG_GAME_BG_CPU_MODE=0x2
+[11:07:00]   [SHELLFLAG] opened SceSystemStateMgrStatus handle=0x0000000000000048
+[11:07:00]   [SHELLFLAG] known SceSystemStateMgrStatus masks: CEC_ONE_TOUCH_PLAY_COMMAND=0x1|MEDIA_PLAYBACK_MODE=0x2|BD_DRIVE_READY=0x4|TICK_MUSIC_PLAYBACK=0x8|TICK_VIDEO_PLAYBACK=0x10|TICK_0x20=0x20|TICK_PARTY_CHAT=0x40|TURN_OFF_REQUEST=0x100|REBOOT_REQUEST=0x200|ENTER_STANDBY_REQUEST=0x400|START_SHUTDOWN_TIMER=0x10000|START_REBOOT_TIMER=0x20000|START_STANDBY_TIMER=0x40000|EXTEND_SHUTDOWN_TIMER=0x80000|CANCEL_SHUTDOWN_TIMER=0x100000|SHELLUI_SHUTDOWN_IN_PROGRESS=0x200000|EXTEND_SHUTDOWN_TIMER_POST_AUTOUPDATE=0x400000|BIGAPP_LAUNCH_READY=0x1000000|VSH_AUTO_UPDATE_VERIFY_DONE=0x4000000|START_REBOOT_TIMER_FAST=0x8000000
+[11:07:00]   [SHELLFLAG] SceShellCoreUtilAppFocus initial=0x0000000000000007 low32=0x00000007 high32=0x00000000 decoded=APP_ID=0x00000007
+[11:07:00]   [SHELLFLAG] SceSystemStateMgrInfo initial=0x00000001000003E8 low32=0x000003E8 high32=0x00000001 decoded=STATE=WORKING(0x03E8)|TRIGGER=0x0001|REBOOT_CAUSE=NONE(0x0000)
+[11:07:00]   [SHELLFLAG] SceLncUtilSystemStatus initial=0x0000000000000002 low32=0x00000002 high32=0x00000000 decoded=SHELLUI_FG_GAME_BG_CPU_MODE
+[11:07:00]   [SHELLFLAG] SceSystemStateMgrStatus initial=0x0000000004000004 low32=0x04000004 high32=0x00000000 decoded=BD_DRIVE_READY|VSH_AUTO_UPDATE_VERIFY_DONE
+[11:07:00]   [SHELLFLAG] monitor started (4/4 flags opened)
+[11:07:00]   [L10N] language=auto active=3 country=es lang=es locale=es-ES
+[11:07:00] NOTIFY: ShadowMount+ v1.7beta2
+© Drakmor y la comunidad
+Control: http://127.0.0.1:10101
+[11:07:00]   [SCAN] FS stats: path=/data/homebrew type=nullfs bsize=65536 iosize=65536 blocks=30447637 bfree=5910398 bavail=2125694 files=29695 ffree=544177664 flags=0x1000 total=1995416338432B free=387343843328B avail=139309481984B
+[11:07:00]   [SCAN] FS stats: path=/mnt/usb0 type=exfatfs bsize=65536 iosize=65536 blocks=15260688 bfree=9602941 bavail=9602941 files=31253889024 ffree=19666823168 flags=0x1000 total=1000124448768B free=629338341376B avail=629338341376B
+[11:07:00] [STARTUP] cleanup_staged_mount_links begin
+[11:07:00] [STARTUP] cleanup_duplicate_title_mounts begin
+[11:07:00]   [DB] snd0info startup maintenance done rows=3 pending=3
+[11:07:00] [STARTUP] scanner startup sync begin
+[11:07:01]   [DB] loaded app.db title list: 64 entries
+[11:07:01]   [DB] loaded blocked PPSA uninstall list: 0 entries
+[11:07:01]   [LINK] runtime layers released: PPSA99008
+[11:07:01] NOTIFY: Biblioteca sincronizada.
+Se encontraron 26 juegos.
+[11:07:01] [STARTUP] scanner startup sync done
+[11:07:01]   [API] HTTP/JSON ready: http://127.0.0.1:10101/api/v1 (v1, workers=8, limit=32)
+[11:07:56]   [IMG] Mounting image (pfsc, optimized-1.7): /data/homebrew/PPSA30140.ffpfsc -> /mnt/shadowmnt/pfsc/PPSA30140_d51366a1
+[11:07:56]   [IMG][LVD] attach backend selected for /data/homebrew/PPSA30140.ffpfsc
+[11:07:56]   [IMG][LVD] attach try: ver=0 sec=4096 sec2=65536 raw=0x9 flags=0x1c img=9
+[11:07:56]   [IMG][LVD] attach returned unit=1
+[11:07:56]   [IMG][LVD] Attached as /dev/lvd1
+[11:07:56]   [IMG][LVD] PFS ro=1 budgetid=game mkeymode=AC sigverify=0 playgo=0 disc=0 finalized=0 pubkey_ver=0 key_ver=0
+[11:07:56]   [IMG][LVD] nested PFS profile: selector=0x02 lvd_img=9 gddr5=0
+[11:07:56]   [IMG][LVD] Mounted (pfsc) /dev/lvd1 -> /mnt/shadowmnt/pfsc/PPSA30140_d51366a1
+[11:07:56]   [IMG] FS stats: path=/mnt/shadowmnt/pfsc/PPSA30140_d51366a1 type=pfs bsize=65536 iosize=65536 blocks=203728 bfree=0 bavail=0 files=0 ffree=0 flags=0x210001041 total=13351518208B free=0B avail=0B
+[11:07:56]   [IMG] Mounting image (exfatfs, legacy-1.6): /mnt/shadowmnt/pfsc/PPSA30140_d51366a1/PPSA30140.exfat -> /mnt/shadowmnt/PPSA30140_5af3596a
+[11:07:56]   [IMG][LVD] attach backend selected for /mnt/shadowmnt/pfsc/PPSA30140_d51366a1/PPSA30140.exfat
+[11:07:56]   [IMG][LVD] attach try: ver=0 sec=512 sec2=65536 raw=0x9 flags=0x1c img=0
+[11:07:56]   [IMG][LVD] attach returned unit=2
+[11:07:56]   [IMG][LVD] Attached as /dev/lvd2
+[11:07:56]   [IMG][LVD] Mounted (exfatfs) /dev/lvd2 -> /mnt/shadowmnt/PPSA30140_5af3596a
+[11:07:56]   [IMG] FS stats: path=/mnt/shadowmnt/PPSA30140_5af3596a type=exfatfs bsize=65536 iosize=65536 blocks=338504 bfree=0 bavail=0 files=693256192 ffree=0 flags=0x210001041 total=22184198144B free=0B avail=0B
+[11:07:56]   [LINK] nullfs mounted: /mnt/shadowmnt/PPSA30140_5af3596a -> /system_ex/app/PPSA30140
+[11:07:56]   [SHELLCORE] launch mount ready: PPSA30140
+[11:07:56]   [FAKELIB] game libraries mounted for PPSA30140: /mnt/shadowmnt/PPSA30140_5af3596a/fakelib -> /mnt/sandbox/PPSA30140_000/D8fGVUnVtZ/common/lib
+[11:07:56]   [SHELLCORE] sandbox ready handled: PPSA30140
+[11:07:56]   [SHELLFLAG] SceLncUtilSystemStatus poll rc=0x80020010
+[11:07:58]   [GAME] started: PPSA30140 pid=94 app_id=0x00000018
+[11:07:58]   [MDBG] tracking crash-candidate state: PPSA30140 pid=94 app_id=0x00000018
+[11:07:58]   [MDBG] coredump privileges enabled
+[11:07:58]   [MDBG] log monitor ready: PPSA30140 buffer_size=0x20018
+[11:07:58]   [KSTUFF] tracking game launch: PPSA30140 pid=94 app_id=0x00000018 source=image pause_delay=25s
+[11:07:58] NOTIFY: Juego con backport aplicado: PPSA30140
+[11:07:58]   [SHELLFLAG] SceShellCoreUtilAppFocus value=0x0000000000000018 delta=0x000000000000001F low32=0x00000018 high32=0x00000000 decoded=APP_ID=0x00000018
+[11:08:23]   [KSTUFF] pause deadline reached for PPSA30140 pid=94 but kstuff was already disabled
+[11:08:52]   [SHELLFLAG] SceSystemStateMgrStatus value=0x0000000004000005 delta=0x0000000000000001 low32=0x04000005 high32=0x00000000 decoded=CEC_ONE_TOUCH_PLAY_COMMAND|BD_DRIVE_READY|VSH_AUTO_UPDATE_VERIFY_DONE
+[11:08:53]   [SHELLFLAG] SceSystemStateMgrStatus value=0x0000000004000004 delta=0x0000000000000001 low32=0x04000004 high32=0x00000000 decoded=BD_DRIVE_READY|VSH_AUTO_UPDATE_VERIFY_DONE
+[11:08:58]   [SHELLFLAG] SceShellCoreUtilAppFocus value=0x0000000000000007 delta=0x000000000000001F low32=0x00000007 high32=0x00000000 decoded=APP_ID=0x00000007
+[11:08:59]   [SHELLFLAG] SceLncUtilSystemStatus value=0x0000000000000002 delta=0x0000000000000000 low32=0x00000002 high32=0x00000000 decoded=SHELLUI_FG_GAME_BG_CPU_MODE
+[11:09:05]   [FAKELIB] game stopped: pid=94 title=PPSA30140 layers=1
+[11:09:05]   [FAKELIB] game libraries unmounted: /mnt/shadowmnt/PPSA30140_5af3596a/fakelib -> /mnt/sandbox/PPSA30140_000/D8fGVUnVtZ/common/lib
+[11:09:05]   [GAME] process exited, awaiting same-app handoff: PPSA30140 pid=94 app_id=0x00000018
+[11:09:06]   [GAME] finalizing stopped application: PPSA30140 pid=94
+[11:09:06]   [KSTUFF] game stopped: PPSA30140 pid=94
+[11:09:06]   [SHELLCORE] runtime release awaiting sandbox removal: PPSA30140
+[11:09:06]   [DB] snd0info normalized after game exit rows=1 title=PPSA30140
+[11:09:06]   [SHELLCORE] title sandbox gone; releasing runtime: PPSA30140
+[11:09:06]   [SHELLCORE] runtime release start: PPSA30140
+[11:09:06]   [LINK] runtime layers released: PPSA30140
+[11:09:06]   [IMG][LVD] unmount start: source=/mnt/shadowmnt/pfsc/PPSA30140_d51366a1/PPSA30140.exfat mount=/mnt/shadowmnt/PPSA30140_5af3596a unit=2
+[11:09:06]   [IMG] Removed mount directory: /mnt/shadowmnt/PPSA30140_5af3596a
+[11:09:06]   [IMG][LVD] unmount complete: source=/mnt/shadowmnt/pfsc/PPSA30140_d51366a1/PPSA30140.exfat mount=/mnt/shadowmnt/PPSA30140_5af3596a unit=2 error=0
+[11:09:06]   [IMG][LVD] unmount start: source=/data/homebrew/PPSA30140.ffpfsc mount=/mnt/shadowmnt/pfsc/PPSA30140_d51366a1 unit=1
+[11:09:06]   [IMG] Removed mount directory: /mnt/shadowmnt/pfsc/PPSA30140_d51366a1
+[11:09:06]   [IMG][LVD] unmount complete: source=/data/homebrew/PPSA30140.ffpfsc mount=/mnt/shadowmnt/pfsc/PPSA30140_d51366a1 unit=1 error=0
+[11:09:06] [SCAN] running targeted scan for /mnt/shadowmnt/pfsc
+[11:09:06]   [DB] loaded app.db title list: 64 entries
+[11:09:06]   [DB] loaded blocked PPSA uninstall list: 0 entries
+[11:09:06] [SCAN] running targeted scan for /mnt/shadowmnt
+[11:32:14]   [SHELLFLAG] SceSystemStateMgrStatus value=0x0000000004000005 delta=0x0000000000000001 low32=0x04000005 high32=0x00000000 decoded=CEC_ONE_TOUCH_PLAY_COMMAND|BD_DRIVE_READY|VSH_AUTO_UPDATE_VERIFY_DONE
+[11:32:14]   [SHELLFLAG] SceSystemStateMgrStatus value=0x0000000004000004 delta=0x0000000000000001 low32=0x04000004 high32=0x00000000 decoded=BD_DRIVE_READY|VSH_AUTO_UPDATE_VERIFY_DONE
+[11:48:11]   [IMG] Mounting image (pfsc, optimized-1.7): /data/homebrew/PPSA13197.ffpfsc -> /mnt/shadowmnt/pfsc/PPSA13197_0671d592
+[11:48:11]   [IMG][LVD] attach backend selected for /data/homebrew/PPSA13197.ffpfsc
+[11:48:11]   [IMG][LVD] attach try: ver=0 sec=4096 sec2=65536 raw=0x9 flags=0x1c img=9
+[11:48:11]   [IMG][LVD] attach returned unit=1
+[11:48:11]   [IMG][LVD] Attached as /dev/lvd1
+[11:48:11]   [IMG][LVD] PFS ro=1 budgetid=game mkeymode=AC sigverify=0 playgo=0 disc=0 finalized=0 pubkey_ver=0 key_ver=0
+[11:48:11]   [IMG][LVD] nested PFS profile: selector=0x02 lvd_img=9 gddr5=0
+[11:48:11]   [IMG][LVD] Mounted (pfsc) /dev/lvd1 -> /mnt/shadowmnt/pfsc/PPSA13197_0671d592
+[11:48:11]   [IMG] FS stats: path=/mnt/shadowmnt/pfsc/PPSA13197_0671d592 type=pfs bsize=65536 iosize=65536 blocks=681040 bfree=0 bavail=0 files=0 ffree=0 flags=0x210001041 total=44632637440B free=0B avail=0B
+[11:48:11]   [IMG] Mounting image (exfatfs, legacy-1.6): /mnt/shadowmnt/pfsc/PPSA13197_0671d592/PPSA13197.exfat -> /mnt/shadowmnt/PPSA13197_7ae08043
+[11:48:11]   [IMG][LVD] attach backend selected for /mnt/shadowmnt/pfsc/PPSA13197_0671d592/PPSA13197.exfat
+[11:48:11]   [IMG][LVD] attach try: ver=0 sec=512 sec2=65536 raw=0x9 flags=0x1c img=0
+[11:48:11]   [IMG][LVD] attach returned unit=2
+[11:48:11]   [IMG][LVD] Attached as /dev/lvd2
+[11:48:11]   [IMG][LVD] Mounted (exfatfs) /dev/lvd2 -> /mnt/shadowmnt/PPSA13197_7ae08043
+[11:48:11]   [IMG] FS stats: path=/mnt/shadowmnt/PPSA13197_7ae08043 type=exfatfs bsize=65536 iosize=65536 blocks=1468848 bfree=0 bavail=0 files=3008200704 ffree=0 flags=0x210001041 total=96262422528B free=0B avail=0B
+[11:48:11]   [LINK] nullfs mounted: /mnt/shadowmnt/PPSA13197_7ae08043 -> /system_ex/app/PPSA13197
+[11:48:11]   [SHELLCORE] launch mount ready: PPSA13197
+[11:48:11]   [FAKELIB] game libraries mounted for PPSA13197: /mnt/shadowmnt/PPSA13197_7ae08043/fakelib -> /mnt/sandbox/PPSA13197_000/TuGg3GNGs7/common/lib
+[11:48:11]   [SHELLCORE] sandbox ready handled: PPSA13197
+[11:48:11]   [SHELLFLAG] SceLncUtilSystemStatus poll rc=0x80020010
+[11:48:14]   [GAME] started: PPSA13197 pid=100 app_id=0x00002018
+[11:48:14]   [MDBG] tracking crash-candidate state: PPSA13197 pid=100 app_id=0x00002018
+[11:48:14]   [MDBG] log monitor ready: PPSA13197 buffer_size=0x20018
+[11:48:14]   [KSTUFF] tracking game launch: PPSA13197 pid=100 app_id=0x00002018 source=image pause_delay=25s
+[11:48:14] NOTIFY: Juego con backport aplicado: PPSA13197
+[11:48:14]   [SHELLFLAG] SceShellCoreUtilAppFocus value=0x0000000000002018 delta=0x000000000000201F low32=0x00002018 high32=0x00000000 decoded=APP_ID=0x00002018
+[11:48:39]   [KSTUFF] pause deadline reached for PPSA13197 pid=100 but kstuff was already disabled
+[11:49:15]   [SHELLFLAG] SceSystemStateMgrStatus value=0x0000000004000005 delta=0x0000000000000001 low32=0x04000005 high32=0x00000000 decoded=CEC_ONE_TOUCH_PLAY_COMMAND|BD_DRIVE_READY|VSH_AUTO_UPDATE_VERIFY_DONE
+[11:49:15]   [SHELLFLAG] SceSystemStateMgrStatus value=0x0000000004000004 delta=0x0000000000000001 low32=0x04000004 high32=0x00000000 decoded=BD_DRIVE_READY|VSH_AUTO_UPDATE_VERIFY_DONE
+[11:49:19]   [SHELLFLAG] SceShellCoreUtilAppFocus value=0x0000000000000007 delta=0x000000000000201F low32=0x00000007 high32=0x00000000 decoded=APP_ID=0x00000007
+[11:49:19]   [SHELLFLAG] SceLncUtilSystemStatus value=0x0000000000000002 delta=0x0000000000000000 low32=0x00000002 high32=0x00000000 decoded=SHELLUI_FG_GAME_BG_CPU_MODE
+[11:49:21]   [FAKELIB] game stopped: pid=100 title=PPSA13197 layers=1
+[11:49:21]   [FAKELIB] game libraries unmounted: /mnt/shadowmnt/PPSA13197_7ae08043/fakelib -> /mnt/sandbox/PPSA13197_000/TuGg3GNGs7/common/lib
+[11:49:21]   [GAME] process exited, awaiting same-app handoff: PPSA13197 pid=100 app_id=0x00002018
+[11:49:22]   [GAME] finalizing stopped application: PPSA13197 pid=100
+[11:49:22]   [MDBG] log stream reset or truncated for PPSA13197
+[11:49:22]   [KSTUFF] game stopped: PPSA13197 pid=100
+[11:49:22]   [SHELLCORE] runtime release awaiting sandbox removal: PPSA13197
+[11:49:22]   [DB] snd0info normalized after game exit rows=1 title=PPSA13197
+[11:49:22]   [SHELLCORE] title sandbox gone; releasing runtime: PPSA13197
+[11:49:22]   [SHELLCORE] runtime release start: PPSA13197
+[11:49:22]   [LINK] runtime layers released: PPSA13197
+[11:49:22]   [IMG][LVD] unmount start: source=/mnt/shadowmnt/pfsc/PPSA13197_0671d592/PPSA13197.exfat mount=/mnt/shadowmnt/PPSA13197_7ae08043 unit=2
+[11:49:22]   [IMG] Removed mount directory: /mnt/shadowmnt/PPSA13197_7ae08043
+[11:49:22]   [IMG][LVD] unmount complete: source=/mnt/shadowmnt/pfsc/PPSA13197_0671d592/PPSA13197.exfat mount=/mnt/shadowmnt/PPSA13197_7ae08043 unit=2 error=0
+[11:49:22]   [IMG][LVD] unmount start: source=/data/homebrew/PPSA13197.ffpfsc mount=/mnt/shadowmnt/pfsc/PPSA13197_0671d592 unit=1
+[11:49:22]   [IMG] Removed mount directory: /mnt/shadowmnt/pfsc/PPSA13197_0671d592
+[11:49:22]   [IMG][LVD] unmount complete: source=/data/homebrew/PPSA13197.ffpfsc mount=/mnt/shadowmnt/pfsc/PPSA13197_0671d592 unit=1 error=0
+[11:49:24]   [LINK] nullfs mounted: /data/homebrew/PPSA99008 -> /system_ex/app/PPSA99008
+[11:49:24]   [SHELLCORE] launch mount ready: PPSA99008
+[11:49:24]   [SHELLCORE] sandbox ready handled: PPSA99008
+[11:49:24]   [SHELLFLAG] SceLncUtilSystemStatus poll rc=0x80020010
+[11:49:26]   [GAME] started: PPSA99008 pid=126 app_id=0x00004018
+[11:49:26]   [MDBG] tracking crash-candidate state: PPSA99008 pid=126 app_id=0x00004018
+[11:49:26]   [MDBG] log monitor ready: PPSA99008 buffer_size=0x20018
+[11:49:26]   [KSTUFF] tracking game launch: PPSA99008 pid=126 app_id=0x00004018 source=direct pause_delay=15s
+[11:49:26]   [SHELLFLAG] SceShellCoreUtilAppFocus value=0x0000000000004018 delta=0x000000000000401F low32=0x00004018 high32=0x00000000 decoded=APP_ID=0x00004018
+[11:49:36]   [SHELLFLAG] SceSystemStateMgrStatus value=0x0000000004000005 delta=0x0000000000000001 low32=0x04000005 high32=0x00000000 decoded=CEC_ONE_TOUCH_PLAY_COMMAND|BD_DRIVE_READY|VSH_AUTO_UPDATE_VERIFY_DONE
+[11:49:36]   [SHELLFLAG] SceSystemStateMgrStatus value=0x0000000004000004 delta=0x0000000000000001 low32=0x04000004 high32=0x00000000 decoded=BD_DRIVE_READY|VSH_AUTO_UPDATE_VERIFY_DONE
+[11:49:39]   [SHELLFLAG] SceShellCoreUtilAppFocus value=0x0000000000000007 delta=0x000000000000401F low32=0x00000007 high32=0x00000000 decoded=APP_ID=0x00000007
+[11:49:39]   [SHELLFLAG] SceLncUtilSystemStatus value=0x0000000000000002 delta=0x0000000000000000 low32=0x00000002 high32=0x00000000 decoded=SHELLUI_FG_GAME_BG_CPU_MODE
+[11:49:41]   [GAME] process exited, awaiting same-app handoff: PPSA99008 pid=126 app_id=0x00004018
+[11:49:42]   [GAME] finalizing stopped application: PPSA99008 pid=126
+[11:49:42]   [KSTUFF] game stopped: PPSA99008 pid=126
+[11:49:42]   [SHELLCORE] runtime release awaiting sandbox removal: PPSA99008
+[11:49:42]   [DB] snd0info normalized after game exit rows=1 title=PPSA99008
+[11:49:42]   [SHELLCORE] title sandbox gone; releasing runtime: PPSA99008
+[11:49:42]   [SHELLCORE] runtime release start: PPSA99008
+[11:49:42]   [LINK] runtime layers released: PPSA99008
+[11:49:42] [SCAN] running targeted scan for /mnt/shadowmnt
+[11:49:42]   [DB] loaded app.db title list: 64 entries
+[11:49:42]   [DB] loaded blocked PPSA uninstall list: 0 entries
+[11:49:42] [SCAN] running targeted scan for /mnt/shadowmnt/pfsc
+[11:50:00]   [SHELLFLAG] SceSystemStateMgrStatus value=0x0000000004000005 delta=0x0000000000000001 low32=0x04000005 high32=0x00000000 decoded=CEC_ONE_TOUCH_PLAY_COMMAND|BD_DRIVE_READY|VSH_AUTO_UPDATE_VERIFY_DONE
+[11:50:00]   [SHELLFLAG] SceSystemStateMgrStatus value=0x0000000004000004 delta=0x0000000000000001 low32=0x04000004 high32=0x00000000 decoded=BD_DRIVE_READY|VSH_AUTO_UPDATE_VERIFY_DONE
+[11:50:34]   [SHELLFLAG] SceSystemStateMgrStatus value=0x00000000040C0004 delta=0x00000000000C0000 low32=0x040C0004 high32=0x00000000 decoded=BD_DRIVE_READY|START_STANDBY_TIMER|EXTEND_SHUTDOWN_TIMER|VSH_AUTO_UPDATE_VERIFY_DONE
+[11:50:34]   [SHELLFLAG] SceSystemStateMgrStatus value=0x0000000004080004 delta=0x0000000000040000 low32=0x04080004 high32=0x00000000 decoded=BD_DRIVE_READY|EXTEND_SHUTDOWN_TIMER|VSH_AUTO_UPDATE_VERIFY_DONE
+[11:50:34]   [SHELLFLAG] SceSystemStateMgrStatus value=0x0000000004200004 delta=0x0000000000280000 low32=0x04200004 high32=0x00000000 decoded=BD_DRIVE_READY|SHELLUI_SHUTDOWN_IN_PROGRESS|VSH_AUTO_UPDATE_VERIFY_DONE
+[11:50:34] [SLEEP] entered by SceSystemStateMgrStatus=SHELLUI_SHUTDOWN_IN_PROGRESS
+[11:50:34] [SLEEP] USB scanner watches suspended
+[11:50:34] [SLEEP] USB-backed mount cleanup begin
+[11:50:34] [SLEEP] USB-backed mount cleanup done
+[11:50:40]   [SHELLFLAG] SceSystemStateMgrInfo value=0x00000001000001F4 delta=0x000000000000021C low32=0x000001F4 high32=0x00000001 decoded=STATE=MAIN_ON_STANDBY(0x01F4)|TRIGGER=0x0001|REBOOT_CAUSE=NONE(0x0000)
+[11:50:55]   [SHELLFLAG] SceSystemStateMgrInfo value=0x000000010000012C delta=0x00000000000000D8 low32=0x0000012C high32=0x00000001 decoded=STATE=SUSPEND_ON_GOING(0x012C)|TRIGGER=0x0001|REBOOT_CAUSE=NONE(0x0000)
+[11:51:23]   [SHELLFLAG] SceSystemStateMgrInfo value=0x00000003000003E8 delta=0x00000002000002C4 low32=0x000003E8 high32=0x00000003 decoded=STATE=WORKING(0x03E8)|TRIGGER=0x0003|REBOOT_CAUSE=NONE(0x0000)
+[11:51:23] [SLEEP] left by SceSystemStateMgrInfo=WORKING
+[11:51:23]   [SHELLCORE] Unix socket service resumed
+[11:51:23]   [API] HTTP/JSON ready: http://127.0.0.1:10101/api/v1 (v1, workers=8, limit=32)
+[11:51:23] [SLEEP] USB scanner watches resumed
+[11:51:24]   [SHELLFLAG] SceShellCoreUtilAppFocus value=0x0000000000002007 delta=0x0000000000002000 low32=0x00002007 high32=0x00000000 decoded=APP_ID=0x00002007
+[11:51:24]   [SHELLFLAG] SceSystemStateMgrStatus value=0x0000000004000000 delta=0x0000000000200004 low32=0x04000000 high32=0x00000000 decoded=VSH_AUTO_UPDATE_VERIFY_DONE
+[11:51:33] [SCAN] running immediate full scan (manual.lst changed)
+[11:51:34]   [DB] loaded app.db title list: 64 entries
+[11:51:34]   [DB] loaded blocked PPSA uninstall list: 0 entries
+[11:51:49]   [SHELLFLAG] SceShellCoreUtilAppFocus value=0x0000000000004007 delta=0x0000000000006000 low32=0x00004007 high32=0x00000000 decoded=APP_ID=0x00004007
+[11:52:03]   [SHELLFLAG] SceSystemStateMgrStatus value=0x0000000004000004 delta=0x0000000000000004 low32=0x04000004 high32=0x00000000 decoded=BD_DRIVE_READY|VSH_AUTO_UPDATE_VERIFY_DONE
