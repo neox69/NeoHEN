@@ -188,6 +188,37 @@ extern "C" pid_t onion_find_pid_substr(const char *substr) {
   return scan_kinfo(substr, /*substr=*/true);
 }
 
+namespace {
+bool kinfo_for_pid(pid_t pid, struct kinfo_proc *out) {
+  if (pid <= 0 || !out)
+    return false;
+  int mib[] = {CTL_KERN, KERN_PROC, KERN_PROC_PID, static_cast<int>(pid)};
+  size_t len = sizeof(*out);
+  std::memset(out, 0, sizeof(*out));
+  if (sysctl(mib, 4, out, &len, nullptr, 0) != 0 || len != sizeof(*out))
+    return false;
+  /* Refuse to read fields if the kernel's struct is a different size. */
+  return out->ki_structsize == static_cast<int>(sizeof(*out)) &&
+         out->ki_pid == pid;
+}
+} // namespace
+
+extern "C" pid_t onion_proc_tracer(pid_t pid) {
+  struct kinfo_proc ki;
+  if (!kinfo_for_pid(pid, &ki))
+    return -1;
+  return ki.ki_tracer > 0 ? static_cast<pid_t>(ki.ki_tracer) : 0;
+}
+
+extern "C" bool onion_proc_name(pid_t pid, char *out, size_t out_size) {
+  struct kinfo_proc ki;
+  if (!out || out_size == 0 || !kinfo_for_pid(pid, &ki))
+    return false;
+  std::strncpy(out, ki.ki_comm, out_size - 1);
+  out[out_size - 1] = '\0';
+  return out[0] != '\0';
+}
+
 extern "C" bool onion_proc_is_alive(pid_t pid) {
   if (pid <= 0) {
     return false;

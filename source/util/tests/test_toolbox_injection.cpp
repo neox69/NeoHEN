@@ -3,6 +3,7 @@
 #include "toolbox_injection.hpp"
 
 #include <atomic>
+#include <chrono>
 #include <thread>
 
 using onion::ToolboxInject;
@@ -12,6 +13,60 @@ namespace {
 
 void reset_toolbox_marker() {
   onion_ready_clear(ONION_READY_TOOLBOX);
+}
+
+/* The 13.42 Rest Mode log: the target ShellUI died after injection and the
+ * old job held the lock for the whole 45 s ready timeout. */
+int test_abortable_stops_when_target_dies() {
+  reset_toolbox_marker();
+  ToolboxInject injector;
+  constexpr pid_t kPid = 4600;
+  std::atomic<int> abort_checks{0};
+  const auto start = std::chrono::steady_clock::now();
+  const auto outcome = injector.inject_abortable(
+      []() -> pid_t { return kPid; }, [](pid_t) -> bool { return true; },
+      [&](pid_t) -> bool { return ++abort_checks >= 3; },
+      /*timeout_ms=*/45 * 1000, /*poll_ms=*/10, kPid);
+  const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                      std::chrono::steady_clock::now() - start)
+                      .count();
+  TEST_ASSERT_TRUE(outcome.result == ToolboxInjectionResult::TargetChanged);
+  TEST_ASSERT_TRUE(ms < 2000);
+  TEST_ASSERT_TRUE(!injector.is_ready_for(kPid));
+  reset_toolbox_marker();
+  return 0;
+}
+
+int test_abortable_injects_when_ready() {
+  reset_toolbox_marker();
+  ToolboxInject injector;
+  constexpr pid_t kPid = 4700;
+  const auto outcome = injector.inject_abortable(
+      []() -> pid_t { return kPid; },
+      [](pid_t pid) -> bool {
+        return onion_ready_signal_pid(ONION_READY_TOOLBOX, pid);
+      },
+      [](pid_t) -> bool { return false; }, 1000, 10, kPid);
+  TEST_ASSERT_TRUE(outcome.result == ToolboxInjectionResult::Injected);
+  TEST_ASSERT_TRUE(injector.is_ready_for(kPid));
+  reset_toolbox_marker();
+  return 0;
+}
+
+int test_abortable_skips_dead_target_before_inject() {
+  reset_toolbox_marker();
+  ToolboxInject injector;
+  int inject_count = 0;
+  const auto outcome = injector.inject_abortable(
+      []() -> pid_t { return 4800; },
+      [&](pid_t) -> bool {
+        ++inject_count;
+        return true;
+      },
+      [](pid_t) -> bool { return true; }, 1000, 10, 4800);
+  TEST_ASSERT_TRUE(outcome.result == ToolboxInjectionResult::TargetChanged);
+  TEST_ASSERT_EQ_INT(0, inject_count);
+  return 0;
 }
 
 int test_injects_and_publishes_current_pid() {
@@ -161,6 +216,12 @@ int test_concurrent_requests_inject_once() {
 
 extern "C" int test_toolbox_injection_suite(void) {
   int failures = 0;
+  failures += onion_test_run("toolbox_injection.abortable_dies",
+                             test_abortable_stops_when_target_dies);
+  failures += onion_test_run("toolbox_injection.abortable_ready",
+                             test_abortable_injects_when_ready);
+  failures += onion_test_run("toolbox_injection.abortable_dead_first",
+                             test_abortable_skips_dead_target_before_inject);
   failures += onion_test_run("toolbox_injection.inject",
                              test_injects_and_publishes_current_pid);
   failures += onion_test_run("toolbox_injection.same_pid_skip",

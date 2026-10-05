@@ -110,6 +110,8 @@ enum DaemonCommands : unsigned int {
 #define ONION_CTRL_TCP_MAGIC 0x4F4E494Fu
 /** TCP cmd: full stack shutdown (util + ShellUI + daemon). */
 #define ONION_CTRL_TCP_CMD_SHUTDOWN 1u
+/* Inject the Toolbox now (NeoHEN; manual Rest Mode policy). */
+#define ONION_CTRL_TCP_CMD_TOOLBOX 2u
 
 struct IPCMessage {
   int magic = 0xDEADBABE;
