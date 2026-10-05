@@ -1,4 +1,4 @@
-# NeoHEN Web
+# NeoWEB
 
 A small HTTP/JSON service that runs on the console as a payload
 (`neoweb.elf`, port 8686). It is what a home dashboard or a PC app talks to,
@@ -40,6 +40,17 @@ state and launch or close a game, nothing more.
 
 `/api/sys/info` never includes the serial number, the user id or the account
 name.
+
+## Web page
+
+Open `http://<console-ip>:8686/` in any browser on the network. The page is
+embedded in the payload (`webui/index.html`, no external resources): console
+state, the game that is open with a button to close it, temperatures with a
+short history, disks, and the library with covers and a launch button. It is
+in Spanish or English depending on the browser.
+
+A file at `/data/neohen/web/webui/index.html` on the console replaces the
+embedded page, which is handy to try changes without rebuilding.
 
 ## Status
 

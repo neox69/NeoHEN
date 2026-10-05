@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tests for the default ("safe") NeoHEN Web build using the host emulator.
+"""Tests for the default ("safe") NeoWEB build using the host emulator.
 
     make -C web host && python3 web/tests/test_safe.py
 
@@ -77,7 +77,7 @@ class SafeBuildTest(unittest.TestCase):
     def test_ping(self):
         st, j = self.api.get("/api/ping")
         self.assertEqual(st, 200)
-        self.assertEqual(j["name"], "NeoHEN Web")
+        self.assertEqual(j["name"], "NeoWEB")
 
     def test_state_is_readable(self):
         st, j = self.api.get("/api/sys/info")

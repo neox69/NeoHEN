@@ -71,7 +71,7 @@ jobs:
           test -x "${PS5_PAYLOAD_SDK}/bin/prospero-cmake"
           scripts/ci/build_ps5_deps.sh "${tmp}/deps"
 
-      - name: Build NeoHEN Web
+      - name: Build NeoWEB
         run: |
           set -euo pipefail
           export PATH="/usr/lib/llvm-18/bin:${PS5_PAYLOAD_SDK}/bin:${PATH}"
@@ -79,7 +79,7 @@ jobs:
           test -f web/neoweb.elf
 
       # What NeoHEN carries inside and installs on first boot: the pinned
-      # third-party payloads plus NeoHEN Web.
+      # third-party payloads plus NeoWEB.
       - name: Collect bundled payloads
         run: |
           set -euo pipefail
@@ -108,7 +108,7 @@ jobs:
           export LD_LIBRARY_PATH="${RUNNER_TEMP}/keystone/lib"
           make -C source/util/tests test KEYSTONE_PREFIX="${RUNNER_TEMP}/keystone" -j"$(nproc)"
 
-      - name: NeoHEN Web tests (host emulator)
+      - name: NeoWEB tests (host emulator)
         run: |
           set -euo pipefail
           make -C web host

@@ -1,7 +1,7 @@
-/* PS5AIO - embedded web interface (usable from a phone as a remote).
+/* NeoWEB - embedded web interface (usable from a phone as a remote).
  *
  * The page in webui/index.html is linked into the payload with .incbin.
- * A customised copy in /data/ps5aio/webui/ takes precedence, which also
+ * A customised copy in /data/neohen/web/webui/ takes precedence, which also
  * allows serving extra static files from that folder.
  *
  * SPDX-License-Identifier: GPL-3.0-or-later */

@@ -53,4 +53,4 @@ OnionHEN and etaHEN, GPL-3.0: the base of NeoHEN. With them come libhijacker,
 NineS and the ps5-payload-dev SDK.
 
 
-El código de NeoHEN y de NeoHEN Web: https://github.com/neox69/NeoHEN (GPL-3.0)
+El código de NeoHEN y de NeoWEB: https://github.com/neox69/NeoHEN (GPL-3.0)
