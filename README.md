@@ -34,7 +34,7 @@ Licensed under GPLv3.
 | One file | `NeoHEN.elf` carries kstuff-lite, ShadowMount+, ftpsrv, nanoDNS and NeoWEB. On first boot it writes them to `/data/neohen/payloads` and starts them in order; on later boots it just starts them. Nothing to download, copy or rename. |
 | Your choices win | A payload you replace or delete stays the way you left it. A `kstuff.elf` in `/data/neohen/` overrides the embedded one, and a kstuff that is already running is left alone. |
 | ShadowMount+ | Used as the author's unmodified payload, with a watchdog that checks its hook after Rest Mode and every 5 minutes, and can relaunch it. |
-| NeoWEB | A remote HTTP service on the console (port 8686) for home dashboards: temperatures, disks, library with covers, running game, launch and close. See [web/README.md](web/README.md). |
+| NeoWEB | A web page and HTTP service on the console (port 8686), no PC app needed. Console tab: temperatures, disks, running game. Library tab: covers, launch and close. Payloads tab: upload, start, stop, delete and auto-start. See [web/README.md](web/README.md). |
 | Privacy | Logs never contain the account name or account id, and IP and MAC addresses are replaced. Upstream logs write the account name and id every time a menu opens. |
 | System partition | The Toolbox icon lives in volatile memory instead of being written to `/system_ex`. |
 | Cheat download | Fixed a case where the download button did nothing after returning from another page. |
@@ -64,7 +64,8 @@ On a PS5 CFI-7021, firmware 13.42, with kstuff-lite 1.11 and ShadowMount+
 | NeoWEB: state, sensors, disks, library, covers, running game | Works |
 | Cold boot: embedded kstuff, Toolbox, the four payloads auto-started, a game | Works (0.1.0-rc2, payloads copied by hand) |
 | "NeoHEN Toolbox" in Settings, `stable` as default | Works (0.1.0-rc2) |
-| NeoWEB web page, desktop and phone | Works |
+| NeoWEB web page with its three tabs, desktop and phone | Works |
+| NeoWEB payload manager: upload, start, stop, delete, auto-start | Works (after 0.1.0-rc2) |
 | **First boot installing the payloads from inside the ELF** | **Compiled, not tested on a console** |
 | NeoWEB: launch and close a game | **Not tested** |
 | ShadowMount+ watchdog recovering a lost hook | **Not tested** |
@@ -75,9 +76,10 @@ On a PS5 CFI-7021, firmware 13.42, with kstuff-lite 1.11 and ShadowMount+
 
 - **0.1.0-rc2** — published as a pre-release. The step that writes the
   bundled payloads on first boot has not been run on a console yet.
-- **NeoWEB** — the safe build is running; next are launch and close on a
-  console, a web page that matches the safe build, and power, fan and M.2
-  readings.
+- **NeoWEB** — console, library and payload tabs are done (the payload
+  manager is newer than the 0.1.0-rc2 release). Next: launch and close on a
+  console, then everything PS5Upload offers (file transfers, power, fan, M.2)
+  so it can be replaced entirely.
 - **NeoAPP** — a PC app on top of the full NeoWEB build: upload games
   with resumable transfers, file manager, library with covers, installer,
   per-game name, icon and background, themes. Not started; the service side

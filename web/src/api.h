@@ -69,6 +69,13 @@ void api_apps_install_dir(http_req_t *req);
 void api_apps_install_pkg(http_req_t *req);
 void api_apps_uninstall(http_req_t *req);
 
+void api_payloads_list(http_req_t *req);
+void api_payloads_upload(http_req_t *req);
+void api_payloads_start(http_req_t *req);
+void api_payloads_stop(http_req_t *req);
+void api_payloads_delete(http_req_t *req);
+void api_payloads_autostart(http_req_t *req);
+
 void api_mem_maps(http_req_t *req);
 void api_mem_read(http_req_t *req);
 void api_mem_write(http_req_t *req);

@@ -8,7 +8,7 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%234DA3FF'/%3E%3Cstop offset='1' stop-color='%238E7BFF'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='%230B0F1A'/%3E%3Cpath d='M18 46V18h7l14 18V18h7v28h-7L25 28v18z' fill='url(%23g)'/%3E%3C/svg%3E">
 <style>
 :root{
-  --bg:#0B0F1A; --bg2:#0E1424; --panel:rgba(22,29,48,.72); --line:rgba(132,153,204,.16);
+  --bg:#0B0F1A; --panel:rgba(22,29,48,.72); --line:rgba(132,153,204,.16);
   --line2:rgba(132,153,204,.28); --text:#EAF0FF; --dim:#8D9ABC; --faint:#5B6788;
   --blue:#4DA3FF; --violet:#8E7BFF; --ok:#34D399; --warn:#FBBF24; --bad:#F87171;
   --r:14px; --mono:ui-monospace,"SFMono-Regular","Cascadia Mono",Consolas,monospace;
@@ -31,7 +31,7 @@ body{
 button,input{font:inherit;color:inherit}
 .grad{background:linear-gradient(100deg,var(--blue),var(--violet));-webkit-background-clip:text;background-clip:text;color:transparent}
 
-header.top{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+header.top{display:flex;align-items:center;gap:12px;margin-bottom:16px}
 .logo{width:38px;height:38px;border-radius:11px;flex:none;display:grid;place-items:center;
   background:linear-gradient(140deg,rgba(77,163,255,.2),rgba(142,123,255,.2));border:1px solid var(--line2)}
 .logo svg{width:22px;height:22px}
@@ -44,6 +44,17 @@ header.top{display:flex;align-items:center;gap:12px;margin-bottom:18px}
 .chip.ok{border-color:rgba(52,211,153,.5)} .chip.ok i{background:var(--ok);box-shadow:0 0 0 4px rgba(52,211,153,.16)}
 .chip.bad{border-color:rgba(248,113,113,.5)} .chip.bad i{background:var(--bad)}
 
+nav.tabs{display:flex;gap:6px;padding:5px;margin-bottom:16px;border:1px solid var(--line);border-radius:var(--r);
+  background:rgba(15,21,37,.6);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);position:sticky;top:10px;z-index:10}
+nav.tabs button{flex:1;display:flex;align-items:center;justify-content:center;gap:9px;border:0;background:transparent;cursor:pointer;
+  padding:11px 10px;border-radius:10px;font-weight:680;color:var(--dim);transition:background .15s,color .15s;min-width:0}
+nav.tabs button svg{width:18px;height:18px;flex:none}
+nav.tabs button span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+nav.tabs button em{font:700 11px var(--mono);font-style:normal;padding:2px 7px;border-radius:999px;background:rgba(132,153,204,.14);color:var(--dim)}
+nav.tabs button:hover{color:var(--text);background:rgba(132,153,204,.08)}
+nav.tabs button.on{color:var(--text);background:linear-gradient(100deg,rgba(77,163,255,.22),rgba(142,123,255,.22));box-shadow:inset 0 0 0 1px rgba(77,163,255,.35)}
+nav.tabs button.on em{background:rgba(77,163,255,.25);color:var(--text)}
+
 .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);
   backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
 .hero{padding:20px;position:relative;overflow:hidden;border-color:rgba(77,163,255,.3)}
@@ -52,7 +63,7 @@ header.top{display:flex;align-items:center;gap:12px;margin-bottom:18px}
              radial-gradient(520px 240px at 100% 100%,rgba(142,123,255,.18),transparent 70%)}
 .hero>*{position:relative}
 .hero-bg{position:absolute;inset:-30px;background-size:cover;background-position:center;
-  filter:blur(34px) saturate(1.3);opacity:.22;transition:opacity .5s}
+  filter:blur(34px) saturate(1.3);opacity:0;transition:opacity .5s}
 .id h1{margin:0;font-size:25px;letter-spacing:-.025em;font-weight:780}
 .id p{margin:3px 0 0;font:500 12.5px var(--mono);color:var(--dim)}
 .id p b{color:var(--text);font-weight:600}
@@ -69,17 +80,19 @@ header.top{display:flex;align-items:center;gap:12px;margin-bottom:18px}
   font-weight:650;cursor:pointer;transition:transform .12s,border-color .15s,background .15s;white-space:nowrap}
 .btn:hover{border-color:var(--blue);background:rgba(77,163,255,.12)}
 .btn:active{transform:scale(.97)}
+.btn.sm{padding:7px 12px;font-size:13.5px}
 .btn.pri{border:0;color:#06101F;background:linear-gradient(100deg,var(--blue),var(--violet))}
 .btn.pri:hover{filter:brightness(1.1)}
 .btn.danger{border-color:rgba(248,113,113,.55);color:#FCA5A5}
 .btn.danger:hover{background:rgba(248,113,113,.14);border-color:var(--bad)}
-.btn[disabled]{opacity:.45;pointer-events:none}
+.btn[disabled]{opacity:.4;pointer-events:none}
 
 .cols{display:grid;grid-template-columns:1.25fr 1fr;gap:14px;margin-top:14px}
 .sec{padding:18px}
-.sec h3,.lib-h h3{margin:0 0 14px;font:700 11.5px var(--mono);letter-spacing:.18em;text-transform:uppercase;color:var(--dim);
+h3.h{margin:0 0 14px;font:700 11.5px var(--mono);letter-spacing:.18em;text-transform:uppercase;color:var(--dim);
   display:flex;align-items:center;gap:9px}
-.sec h3::before,.lib-h h3::before{content:"";width:3px;height:13px;border-radius:2px;background:linear-gradient(var(--blue),var(--violet))}
+h3.h::before{content:"";width:3px;height:13px;border-radius:2px;background:linear-gradient(var(--blue),var(--violet))}
+h3.h em{font-style:normal;color:var(--faint)}
 .gauges{display:flex;justify-content:space-around;gap:10px;flex-wrap:wrap}
 .g{position:relative;width:132px;text-align:center}
 .g svg{width:132px;height:108px;display:block}
@@ -104,9 +117,8 @@ header.top{display:flex;align-items:center;gap:12px;margin-bottom:18px}
 .bar i.hot{background:linear-gradient(90deg,var(--warn),var(--bad))}
 .disk small{font:500 11.5px var(--mono);color:var(--faint)}
 
-.lib-h{display:flex;align-items:center;gap:10px;margin:26px 2px 14px;flex-wrap:wrap}
-.lib-h h3{margin:0}.lib-h h3 em{font-style:normal;color:var(--faint)}
-.lib-h .sp{flex:1}
+.bar-h{display:flex;align-items:center;gap:10px;margin:4px 2px 14px;flex-wrap:wrap}
+.bar-h h3.h{margin:0}.bar-h .sp{flex:1}
 .in{background:rgba(15,21,37,.75);border:1px solid var(--line2);border-radius:10px;padding:9px 13px;min-width:0;width:210px;outline:none}
 .in:focus{border-color:var(--blue)}
 .seg{display:inline-flex;border:1px solid var(--line2);border-radius:10px;overflow:hidden}
@@ -127,6 +139,37 @@ header.top{display:flex;align-items:center;gap:12px;margin-bottom:18px}
 .game b{display:block;margin-top:9px;font-weight:680;line-height:1.25;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
 .game i{font:500 11.5px var(--mono);font-style:normal;color:var(--faint)}
 .empty{padding:34px;text-align:center;color:var(--dim)}
+
+.drop{display:flex;align-items:center;gap:16px;padding:18px 20px;border:1.5px dashed var(--line2);border-radius:var(--r);
+  background:rgba(15,21,37,.5);transition:border-color .15s,background .15s;margin-bottom:14px}
+.drop.over{border-color:var(--blue);background:rgba(77,163,255,.1)}
+.drop .ic{width:46px;height:46px;border-radius:12px;display:grid;place-items:center;flex:none;color:var(--blue);
+  background:linear-gradient(140deg,rgba(77,163,255,.18),rgba(142,123,255,.18));border:1px solid var(--line2)}
+.drop .tx{flex:1;min-width:0}
+.drop .tx b{display:block;font-weight:700}
+.drop .tx span{font-size:13.5px;color:var(--dim)}
+.prog{height:4px;border-radius:3px;background:rgba(132,153,204,.14);margin-top:9px;overflow:hidden}
+.prog i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--blue),var(--violet));transition:width .15s}
+.note{padding:11px 15px;border-radius:11px;border:1px solid rgba(251,191,36,.4);background:rgba(251,191,36,.08);color:#FDE68A;margin-bottom:14px;font-size:14px}
+.plist{overflow:hidden}
+.prow{display:flex;align-items:center;gap:14px;padding:14px 18px;border-top:1px solid var(--line)}
+.prow:first-child{border-top:0}
+.dot{width:10px;height:10px;border-radius:50%;flex:none;background:rgba(132,153,204,.3)}
+.prow.run .dot{background:var(--ok);box-shadow:0 0 0 4px rgba(52,211,153,.16)}
+.pmain{flex:1;min-width:0}
+.pmain b{display:block;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pmain span{font:500 12px var(--mono);color:var(--faint)}
+.badge{display:inline-block;font:700 10px var(--mono);letter-spacing:.1em;text-transform:uppercase;padding:2px 7px;border-radius:6px;margin-left:8px;vertical-align:2px;
+  border:1px solid var(--line2);color:var(--dim)}
+.badge.ok{border-color:rgba(52,211,153,.5);color:var(--ok)}
+.sw{display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--dim);white-space:nowrap;user-select:none}
+.sw input{position:absolute;opacity:0;pointer-events:none}
+.sw i{width:36px;height:20px;border-radius:999px;background:rgba(132,153,204,.22);position:relative;transition:background .15s;flex:none}
+.sw i::after{content:"";position:absolute;left:3px;top:3px;width:14px;height:14px;border-radius:50%;background:#C9D3EE;transition:transform .15s}
+.sw input:checked+i{background:linear-gradient(100deg,var(--blue),var(--violet))}
+.sw input:checked+i::after{transform:translateX(16px);background:#fff}
+.sw input:focus-visible+i{outline:2px solid var(--blue);outline-offset:2px}
+.pact{display:flex;gap:8px;flex:none}
 footer{margin-top:34px;text-align:center;font:500 11.5px var(--mono);color:var(--faint)}
 footer a{color:var(--dim)}
 
@@ -139,7 +182,12 @@ dialog h4{margin:0 0 8px;font-size:19px;letter-spacing:-.02em}
 dialog p{margin:0 0 18px;color:var(--dim)}
 dialog .row{display:flex;gap:10px;justify-content:flex-end}
 @media (max-width:860px){.cols{grid-template-columns:1fr}}
+@media (max-width:640px){
+  .prow{flex-wrap:wrap}.pmain{flex-basis:calc(100% - 24px)}.pact{margin-left:24px}.sw{margin-left:24px}
+  .drop{flex-wrap:wrap}.drop .btn{width:100%}
+}
 @media (max-width:560px){
+  nav.tabs button{padding:10px 6px;gap:6px;font-size:13.5px}nav.tabs button em{display:none}
   .now{flex-wrap:wrap}.now img,.now .ph{width:76px;height:76px}.now .btn{width:100%}
   .grid{grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:14px 10px}
   .in{width:100%}.stats{grid-template-columns:repeat(2,1fr)}
@@ -157,47 +205,71 @@ dialog .row{display:flex;gap:10px;justify-content:flex-end}
     <div class="chip" id="chip"><i></i><span id="chipt">…</span></div>
   </header>
 
-  <section class="card hero">
-    <div class="hero-bg" id="herobg"></div>
-    <div class="id"><h1 id="name">PlayStation 5</h1><p id="meta">&nbsp;</p></div>
-    <div class="now">
-      <div class="ph" id="nowph"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="6" width="18" height="12" rx="3"/><path d="M8 10v4M6 12h4M15.5 11h.01M18 13h.01"/></svg></div>
-      <img id="nowimg" alt="" hidden>
-      <div class="t"><div class="kick idle" id="kick"></div><h2 id="nowt">—</h2><span id="nows"></span></div>
-      <button class="btn danger" id="close" hidden></button>
+  <nav class="tabs" role="tablist">
+    <button role="tab" data-tab="console"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg><span data-t="tconsole"></span></button>
+    <button role="tab" data-tab="library"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg><span data-t="tlibrary"></span><em id="n-lib"></em></button>
+    <button role="tab" data-tab="payloads"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 3 7v10l9 5 9-5V7z"/><path d="m3 7 9 5 9-5M12 12v10"/></svg><span>Payloads</span><em id="n-pay"></em></button>
+  </nav>
+
+  <!-- ============================== console -->
+  <section id="tab-console" role="tabpanel">
+    <div class="card hero">
+      <div class="hero-bg" id="herobg"></div>
+      <div class="id"><h1 id="name">PlayStation 5</h1><p id="meta">&nbsp;</p></div>
+      <div class="now">
+        <div class="ph" id="nowph"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="6" width="18" height="12" rx="3"/><path d="M8 10v4M6 12h4M15.5 11h.01M18 13h.01"/></svg></div>
+        <img id="nowimg" alt="" hidden>
+        <div class="t"><div class="kick idle" id="kick"></div><h2 id="nowt">—</h2><span id="nows"></span></div>
+        <button class="btn danger" id="close" hidden></button>
+      </div>
+    </div>
+    <div class="cols">
+      <div class="card sec">
+        <h3 class="h" data-t="temp"></h3>
+        <div class="gauges">
+          <div class="g"><svg viewBox="0 0 132 108"><path class="trk" d="M22 96A52 52 0 1 1 110 96"/><path class="arc" id="a-cpu" d="M22 96A52 52 0 1 1 110 96"/></svg><div class="v"><span id="v-cpu">–</span><small>°C</small></div><div class="l">CPU</div></div>
+          <div class="g"><svg viewBox="0 0 132 108"><path class="trk" d="M22 96A52 52 0 1 1 110 96"/><path class="arc" id="a-soc" d="M22 96A52 52 0 1 1 110 96"/></svg><div class="v"><span id="v-soc">–</span><small>°C</small></div><div class="l">SOC</div></div>
+        </div>
+        <div class="spark">
+          <div class="lg"><span id="sp-l"></span><span><b style="--c:var(--blue)">CPU</b> &nbsp; <b style="--c:var(--violet)">SoC</b></span><span id="sp-r"></span></div>
+          <svg id="spark" viewBox="0 0 600 74" preserveAspectRatio="none"></svg>
+        </div>
+      </div>
+      <div class="card sec">
+        <h3 class="h" data-t="system"></h3>
+        <div class="stats">
+          <div class="stat"><b id="s-up">–</b><span data-t="uptime"></span></div>
+          <div class="stat"><b id="s-clk">–</b><span data-t="clock"></span></div>
+          <div class="stat"><b id="s-n">–</b><span data-t="games"></span></div>
+        </div>
+        <div id="disks"></div>
+      </div>
     </div>
   </section>
 
-  <div class="cols">
-    <section class="card sec">
-      <h3 data-t="temp"></h3>
-      <div class="gauges">
-        <div class="g"><svg viewBox="0 0 132 108"><path class="trk" d="M22 96A52 52 0 1 1 110 96"/><path class="arc" id="a-cpu" d="M22 96A52 52 0 1 1 110 96"/></svg><div class="v"><span id="v-cpu">–</span><small>°C</small></div><div class="l">CPU</div></div>
-        <div class="g"><svg viewBox="0 0 132 108"><path class="trk" d="M22 96A52 52 0 1 1 110 96"/><path class="arc" id="a-soc" d="M22 96A52 52 0 1 1 110 96"/></svg><div class="v"><span id="v-soc">–</span><small>°C</small></div><div class="l">SOC</div></div>
-      </div>
-      <div class="spark">
-        <div class="lg"><span id="sp-l"></span><span><b style="--c:var(--blue)">CPU</b> &nbsp; <b style="--c:var(--violet)">SoC</b></span><span id="sp-r"></span></div>
-        <svg id="spark" viewBox="0 0 600 74" preserveAspectRatio="none"></svg>
-      </div>
-    </section>
-    <section class="card sec">
-      <h3 data-t="system"></h3>
-      <div class="stats">
-        <div class="stat"><b id="s-up">–</b><span data-t="uptime"></span></div>
-        <div class="stat"><b id="s-clk">–</b><span data-t="clock"></span></div>
-        <div class="stat"><b id="s-n">–</b><span data-t="games"></span></div>
-      </div>
-      <div id="disks"></div>
-    </section>
-  </div>
+  <!-- ============================== library -->
+  <section id="tab-library" role="tabpanel" hidden>
+    <div class="bar-h">
+      <h3 class="h"><span data-t="tlibrary"></span> <em id="count"></em></h3>
+      <div class="sp"></div>
+      <input class="in" id="q" type="search" autocomplete="off">
+      <div class="seg"><button id="f-games" class="on"></button><button id="f-all"></button></div>
+    </div>
+    <div class="grid" id="grid"></div>
+  </section>
 
-  <div class="lib-h">
-    <h3><span data-t="library"></span> <em id="count"></em></h3>
-    <div class="sp"></div>
-    <input class="in" id="q" type="search" autocomplete="off">
-    <div class="seg"><button id="f-games" class="on"></button><button id="f-all"></button></div>
-  </div>
-  <div class="grid" id="grid"></div>
+  <!-- ============================== payloads -->
+  <section id="tab-payloads" role="tabpanel" hidden>
+    <div class="note" id="ro" hidden></div>
+    <div class="drop" id="drop">
+      <div class="ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4m0 0L7 9m5-5 5 5M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg></div>
+      <div class="tx"><b id="up-h"></b><span id="up-s"></span><div class="prog" id="prog" hidden><i></i></div></div>
+      <button class="btn pri" id="pick"></button>
+      <input type="file" id="file" accept=".elf,.bin" multiple hidden>
+    </div>
+    <div class="bar-h"><h3 class="h"><span data-t="installed"></span> <em id="pdir"></em></h3></div>
+    <div class="card plist" id="plist"></div>
+  </section>
 
   <footer><span id="foot"></span> · <a href="https://github.com/neox69/NeoHEN" target="_blank" rel="noopener">NeoHEN</a></footer>
 </div>
@@ -209,30 +281,47 @@ dialog .row{display:flex;gap:10px;justify-content:flex-end}
 (function(){
 "use strict";
 var ES=/^es\b/i.test(navigator.language||"");
-var T=ES?{temp:"Temperatura",system:"Sistema",uptime:"Encendida",clock:"Reloj de CPU",games:"Juegos",library:"Biblioteca",
-  on:"Conectada",off:"Sin conexión",playing:"Jugando ahora",idle:"Nada abierto",idlet:"Ningún juego en marcha",
+var T=ES?{tconsole:"Consola",tlibrary:"Biblioteca",temp:"Temperatura",system:"Sistema",uptime:"Encendida",clock:"Reloj de CPU",games:"Juegos",
+  installed:"Instalados",on:"Conectada",off:"Sin conexión",playing:"Jugando ahora",idle:"Nada abierto",idlet:"Ningún juego en marcha",
   close:"Cerrar juego",launch:"Lanzar",running:"EN MARCHA",search:"Buscar juego…",fgames:"Juegos",fall:"Todo",
   none:"No hay nada que mostrar.",last:"Últimos minutos",free:"libres de",cancel:"Cancelar",
   qclose:"Cerrar el juego",qclosep:"Lo que no esté guardado se pierde.",
   qlaunch:"Lanzar ",qlaunchp:"Hay otro juego abierto y la consola lo cerrará. Lo que no esté guardado se pierde.",
   launching:"Lanzando ",closing:"Cerrando el juego…",done:"Hecho",ssd:"SSD interno",usb:"USB externo",usb2:"USB externo 2",ext:"Almacenamiento ampliado",m2:"SSD M.2",
-  foot:"Servicio remoto de NeoHEN"}
-:{temp:"Temperature",system:"System",uptime:"Uptime",clock:"CPU clock",games:"Games",library:"Library",
-  on:"Connected",off:"Offline",playing:"Now playing",idle:"Nothing open",idlet:"No game running",
+  foot:"Servicio remoto de NeoHEN",
+  uph:"Enviar un payload",ups:"Arrastra aquí un .elf o .bin, o elige un fichero. Se guarda en la consola.",pick:"Elegir fichero",
+  uping:"Enviando ",upok:" guardado en la consola",badfile:"Solo ficheros .elf o .bin",
+  start:"Arrancar",stop:"Parar",del:"Borrar",auto:"Al arrancar",prun:"en marcha",pstop:"parado",bundled:"de NeoHEN",thisone:"este servicio",
+  starting:"Arrancando ",started:" arrancado",ranonce:" enviado al cargador; no ha dejado ningún proceso en marcha",
+  stopped:" parado",deleted:" borrado",
+  qstop:"Parar ",qstopp:"El proceso se cierra de inmediato. Si es un payload del que depende la consola, como ShadowMount+, dejará de hacer su trabajo hasta que lo arranques otra vez.",
+  qdel:"Borrar ",qdelp:"Se elimina el fichero de la consola. No se puede deshacer.",
+  nopay:"No hay payloads en la consola todavía.",ro:"NeoWEB está en modo de solo lectura: existe el fichero /data/neohen/web/readonly en la consola. Bórralo para poder gestionar payloads desde aquí."}
+:{tconsole:"Console",tlibrary:"Library",temp:"Temperature",system:"System",uptime:"Uptime",clock:"CPU clock",games:"Games",
+  installed:"Installed",on:"Connected",off:"Offline",playing:"Now playing",idle:"Nothing open",idlet:"No game running",
   close:"Close game",launch:"Launch",running:"RUNNING",search:"Search games…",fgames:"Games",fall:"All",
   none:"Nothing to show.",last:"Last minutes",free:"free of",cancel:"Cancel",
   qclose:"Close the game",qclosep:"Anything unsaved is lost.",
   qlaunch:"Launch ",qlaunchp:"Another game is open and the console will close it. Anything unsaved is lost.",
   launching:"Launching ",closing:"Closing the game…",done:"Done",ssd:"Internal SSD",usb:"USB drive",usb2:"USB drive 2",ext:"Extended storage",m2:"M.2 SSD",
-  foot:"NeoHEN remote service"};
+  foot:"NeoHEN remote service",
+  uph:"Send a payload",ups:"Drop an .elf or .bin here, or pick a file. It is saved on the console.",pick:"Choose file",
+  uping:"Sending ",upok:" saved on the console",badfile:"Only .elf or .bin files",
+  start:"Start",stop:"Stop",del:"Delete",auto:"On boot",prun:"running",pstop:"stopped",bundled:"NeoHEN's",thisone:"this service",
+  starting:"Starting ",started:" started",ranonce:" sent to the loader; it left no process running",
+  stopped:" stopped",deleted:" deleted",
+  qstop:"Stop ",qstopp:"The process is closed at once. If the console relies on it, like ShadowMount+, it stops doing its job until you start it again.",
+  qdel:"Delete ",qdelp:"The file is removed from the console. This cannot be undone.",
+  nopay:"No payloads on the console yet.",ro:"NeoWEB is read-only: the file /data/neohen/web/readonly exists on the console. Delete it to manage payloads from here."};
 var $=function(id){return document.getElementById(id)};
 document.documentElement.lang=ES?"es":"en";
 [].forEach.call(document.querySelectorAll("[data-t]"),function(e){e.textContent=T[e.getAttribute("data-t")]});
 $("q").placeholder=T.search;$("f-games").textContent=T.fgames;$("f-all").textContent=T.fall;
 $("close").textContent=T.close;$("dno").textContent=T.cancel;$("foot").textContent=T.foot;$("sp-l").textContent=T.last;
+$("up-h").textContent=T.uph;$("up-s").textContent=T.ups;$("pick").textContent=T.pick;$("ro").textContent=T.ro;
 
 var UTIL=/^(NPXS|APDU|APRE|ORBT|PLDM|FAKE|WKAL|MOUU|PPSA99)/;
-var apps=[],running=null,hist=[],filter="games",ARC=245;
+var apps=[],running=null,hist=[],filter="games",ARC=245,tab="console",readOnly=false,busy=false;
 ["a-cpu","a-soc"].forEach(function(id){var p=$(id);p.style.strokeDasharray=ARC;p.style.strokeDashoffset=ARC});
 
 function api(path,body){
@@ -243,14 +332,32 @@ function api(path,body){
 function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
 function dur(s){s=Math.max(0,s|0);var d=Math.floor(s/86400),h=Math.floor(s%86400/3600),m=Math.floor(s%3600/60);
   return d?d+" d "+h+" h":h?h+" h "+m+" min":m+" min"}
-function size(b){return b>=1e12?(b/1e12).toFixed(2).replace(".",ES?",":".")+" TB":Math.round(b/1e9)+" GB"}
+function num(v,d){return v.toFixed(d).replace(".",ES?",":".")}
+function size(b){return b>=1e12?num(b/1e12,2)+" TB":b>=1e9?Math.round(b/1e9)+" GB":b>=1048576?num(b/1048576,1)+" MB":Math.max(1,Math.round(b/1024))+" KB"}
 function toast(msg,err){var t=$("toast");t.textContent=msg;t.className="toast on"+(err?" err":"");
-  clearTimeout(toast.t);toast.t=setTimeout(function(){t.className="toast"},err?5200:2600)}
-function ask(title,text,yes){return new Promise(function(res){
+  clearTimeout(toast.t);toast.t=setTimeout(function(){t.className="toast"},err?5600:2800)}
+function ask(title,text,yes,danger){return new Promise(function(res){
   var d=$("dlg");$("dh").textContent=title;$("dp").textContent=text;$("dyes").textContent=yes;
+  $("dyes").className="btn "+(danger?"danger":"pri");
   function end(v){d.close();$("dyes").onclick=$("dno").onclick=d.oncancel=null;res(v)}
   $("dyes").onclick=function(){end(true)};$("dno").onclick=function(){end(false)};d.oncancel=function(){res(false)};
   d.showModal()})}
+function online(v){$("chip").className="chip "+(v?"ok":"bad");$("chipt").textContent=v?T.on:T.off}
+function title(id){for(var i=0;i<apps.length;i++)if(apps[i].titleId===id)return apps[i].title||id;return id}
+
+/* ---------------------------------------------------------------- tabs */
+function show(t,push){
+  if(!$("tab-"+t))t="console";tab=t;
+  [].forEach.call(document.querySelectorAll("nav.tabs button"),function(b){
+    var on=b.getAttribute("data-tab")===t;b.className=on?"on":"";b.setAttribute("aria-selected",on)});
+  ["console","library","payloads"].forEach(function(x){$("tab-"+x).hidden=x!==t});
+  if(push)history.replaceState(null,"","#"+t);
+  if(t==="payloads")payloads();
+}
+[].forEach.call(document.querySelectorAll("nav.tabs button"),function(b){b.onclick=function(){show(b.getAttribute("data-tab"),true)}});
+window.addEventListener("hashchange",function(){show(location.hash.slice(1))});
+
+/* ---------------------------------------------------------------- console */
 function tempColor(v){return v>=88?"var(--bad)":v>=78?"var(--warn)":"var(--ok)"}
 function gauge(k,v){var p=$("a-"+k),ok=typeof v==="number"&&v>0;
   $("v-"+k).textContent=ok?v:"–";
@@ -266,9 +373,6 @@ function spark(){
     '<polyline fill="none" stroke="#8E7BFF" stroke-width="1.6" stroke-dasharray="3 4" vector-effect="non-scaling-stroke" points="'+line(1)+'"/>'+
     '<polyline fill="none" stroke="#4DA3FF" stroke-width="2" vector-effect="non-scaling-stroke" points="'+c+'"/>';
   $("sp-r").textContent=lo+"–"+hi+" °C"}
-function online(v){$("chip").className="chip "+(v?"ok":"bad");$("chipt").textContent=v?T.on:T.off}
-function title(id){for(var i=0;i<apps.length;i++)if(apps[i].titleId===id)return apps[i].title||id;return id}
-
 function paintNow(){
   var img=$("nowimg"),ph=$("nowph");
   if(running){
@@ -283,6 +387,15 @@ function paintNow(){
     img.hidden=true;ph.hidden=false;$("herobg").style.opacity="0";$("close").hidden=true;
   }
 }
+function paintDisks(m){
+  var names={"/user":T.ssd,"/mnt/usb0":T.usb,"/mnt/usb1":T.usb2,"/mnt/ext0":T.ext,"/mnt/ext1":T.m2};
+  $("disks").innerHTML=(m||[]).filter(function(d){return names[d.path]&&d.total}).map(function(d){
+    var pct=Math.round((d.total-d.free)/d.total*100);
+    return '<div class="disk"><div class="r"><span>'+names[d.path]+'</span><em>'+pct+' %</em></div>'+
+      '<div class="bar"><i class="'+(pct>=85?"hot":"")+'" style="width:'+pct+'%"></i></div>'+
+      '<small>'+size(d.free)+" "+T.free+" "+size(d.total)+'</small></div>'}).join("")}
+
+/* ---------------------------------------------------------------- library */
 function paintGrid(){
   var q=$("q").value.trim().toLowerCase();
   var list=apps.filter(function(a){
@@ -299,14 +412,70 @@ function paintGrid(){
       '</div><b title="'+esc(a.title)+'">'+esc(a.title||a.titleId)+'</b><i>'+esc(a.titleId)+(a.version?" · v"+esc(a.version.replace(/^0/,"")):"")+'</i></div>'
   }).join(""):'<div class="empty">'+T.none+'</div>';
 }
-function paintDisks(m){
-  var names={"/user":T.ssd,"/mnt/usb0":T.usb,"/mnt/usb1":T.usb2,"/mnt/ext0":T.ext,"/mnt/ext1":T.m2};
-  $("disks").innerHTML=(m||[]).filter(function(d){return names[d.path]&&d.total}).map(function(d){
-    var pct=Math.round((d.total-d.free)/d.total*100);
-    return '<div class="disk"><div class="r"><span>'+names[d.path]+'</span><em>'+pct+' %</em></div>'+
-      '<div class="bar"><i class="'+(pct>=85?"hot":"")+'" style="width:'+pct+'%"></i></div>'+
-      '<small>'+size(d.free)+" "+T.free+" "+size(d.total)+'</small></div>'}).join("")}
 
+/* ---------------------------------------------------------------- payloads */
+function payloads(){
+  return api("/api/payloads/list").then(function(j){
+    var list=j.payloads||[];readOnly=!!j.readOnly;
+    $("ro").hidden=!readOnly;$("pick").disabled=readOnly;$("pdir").textContent=j.dir||"";
+    $("n-pay").textContent=list.length?list.filter(function(p){return p.running}).length+"/"+list.length:"";
+    if(busy)return;
+    var dis=readOnly?" disabled":"";
+    $("plist").innerHTML=list.length?list.map(function(p){
+      var n=esc(p.name);
+      return '<div class="prow'+(p.running?" run":"")+'"><i class="dot"></i>'+
+        '<div class="pmain"><b title="'+n+'">'+n+(p.bundled?'<span class="badge">'+T.bundled+'</span>':"")+(p.self?'<span class="badge ok">'+T.thisone+'</span>':"")+'</b>'+
+        '<span>'+size(p.size)+" · "+(p.running?T.prun+" · pid "+p.pid:T.pstop)+'</span></div>'+
+        '<label class="sw"><input type="checkbox" data-auto="'+n+'"'+(p.autoStart?" checked":"")+dis+'><i></i>'+T.auto+'</label>'+
+        '<div class="pact">'+
+        (p.running?'<button class="btn sm danger" data-stop="'+n+'"'+(p.self?" disabled":dis)+'>'+T.stop+'</button>'
+                  :'<button class="btn sm pri" data-start="'+n+'"'+dis+'>'+T.start+'</button>')+
+        '<button class="btn sm" data-del="'+n+'"'+(p.running?" disabled":dis)+'>'+T.del+'</button></div></div>'
+    }).join(""):'<div class="empty">'+T.nopay+'</div>';
+  }).catch(function(){});
+}
+function pact(path,body,before,after){
+  toast(before);busy=true;
+  return api(path,body).then(function(j){busy=false;toast(typeof after==="function"?after(j):after);return payloads()})
+    .catch(function(e){busy=false;toast(e.message,true);return payloads()});
+}
+$("plist").addEventListener("click",function(e){
+  var b=e.target.closest("button");if(!b||b.disabled)return;var n;
+  if((n=b.getAttribute("data-start")))
+    pact("/api/payloads/start",{name:n},T.starting+n+"…",function(j){return n+(j.running?T.started:T.ranonce)});
+  else if((n=b.getAttribute("data-stop")))
+    ask(T.qstop+n,T.qstopp,T.stop,true).then(function(ok){if(ok)pact("/api/payloads/stop",{name:n},"…",n+T.stopped)});
+  else if((n=b.getAttribute("data-del")))
+    ask(T.qdel+n,T.qdelp,T.del,true).then(function(ok){if(ok)pact("/api/payloads/delete",{name:n},"…",n+T.deleted)});
+});
+$("plist").addEventListener("change",function(e){
+  var n=e.target.getAttribute("data-auto");if(!n)return;
+  pact("/api/payloads/autostart",{name:n,enabled:e.target.checked},"…",T.done);
+});
+function upload(files){
+  var list=[].filter.call(files,function(f){return /\.(elf|bin)$/i.test(f.name)});
+  if(!list.length){if(files.length)toast(T.badfile,true);return}
+  var bar=$("prog"),fill=bar.firstChild,i=0;
+  (function next(){
+    if(i>=list.length){bar.hidden=true;$("up-s").textContent=T.ups;payloads();return}
+    var f=list[i++],name=f.name.replace(/[^A-Za-z0-9._+-]/g,"_"),x=new XMLHttpRequest();
+    $("up-s").textContent=T.uping+name+"…";bar.hidden=false;fill.style.width="0";
+    x.open("PUT","/api/payloads/upload?name="+encodeURIComponent(name));
+    x.upload.onprogress=function(e){if(e.lengthComputable)fill.style.width=Math.round(e.loaded/e.total*100)+"%"};
+    x.onload=function(){var j={};try{j=JSON.parse(x.responseText)}catch(_){}
+      if(x.status===200&&j.ok!==false)toast(name+T.upok);else toast(j.error||("HTTP "+x.status),true);next()};
+    x.onerror=function(){toast(T.off,true);next()};
+    x.send(f);
+  })();
+}
+$("pick").onclick=function(){$("file").click()};
+$("file").onchange=function(){upload(this.files);this.value=""};
+var drop=$("drop");
+["dragenter","dragover"].forEach(function(ev){drop.addEventListener(ev,function(e){e.preventDefault();if(!readOnly)drop.className="drop over"})});
+["dragleave","drop"].forEach(function(ev){drop.addEventListener(ev,function(e){e.preventDefault();drop.className="drop"})});
+drop.addEventListener("drop",function(e){if(!readOnly&&e.dataTransfer)upload(e.dataTransfer.files)});
+
+/* ---------------------------------------------------------------- data */
 function fast(){
   return api("/api/sys/info").then(function(i){
     online(true);
@@ -316,7 +485,7 @@ function fast(){
     gauge("cpu",i.cpuTemp);gauge("soc",i.socTemp);
     if(i.cpuTemp>0||i.socTemp>0){hist.push([i.cpuTemp|0,i.socTemp|0]);if(hist.length>120)hist.shift();spark()}
     $("s-up").textContent=i.uptime?dur(i.uptime):"–";
-    $("s-clk").innerHTML=i.cpuFreqMhz>0?(i.cpuFreqMhz/1000).toFixed(1).replace(".",ES?",":".")+"<small>GHz</small>":"–";
+    $("s-clk").innerHTML=i.cpuFreqMhz>0?num(i.cpuFreqMhz/1000,1)+"<small>GHz</small>":"–";
     var r=i.running&&i.running.titleId||null;
     if(r!==running){running=r;paintNow();paintGrid()}
   }).catch(function(){online(false)});
@@ -324,7 +493,8 @@ function fast(){
 function slow(){
   return Promise.all([api("/api/apps/list"),api("/api/sys/mounts")]).then(function(x){
     apps=x[0].apps||[];paintDisks(x[1].mounts);
-    $("s-n").textContent=apps.filter(function(a){return !UTIL.test(a.titleId)}).length;
+    var n=apps.filter(function(a){return !UTIL.test(a.titleId)}).length;
+    $("s-n").textContent=n;$("n-lib").textContent=n;
     paintNow();paintGrid();
   }).catch(function(){});
 }
@@ -338,15 +508,15 @@ $("grid").addEventListener("click",function(e){
   (running?ask(T.qlaunch+n,T.qlaunchp,T.launch):Promise.resolve(true)).then(function(ok){
     if(ok)act("/api/apps/launch",{titleId:id},T.launching+n+"…")});
 });
-$("close").onclick=function(){ask(T.qclose,T.qclosep,T.close).then(function(ok){if(ok)act("/api/apps/kill",{},T.closing)})};
+$("close").onclick=function(){ask(T.qclose,T.qclosep,T.close,true).then(function(ok){if(ok)act("/api/apps/kill",{},T.closing)})};
 $("q").oninput=paintGrid;
 $("f-games").onclick=function(){filter="games";this.className="on";$("f-all").className="";paintGrid()};
 $("f-all").onclick=function(){filter="all";this.className="on";$("f-games").className="";paintGrid()};
 
-paintNow();fast().then(slow);
-setInterval(function(){if(!document.hidden)fast()},5000);
-setInterval(function(){if(!document.hidden)slow()},60000);
-document.addEventListener("visibilitychange",function(){if(!document.hidden){fast();slow()}});
+show(location.hash.slice(1));paintNow();fast().then(slow);payloads();
+setInterval(function(){if(document.hidden)return;fast();if(tab==="payloads")payloads()},5000);
+setInterval(function(){if(!document.hidden){slow();payloads()}},60000);
+document.addEventListener("visibilitychange",function(){if(!document.hidden){fast();slow();payloads()}});
 })();
 </script>
 </body>
