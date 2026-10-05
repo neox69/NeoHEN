@@ -11,36 +11,42 @@ de usarla.
 
 1. Qué hay en este zip
 ----------------------------------------------------------------
-  NeoHEN.elf                     el payload que se envía al 9021
-                                 (lleva kstuff-lite dentro)
-  data/neohen/config.ini         configuración por defecto
-  data/neohen/payloads/          lo que NeoHEN arranca solo:
-      shadowmountplus.elf          ShadowMount+ (drakmor)
-      ftpsrv.elf                   servidor FTP (ps5-payload-dev)
-      nanodns.elf                  nanoDNS (drakmor)
-      neoweb.elf                   NeoHEN Web
-      *.auto_start, *.json         marcas y orden de arranque
-  neohen_ctl.py                  control desde un PC
-  TERCEROS.txt                   autores, versiones y licencias
-  LEEME.txt                      este fichero
+  NeoHEN.elf            lo único que hace falta: se envía al 9021
+  LEEME.txt             este fichero
+  TERCEROS.txt          autores, versiones y licencias de lo que lleva dentro
+  neohen_ctl.py         control desde un PC (opcional)
+  config.ini.ejemplo    la configuración por defecto, como referencia
 
-ShadowMount+, el servidor FTP y nanoDNS son los binarios oficiales de sus
-autores, sin modificar (GPLv3). Las versiones exactas y de dónde salen están
-en TERCEROS.txt.
+NeoHEN.elf lleva dentro todo lo que arranca: kstuff-lite, ShadowMount+, el
+servidor FTP, nanoDNS y NeoHEN Web. Los tres primeros payloads son los
+binarios oficiales de sus autores, sin modificar (ver TERCEROS.txt).
 
 
-2. Instalación (una vez)
+2. Instalación
 ----------------------------------------------------------------
-Copia por FTP la carpeta data/neohen del zip a /data/neohen en la consola.
-Nada más: no hay que descargar ni renombrar nada.
+No hay instalación. La primera vez que arranca, NeoHEN crea /data/neohen en
+la consola y deja ahí sus payloads, listos para arrancar solos:
 
-¿No quieres alguno de los payloads? Borra su fichero .auto_start y no se
-arrancará.
+  /data/neohen/payloads/shadowmountplus.elf
+  /data/neohen/payloads/ftpsrv.elf
+  /data/neohen/payloads/nanodns.elf
+  /data/neohen/payloads/neoweb.elf
 
-¿Quieres otra versión de alguno? Sustituye su .elf manteniendo el nombre.
-Para kstuff, deja un kstuff.elf en /data/neohen/ y NeoHEN usará ese en vez
-del que lleva dentro. Si ya hay un kstuff en marcha al enviar NeoHEN, no
-carga otro.
+Cada uno lleva al lado tres ficheros pequeños: .auto_start (arrancar solo),
+.json (orden de arranque) y .bundled (marca de que lo instaló NeoHEN).
+
+Para adaptarlo a tu gusto, por FTP:
+
+  - No arrancar uno: borra su .auto_start.
+  - Quitar uno del todo: borra su .elf. No volverá a instalarse.
+  - Usar otra versión: sustituye el .elf y borra su .bundled; NeoHEN no
+    volverá a tocarlo. Si dejas el .bundled, una versión nueva de NeoHEN
+    lo sustituirá por la que traiga.
+  - Otro kstuff: deja un kstuff.elf en /data/neohen/ y se usará ese.
+  - Configuración: copia config.ini.ejemplo como /data/neohen/config.ini y
+    edítalo. Sin ese fichero, NeoHEN usa los valores por defecto.
+
+Si ya hay un kstuff en marcha al enviar NeoHEN, no carga otro.
 
 
 3. Uso (cada arranque)

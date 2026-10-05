@@ -9,9 +9,10 @@
 # NeoHEN
 
 NeoHEN is a homebrew enabler and Toolbox for jailbroken PS5 consoles. You
-send one payload after the exploit and the console is ready: Toolbox in the
-home screen, your game mounter, FTP, DNS and a remote service for
-dashboards.
+send one file after the exploit, `NeoHEN.elf`, and the console is ready:
+Toolbox in the home screen, game mounter, FTP, DNS and a remote service for
+dashboards. Everything it starts is inside that one file; there is nothing
+to install.
 
 It is a fork of [OnionHEN](https://github.com/aydencharles/onionHEN) by
 aydencharles and contributors, which is itself built on
@@ -30,8 +31,8 @@ Licensed under GPLv3.
 | Area | NeoHEN |
 |---|---|
 | Rest Mode | The Toolbox comes back by itself once the home screen has been stable for 30 s. Upstream re-injects 10 s after waking, which on 13.42 restarted the home screen and froze it for about a minute. Three modes: `stable` (default), `manual`, `original`. |
-| One load | `NeoHEN.elf` starts kstuff, ShadowMount+, FTP, nanoDNS and NeoHEN Web from `/data/neohen/payloads`, in order, and tells you on screen which file is missing. |
-| Everything included | The install zip already contains ShadowMount+, ftpsrv and nanoDNS (their authors' release binaries, pinned and checksummed) and NeoHEN Web; kstuff-lite is inside `NeoHEN.elf`. Nothing to download or rename. A `kstuff.elf` in `/data/neohen/` overrides the embedded one, and a kstuff that is already running is left alone. |
+| One file | `NeoHEN.elf` carries kstuff-lite, ShadowMount+, ftpsrv, nanoDNS and NeoHEN Web. On first boot it writes them to `/data/neohen/payloads` and starts them in order; on later boots it just starts them. Nothing to download, copy or rename. |
+| Your choices win | A payload you replace or delete stays the way you left it. A `kstuff.elf` in `/data/neohen/` overrides the embedded one, and a kstuff that is already running is left alone. |
 | ShadowMount+ | Used as the author's unmodified payload, with a watchdog that checks its hook after Rest Mode and every 5 minutes, and can relaunch it. |
 | NeoHEN Web | A remote HTTP service on the console (port 8686) for home dashboards: temperatures, disks, library with covers, running game, launch and close. See [web/README.md](web/README.md). |
 | Privacy | Logs never contain the account name or account id, and IP and MAC addresses are replaced. Upstream logs write the account name and id every time a menu opens. |
@@ -96,43 +97,42 @@ cold-boot test of 0.1.0-rc2. Until then:
 - Every branch is built by GitHub Actions. Open the
   [Actions tab](../../actions), pick the latest green run of the branch you
   want and download its artifact (GitHub asks you to be signed in). It
-  contains `NeoHEN.elf`, `neoweb.elf`, the install zip and `SHA256SUMS`.
+  contains `NeoHEN.elf`, a zip with it and its notes, and `SHA256SUMS`.
 - Or build it yourself, see [Build](#build).
 
 ## Install
 
-Once:
-
-1. Copy the `data/neohen` folder of the install zip to `/data/neohen` on the
-   console (FTP).
-
-Each boot:
+There is no installation.
 
 1. Run the exploit so that an ELF loader listens on port 9021.
-2. Send `NeoHEN.elf` to it. Nothing else.
+2. Send `NeoHEN.elf` to it.
 
-NeoHEN then starts kstuff, the Toolbox, ShadowMount+, the FTP server,
-nanoDNS and NeoHEN Web by itself.
+That is all, on the first boot and on every boot after it. NeoHEN creates
+`/data/neohen` on the console, writes its payloads there the first time, and
+starts kstuff, the Toolbox, ShadowMount+, the FTP server, nanoDNS and NeoHEN
+Web.
 
-The zip includes, unmodified and under their own GPL-3.0 license:
+Inside `NeoHEN.elf`, unmodified:
 
-| File | What | Version |
+| Payload | Version | License |
 |---|---|---|
-| `payloads/shadowmountplus.elf` | [ShadowMount+](https://github.com/drakmor/ShadowMountPlus) | 1.7beta2 |
-| `payloads/ftpsrv.elf` | [ftpsrv](https://github.com/ps5-payload-dev/ftpsrv) | v0.21.1 |
-| `payloads/nanodns.elf` | [nanoDNS](https://github.com/drakmor/nanoDNS) | 0.4 |
+| [ShadowMount+](https://github.com/drakmor/ShadowMountPlus) | 1.7beta2 | GPL-3.0 |
+| [ftpsrv](https://github.com/ps5-payload-dev/ftpsrv) | v0.21.1 | GPL-3.0 |
+| [nanoDNS](https://github.com/drakmor/nanoDNS) | 0.4 | GPL-3.0 |
+| [kstuff-lite](https://github.com/EchoStretch/kstuff-lite) | v1.11 | none declared |
 
-and [kstuff-lite](https://github.com/EchoStretch/kstuff-lite) v1.11 inside
-`NeoHEN.elf`. These are the versions NeoHEN was tested with; the exact
-checksums are in `scripts/release/payloads.lock` and in `TERCEROS.txt` in the
-zip.
+These are the versions NeoHEN was tested with. The first three are pinned by
+URL and SHA-256 in `scripts/release/payloads.lock`.
 
-- Do not want one of them? Delete its `.auto_start` file.
-- Want another version? Replace the `.elf`, keeping its name. For kstuff, put
-  a `kstuff.elf` in `/data/neohen/`.
+To change something, over FTP in `/data/neohen/payloads`:
 
-Do not load etaHEN, OnionHEN or CheatRunner at the same time. The install
-zip has a longer guide in Spanish (`LEEME.txt`).
+- Do not start one: delete its `.auto_start` file.
+- Remove one: delete its `.elf`. It is not installed again.
+- Use another version: replace the `.elf` and delete its `.bundled` file.
+- Another kstuff: put a `kstuff.elf` in `/data/neohen/`.
+
+Do not load etaHEN, OnionHEN or CheatRunner at the same time. The release zip
+has a longer guide in Spanish (`LEEME.txt`).
 
 ## Configuration
 

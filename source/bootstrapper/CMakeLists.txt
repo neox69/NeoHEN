@@ -155,6 +155,35 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
 	ONIONHEN_SICON_PNG="${ONION_STARTUP_ICON}"
 	ONIONHEN_ICON_ASSET_DIR="${_icon_output_dir}"
 )
+# Bundled payloads: name:priority, highest priority starts first. The tag is
+# part of each file's SHA-256, so a changed binary replaces the installed one.
+if(ONION_BUNDLE_DIR)
+	set(_bundle_inc "${CMAKE_CURRENT_BINARY_DIR}/bundled/bundled_payloads.inc")
+	set(_bundle_body "")
+	set(_bundle_files "")
+	foreach(_entry "shadowmountplus:300" "ftpsrv:200" "nanodns:100" "neoweb:50")
+		string(REPLACE ":" ";" _parts "${_entry}")
+		list(GET _parts 0 _bundle_name)
+		list(GET _parts 1 _bundle_priority)
+		set(_bundle_file "${ONION_BUNDLE_DIR}/${_bundle_name}.elf")
+		if(NOT EXISTS "${_bundle_file}")
+			message(FATAL_ERROR "ONION_BUNDLE_DIR: missing ${_bundle_file}")
+		endif()
+		file(SHA256 "${_bundle_file}" _bundle_sha)
+		string(SUBSTRING "${_bundle_sha}" 0 16 _bundle_tag)
+		string(APPEND _bundle_body
+			"ONION_BUNDLED(${_bundle_name}, \"${_bundle_name}.elf\", \"${_bundle_file}\", ${_bundle_priority}, \"${_bundle_tag}\")\n")
+		list(APPEND _bundle_files "${_bundle_file}")
+		message(STATUS "Bundled payload: ${_bundle_name}.elf ${_bundle_tag}")
+	endforeach()
+	file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bundled")
+	file(WRITE "${_bundle_inc}" "${_bundle_body}")
+	target_include_directories(${PROJECT_NAME} PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/bundled")
+	target_compile_definitions(${PROJECT_NAME} PRIVATE ONION_BUNDLED_PAYLOADS=1)
+	# .incbin is invisible to the dependency scanner, as with daemon.c.
+	set_source_files_properties(${D_SRC}/bundled_payloads.c
+		PROPERTIES OBJECT_DEPENDS "${_bundle_files};${_bundle_inc}")
+endif()
 # elfldr_raise_privileges from libonion_elfldr; launches go via elfldr_remote.c.
 onion_target_debug_define(${PROJECT_NAME})
 target_include_directories(${PROJECT_NAME} PRIVATE

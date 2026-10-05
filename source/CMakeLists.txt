@@ -81,6 +81,10 @@ add_compile_definitions(
 # the bootstrapper then loads ${ONION_DATA_DIR}/kstuff.elf only and never
 # carries a kstuff binary of its own.
 option(ONION_EMBED_KSTUFF "Embed kstuff.elf in the bootstrapper" ON)
+# Directory with payload ELFs to carry inside the bootstrapper and install
+# on first boot (shadowmountplus.elf, ftpsrv.elf, nanodns.elf, neoweb.elf).
+# Empty: nothing is bundled. See bootstrapper/source/bundled_payloads.c.
+set(ONION_BUNDLE_DIR "" CACHE PATH "Payloads embedded in the bootstrapper")
 # Hide Toolbox entries not yet verified on a console (overlay, PKG install).
 option(ONION_HIDE_UNTESTED "Hide untested Toolbox features" OFF)
 if(ONION_HIDE_UNTESTED)
