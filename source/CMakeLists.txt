@@ -73,6 +73,9 @@ option(ONION_EMBED_KSTUFF "Embed kstuff.elf in the bootstrapper" ON)
 if(NOT ONION_EMBED_KSTUFF)
 	add_compile_definitions(ONION_EXTERNAL_KSTUFF=1)
 endif()
+# 128x128 RGBA PNG: startup notification, HomeUI top-nav and Settings icon.
+set(ONION_STARTUP_ICON "${PROJECT_ROOT}/bootstrapper/assets/onionhen_sicon.png"
+	CACHE FILEPATH "Icon embedded by the bootstrapper")
 set(ONION_I18N_BRAND_ARGS
 	--brand "${ONION_BRAND_NAME}"
 	--data-dir "/data/${ONION_DIR_NAME}"

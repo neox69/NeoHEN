@@ -145,13 +145,14 @@ endif()
 set_source_files_properties(
 	${D_SRC}/daemon.c
 	PROPERTIES OBJECT_DEPENDS
-		"${_onion_daemon_elf};${_onion_util_elf};${_onion_elfldr_elf};${_onion_kstuff_dep};${D_CWD}/assets/onionhen_sicon.png;${_generated_icon_files}"
+		"${_onion_daemon_elf};${_onion_util_elf};${_onion_elfldr_elf};${_onion_kstuff_dep};${ONION_STARTUP_ICON};${_generated_icon_files}"
 )
 target_compile_definitions(${PROJECT_NAME} PRIVATE
 	ONIONHEN_DAEMON_ELF="${_onion_daemon_elf}"
 	ONIONHEN_UTIL_ELF="${_onion_util_elf}"
 	ONIONHEN_ELFLDR_ELF="${_onion_elfldr_elf}"
 	ONIONHEN_KSTUFF_ELF="${ONIONHEN_KSTUFF_ELF}"
+	ONIONHEN_SICON_PNG="${ONION_STARTUP_ICON}"
 	ONIONHEN_ICON_ASSET_DIR="${_icon_output_dir}"
 )
 # elfldr_raise_privileges from libonion_elfldr; launches go via elfldr_remote.c.
