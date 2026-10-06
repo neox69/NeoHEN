@@ -31,6 +31,7 @@ constexpr int kFirstCheckSeconds = 120;  // let autostart finish first
 constexpr int kResumeCheckSeconds = 60;  // ShadowMount+ resumes on WORKING
 constexpr int kRelaunchMinGapSeconds = 600;
 constexpr int kRelaunchMaxPerBoot = 3;
+constexpr int kGameRecheckSeconds = 30; // relaunch soon after the game closes
 
 std::atomic<bool> g_started{false};
 std::atomic<int> g_resume_due{-1}; // seconds until a resume check, -1 = none
@@ -90,6 +91,7 @@ bool relaunch() {
 void *watchdog_thread(void *) {
   Problem last = Problem::None;
   bool reported_ok = false;
+  bool waiting_for_game = false;
   int relaunches = 0;
   time_t last_relaunch = 0;
   int countdown = kFirstCheckSeconds;
@@ -126,11 +128,22 @@ void *watchdog_thread(void *) {
       continue;
     }
     const char *what = problem == Problem::HookLost ? "hook lost" : "not running";
-    LOG_WARN("smp watchdog: ShadowMount+ %s%s", what,
-             resume_check ? " (after Rest Mode)" : "");
+    if (problem != last || !waiting_for_game)
+      LOG_WARN("smp watchdog: ShadowMount+ %s%s", what,
+               resume_check ? " (after Rest Mode)" : "");
+    waiting_for_game = false;
     if (settings.smp_watchdog == onion::kSmpWatchdogRelaunch) {
       const time_t now = time(nullptr);
-      if (relaunches >= kRelaunchMaxPerBoot ||
+      if (get_game_pid() > 1) {
+        /* A new instance cleans up the mounts of the old one, and the open
+         * game runs from one of them. Wait until it is closed. */
+        if (problem != last) {
+          LOG_INFO("smp watchdog: relaunch waits for the open game to close");
+          onion_notify(true, "notify.smp.relaunch_waits");
+        }
+        countdown = kGameRecheckSeconds;
+        waiting_for_game = true;
+      } else if (relaunches >= kRelaunchMaxPerBoot ||
           (last_relaunch && now - last_relaunch < kRelaunchMinGapSeconds)) {
         if (problem != last)
           onion_notify(true, "notify.smp.relaunch_limited");
