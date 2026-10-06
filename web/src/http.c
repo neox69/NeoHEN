@@ -8,20 +8,24 @@
 #include <inttypes.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
+#include <poll.h>
 #include <pthread.h>
 #include <signal.h>
 #include <stdarg.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
+#include <sys/time.h>
 #include <unistd.h>
 
 #include "log.h"
 
 #define IO_CHUNK (1024 * 1024)
+#define HTTP_PROBE_SECONDS 20
 
 typedef struct conn_arg {
   int            fd;
@@ -674,13 +678,16 @@ conn_thread(void *arg) {
   return NULL;
 }
 
-int
-http_serve(uint16_t port, http_handler_t handler) {
+/* Rest Mode kills the listening socket: after the console wakes up accept()
+ * either fails for good or blocks on a socket nobody can reach. Both ends in
+ * the same place, a new socket. */
+static volatile int g_relisten;
+
+static int
+open_listener(uint16_t port) {
   struct sockaddr_in addr;
   int one = 1;
   int srv;
-
-  signal(SIGPIPE, SIG_IGN);
 
   if((srv = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
     LOG_ERR("socket: %s", strerror(errno));
@@ -703,19 +710,100 @@ http_serve(uint16_t port, http_handler_t handler) {
     close(srv);
     return -1;
   }
+  return srv;
+}
 
+/* Connects to our own port now and then; two misses in a row mean the
+ * listener is dead even though accept() never said so. */
+static void *
+probe_thread(void *arg) {
+  uint16_t port = (uint16_t)(uintptr_t)arg;
+  int misses = 0;
+
+  for(;;) {
+    struct sockaddr_in addr;
+    struct timeval tv = {3, 0};
+    int fd;
+
+    sleep(HTTP_PROBE_SECONDS);
+    if(g_relisten) {
+      continue;
+    }
+    if((fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+      continue;
+    }
+    setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
+    memset(&addr, 0, sizeof(addr));
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    addr.sin_port = htons(port);
+    if(connect(fd, (struct sockaddr *)&addr, sizeof(addr))) {
+      if(++misses >= 2) {
+        LOG_WARN("port %d does not answer (%s); listening again", port,
+                 strerror(errno));
+        g_relisten = 1;
+        misses = 0;
+      }
+    } else {
+      misses = 0;
+    }
+    close(fd);
+  }
+  return NULL;
+}
+
+int
+http_serve(uint16_t port, http_handler_t handler) {
+  int one = 1;
+  int srv;
+  pthread_t probe;
+
+  signal(SIGPIPE, SIG_IGN);
+
+  if((srv = open_listener(port)) < 0) {
+    return -1;
+  }
   LOG_INFO("HTTP server listening on port %d", port);
+
+  if(!pthread_create(&probe, NULL, probe_thread, (void *)(uintptr_t)port)) {
+    pthread_detach(probe);
+  }
 
   for(;;) {
     struct sockaddr_in caddr;
     socklen_t clen = sizeof(caddr);
-    int fd = accept(srv, (struct sockaddr *)&caddr, &clen);
-    if(fd < 0) {
-      if(errno == EINTR || errno == ECONNABORTED) {
+    struct pollfd pfd = {.fd = srv, .events = POLLIN};
+    int fd = -1;
+    int dead = g_relisten;
+
+    if(!dead) {
+      int pr = poll(&pfd, 1, 1000);
+      if(pr == 0 || (pr < 0 && errno == EINTR)) {
         continue;
       }
-      LOG_ERR("accept: %s", strerror(errno));
-      usleep(100 * 1000);
+      if(pr < 0 || (pfd.revents & (POLLERR | POLLHUP | POLLNVAL))) {
+        LOG_WARN("listener lost (%s); listening again",
+                 pr < 0 ? strerror(errno) : "poll");
+        dead = 1;
+      }
+    }
+    if(!dead) {
+      fd = accept(srv, (struct sockaddr *)&caddr, &clen);
+      if(fd < 0) {
+        if(errno == EINTR || errno == ECONNABORTED || errno == EAGAIN) {
+          continue;
+        }
+        LOG_WARN("accept: %s; listening again", strerror(errno));
+        dead = 1;
+      }
+    }
+    if(dead) {
+      close(srv);
+      while((srv = open_listener(port)) < 0) {
+        sleep(2);
+      }
+      g_relisten = 0;
+      LOG_INFO("HTTP server listening on port %d again", port);
       continue;
     }
 

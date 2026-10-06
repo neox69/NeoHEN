@@ -418,6 +418,7 @@
     "notify.smp.relaunched": "ShadowMount+ relaunched by {brand}",
     "notify.smp.relaunch_failed": "{brand} could not relaunch ShadowMount+",
     "notify.smp.relaunch_limited": "ShadowMount+ keeps failing; {brand} stops relaunching it until the next boot",
+    "notify.smp.relaunch_waits": "ShadowMount+ lost its hook; {brand} will relaunch it when you close the game",
     "notify.payload.launched": "Payload gestartet\nPfad: %s\nKennung: %s",
     "notify.cheats.none": "Keine Cheats für %s Version %s!",
     "notify.payload.elf_only": "Nur .elf-Payloads werden unterstützt:\n%s",

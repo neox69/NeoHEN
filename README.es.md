@@ -65,19 +65,25 @@ En una PS5 CFI-7021, firmware 13.42, con kstuff-lite 1.11 y ShadowMount+
 | Arranque en frío: kstuff incrustado, Toolbox, los cuatro payloads arrancados solos, un juego | Funciona (0.1.0-rc2, payloads copiados a mano) |
 | "NeoHEN Toolbox" en Ajustes, `stable` por defecto | Funciona (0.1.0-rc2) |
 | Página web de NeoWEB con sus tres pestañas, escritorio y móvil | Funciona |
-| Gestor de payloads de NeoWEB: enviar, arrancar, parar, borrar, autoarranque | Funciona (posterior a 0.1.0-rc2) |
+| Gestor de payloads de NeoWEB: enviar, arrancar, parar, borrar, autoarranque | Funciona (0.1.0-rc3) |
 | **Primer arranque instalando los payloads desde dentro del ELF** | **Compilado, sin probar en consola** |
 | NeoWEB: lanzar y cerrar un juego | **Sin probar** |
-| El vigilante de ShadowMount+ recuperando un hook perdido | **Sin probar** |
+| El vigilante relanzando un ShadowMount+ parado (`watchdog=relaunch`) | Funciona (0.1.0-rc2) |
+| NeoWEB reabriendo su puerto tras el reposo | **Compilado, sin probar con un reposo real** |
+| El vigilante de ShadowMount+ recuperando un hook perdido, y esperando al juego abierto | **Sin probar** |
 | Aplicar un truco, instalar PKG, superposición, app jailbreak | **Sin probar** |
 | Cualquier firmware distinto de 13.42 | **Sin probar** |
 
 ## En desarrollo
 
-- **0.1.0-rc2** — publicada como versión preliminar. El paso que escribe los
-  payloads incluidos en el primer arranque aún no se ha ejecutado en consola.
+- **0.1.0-rc3** — versión preliminar. Corrige lo que un reposo de 29 horas
+  rompió en la 0.1.0-rc2: NeoWEB dejaba de responder en el puerto 8686
+  (ahora reabre su puerto) y ShadowMount+ perdía su hook de instalación. Con
+  `watchdog=relaunch` el vigilante espera a que se cierre el juego abierto
+  antes de relanzar ShadowMount+. El paso que escribe los payloads incluidos
+  en el primer arranque sigue sin ejecutarse en consola.
 - **NeoWEB** — hechas las pestañas de consola, biblioteca y payloads (el
-  gestor de payloads es posterior a la versión 0.1.0-rc2). Lo siguiente:
+  gestor de payloads llegó con la 0.1.0-rc3). Lo siguiente:
   probar lanzar y cerrar en consola, y después todo lo que ofrece PS5Upload
   (transferencia de ficheros, energía, ventilador, M.2) para sustituirlo del
   todo.
@@ -101,7 +107,7 @@ kstuff ya estaba desactivado, por una causa aún sin identificar.
 **[Releases](../../releases)** — descarga `NeoHEN.elf` de la última. Es el
 único fichero que hace falta.
 
-La `0.1.0-rc2` es una versión preliminar. Todo lo que lleva se ha visto
+La `0.1.0-rc3` es una versión preliminar. Todo lo que lleva se ha visto
 funcionar en consola salvo un paso: escribir los payloads incluidos en
 `/data/neohen` en el primer arranque. Ese código está compilado y revisado,
 pero no se había ejecutado en una consola cuando se publicó. Debería
@@ -197,7 +203,7 @@ compilando un OnionHEN sin marca desde el mismo árbol.
 
 | Rama | Contenido |
 |---|---|
-| `neohen-main` | NeoHEN actual: 0.1.0-rc2 más NeoWEB |
+| `neohen-main` | NeoHEN actual: 0.1.0-rc3 |
 | `neohen/release` | 0.1.0-rc1, la versión probada en consola |
 | `neohen/pc-tool` | `neohen_pc`, el empaquetador de juegos |
 | `neohen/docs` | Plan y procedimientos de prueba en consola |

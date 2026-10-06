@@ -65,19 +65,25 @@ On a PS5 CFI-7021, firmware 13.42, with kstuff-lite 1.11 and ShadowMount+
 | Cold boot: embedded kstuff, Toolbox, the four payloads auto-started, a game | Works (0.1.0-rc2, payloads copied by hand) |
 | "NeoHEN Toolbox" in Settings, `stable` as default | Works (0.1.0-rc2) |
 | NeoWEB web page with its three tabs, desktop and phone | Works |
-| NeoWEB payload manager: upload, start, stop, delete, auto-start | Works (after 0.1.0-rc2) |
+| NeoWEB payload manager: upload, start, stop, delete, auto-start | Works (0.1.0-rc3) |
 | **First boot installing the payloads from inside the ELF** | **Compiled, not tested on a console** |
 | NeoWEB: launch and close a game | **Not tested** |
-| ShadowMount+ watchdog recovering a lost hook | **Not tested** |
+| ShadowMount+ watchdog relaunching a stopped ShadowMount+ (`watchdog=relaunch`) | Works (0.1.0-rc2) |
+| NeoWEB reopening its port after Rest Mode | **Built, not tested across a real Rest Mode** |
+| ShadowMount+ watchdog recovering a lost hook, and waiting for the open game | **Not tested** |
 | Applying a cheat, PKG install, overlay, app jailbreak | **Not tested** |
 | Any firmware other than 13.42 | **Not tested** |
 
 ## In progress
 
-- **0.1.0-rc2** — published as a pre-release. The step that writes the
-  bundled payloads on first boot has not been run on a console yet.
+- **0.1.0-rc3** — pre-release. Fixes what a 29 hour Rest Mode broke on
+  0.1.0-rc2: NeoWEB stopped answering on port 8686 (it now reopens its port)
+  and ShadowMount+ lost its install hook. With `watchdog=relaunch` the
+  watchdog now waits until the open game is closed before it relaunches
+  ShadowMount+. The step that writes the bundled payloads on first boot has
+  still not been run on a console.
 - **NeoWEB** — console, library and payload tabs are done (the payload
-  manager is newer than the 0.1.0-rc2 release). Next: launch and close on a
+  manager arrived with 0.1.0-rc3). Next: launch and close on a
   console, then everything PS5Upload offers (file transfers, power, fan, M.2)
   so it can be replaced entirely.
 - **NeoAPP** — a PC app on top of the full NeoWEB build: upload games
@@ -99,7 +105,7 @@ cause unknown.
 **[Releases](../../releases)** — get `NeoHEN.elf` from the latest one. It is
 the only file you need.
 
-`0.1.0-rc2` is a pre-release. Everything in it was seen working on the
+`0.1.0-rc3` is a pre-release. Everything in it was seen working on the
 console except one step: writing the bundled payloads to `/data/neohen` on
 the very first boot. That code is compiled and reviewed but had not been run
 on a console when the release was published. It should work; if it does not,
@@ -193,7 +199,7 @@ environment, including the libraries the SDK does not ship.
 
 | Branch | Content |
 |---|---|
-| `neohen-main` | Current NeoHEN: 0.1.0-rc2 plus NeoWEB |
+| `neohen-main` | Current NeoHEN: 0.1.0-rc3 |
 | `neohen/release` | 0.1.0-rc1, the build tested on the console |
 | `neohen/pc-tool` | `neohen_pc`, the game packer |
 | `neohen/docs` | Plan and console test procedures (Spanish) |
