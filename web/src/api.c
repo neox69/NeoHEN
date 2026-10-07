@@ -328,6 +328,7 @@ static const api_route_t g_routes[] = {
   {"POST", "/api/fs/rename",        api_fs_rename},
   {"POST", "/api/fs/copy",          api_fs_copy},
   {"POST", "/api/fs/chmod",         api_fs_chmod},
+  {"POST", "/api/fs/hash",          api_fs_hash},
   {NULL,   "/fs/get",               api_fs_get},
   {"PUT",  "/fs/put",               api_fs_put},
   {"POST", "/fs/put",               api_fs_put},

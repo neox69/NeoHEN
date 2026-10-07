@@ -55,6 +55,7 @@ void api_fs_chmod(http_req_t *req);
 void api_fs_size(http_req_t *req);
 void api_fs_get(http_req_t *req);
 void api_fs_put(http_req_t *req);
+void api_fs_hash(http_req_t *req);
 void api_fs_read_text(http_req_t *req);
 void api_fs_write_text(http_req_t *req);
 

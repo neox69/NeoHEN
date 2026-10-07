@@ -9,10 +9,12 @@
 #include <string.h>
 #include <strings.h>
 #include <sys/stat.h>
+#include <sys/statvfs.h>
 #include <unistd.h>
 
 #include "api.h"
 #include "fsutil.h"
+#include "sha256.h"
 #include "jobs.h"
 #include "log.h"
 #include "plat.h"
@@ -433,6 +435,94 @@ api_fs_get(http_req_t *req) {
   http_send_file(req, local, (int)http_query_int(req, "download", 0));
 }
 
+/* ------------------------------------------------------------------ hash */
+
+typedef struct hash_arg {
+  char path[PATH_MAX];
+} hash_arg_t;
+
+static int
+hash_job(job_t *job, void *p) {
+  hash_arg_t *a = p;
+  struct stat st;
+  sha256_t sha;
+  char hex[65];
+  char *buf;
+  int fd;
+
+  if((fd = open(a->path, O_RDONLY)) < 0) {
+    return job_fail(job, "open: %s", strerror(errno));
+  }
+  if(fstat(fd, &st) || !S_ISREG(st.st_mode)) {
+    close(fd);
+    return job_fail(job, "not a regular file");
+  }
+  if(!(buf = malloc(UPLOAD_BUF))) {
+    close(fd);
+    return job_fail(job, "out of memory");
+  }
+  job->bytes_total = (uint64_t)st.st_size;
+  job->files_total = 1;
+  sha256_init(&sha);
+  for(;;) {
+    ssize_t n = read(fd, buf, UPLOAD_BUF);
+    if(n < 0 && errno == EINTR) {
+      continue;
+    }
+    if(n < 0 || job->cancel) {
+      free(buf);
+      close(fd);
+      return job_fail(job, n < 0 ? "read: %s" : "cancelled%s", n < 0 ? strerror(errno) : "");
+    }
+    if(!n) {
+      break;
+    }
+    sha256_update(&sha, buf, (size_t)n);
+    job->bytes_done += (uint64_t)n;
+  }
+  free(buf);
+  close(fd);
+  sha256_final(&sha, hex);
+  job->files_done = 1;
+  job_set_result(job, "%s", hex);
+  return 0;
+}
+
+/* SHA-256 of a file on the console, as a job: the digest is the job result. */
+void
+api_fs_hash(http_req_t *req) {
+  hash_arg_t *a = calloc(1, sizeof(hash_arg_t));
+  char console[PATH_MAX], title[PATH_MAX + 16];
+  jval_t *b;
+  jw_t w;
+
+  if(!a) {
+    http_send_error(req, 500, "out of memory");
+    return;
+  }
+  if(!(b = api_body(req))) {
+    free(a);
+    return;
+  }
+  if(api_body_path(req, b, "path", a->path, sizeof(a->path))) {
+    json_free(b);
+    free(a);
+    return;
+  }
+  snprintf(console, sizeof(console), "%s", json_get_str(b, "path", ""));
+  json_free(b);
+  snprintf(title, sizeof(title), "SHA-256 %s", console);
+
+  int id = job_start("hash", title, hash_job, a, free);
+  if(id < 0) {
+    http_send_error(req, 503, "too many jobs");
+    return;
+  }
+  api_begin(&w);
+  jw_kint(&w, "job", id);
+  api_finish(req, &w);
+}
+
 void
 api_fs_put(http_req_t *req) {
   char console[PATH_MAX], local[PATH_MAX];
@@ -451,6 +541,35 @@ api_fs_put(http_req_t *req) {
   }
   if(http_query_int(req, "mkdirs", 1)) {
     fs_mkparents(local);
+  }
+
+  /* size= is the size the file will have when the whole upload is done.
+   * Refuse now what cannot fit, counting what is already there, and refuse
+   * to resume past the end of what was really written. */
+  int64_t total = http_query_int(req, "size", -1);
+  struct stat st;
+  int64_t have = !stat(local, &st) && S_ISREG(st.st_mode) ? (int64_t)st.st_size : 0;
+  if(offset > have) {
+    http_send_error(req, 409, "offset %lld is past the %lld bytes on the console",
+                    (long long)offset, (long long)have);
+    return;
+  }
+  if(total >= 0) {
+    char dir[PATH_MAX];
+    struct statvfs vfs;
+    snprintf(dir, sizeof(dir), "%s", local);
+    char *slash = strrchr(dir, '/');
+    if(slash && slash != dir) {
+      *slash = 0;
+    }
+    if(!statvfs(dir, &vfs)) {
+      int64_t freeb = (int64_t)vfs.f_bavail * (int64_t)vfs.f_frsize;
+      if(total - have > freeb) {
+        http_send_error(req, 507, "not enough space: %lld bytes needed, %lld free",
+                        (long long)(total - have), (long long)freeb);
+        return;
+      }
+    }
   }
 
   int flags = O_WRONLY | O_CREAT;

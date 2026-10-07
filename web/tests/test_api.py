@@ -256,6 +256,26 @@ class PayloadTest(unittest.TestCase):
         _, j = self.api.get("/api/fs/text?path=/data/cfg.json")
         self.assertEqual(j["content"], "{\"á\":1}")
 
+    def test_hash_and_space_check(self):
+        import hashlib
+        payload = os.urandom(300 * 1024 + 7)
+        st, body, _ = self.api.req("PUT", "/fs/put?path=/data/t/h.bin&size=%d" % len(payload),
+                                   raw=payload)
+        self.assertEqual(st, 200, body)
+        _, j = self.api.post("/api/fs/hash", {"path": "/data/t/h.bin"})
+        job = self.api.wait_job(j["job"])
+        self.assertEqual(job["state"], "done", job)
+        self.assertEqual(job["result"], hashlib.sha256(payload).hexdigest())
+        # an upload that cannot fit is refused before a byte is written
+        st, body, _ = self.api.req("PUT", "/fs/put?path=/data/t/big.bin&size=%d" % (1 << 60),
+                                   raw=b"x")
+        self.assertEqual(st, 507, body)
+        self.assertFalse(os.path.exists(f"{self.root}/data/t/big.bin"))
+        # resuming past what is really on the console is refused
+        st, body, _ = self.api.req("PUT", "/fs/put?path=/data/t/h.bin&offset=%d" % (len(payload) + 10),
+                                   raw=b"x")
+        self.assertEqual(st, 409, body)
+
     def test_copy_job(self):
         _, j = self.api.post("/api/fs/copy", {"from": "/mnt/sandbox/pfsmnt/PPSA01234-app0",
                                               "to": "/data/copytest"})
