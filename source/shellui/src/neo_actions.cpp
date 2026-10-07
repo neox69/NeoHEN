@@ -19,9 +19,13 @@
 #include <ctime>
 #include <dirent.h>
 #include <fcntl.h>
+#include <msg.hpp>
+#include <netinet/in.h>
 #include <pthread.h>
 #include <string>
+#include <sys/socket.h>
 #include <sys/stat.h>
+#include <sys/time.h>
 #include <utility>
 #include <unistd.h>
 #include <vector>
@@ -506,6 +510,31 @@ void *theme_watch_thread(void *) {
   return nullptr;
 }
 } // namespace
+
+void neo_menu_restart() {
+  const uint32_t frame[2] = {ONION_CTRL_TCP_MAGIC, ONION_CTRL_TCP_CMD_MENU};
+  unsigned char reply = 0xff;
+  sockaddr_in addr{};
+  addr.sin_family = AF_INET;
+  addr.sin_port = htons(ONION_CTRL_TCP_PORT);
+  addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+  timeval tv{3, 0};
+  const int s = socket(AF_INET, SOCK_STREAM, 0);
+  bool sent = false;
+  if (s >= 0) {
+    setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+    setsockopt(s, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
+    sent = connect(s, reinterpret_cast<sockaddr *>(&addr), sizeof(addr)) == 0 &&
+           send(s, frame, sizeof(frame), 0) == static_cast<ssize_t>(sizeof(frame)) &&
+           recv(s, &reply, 1, 0) == 1;
+    close(s);
+  }
+  LOG_INFO("menu restart asked: sent=%d reply=%u", sent ? 1 : 0, reply);
+  if (!sent)
+    notify("notify.neo.failed", "menu", strerror(errno));
+  else if (reply == 2)
+    notify("notify.neo.menu_busy");
+}
 
 void neo_theme_watch_start() {
   static bool started = false;

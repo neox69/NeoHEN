@@ -3,6 +3,7 @@
 
   python3 scripts/neohen_ctl.py toolbox  <PS5_IP>   # load the Toolbox now
   python3 scripts/neohen_ctl.py shutdown <PS5_IP>   # stop NeoHEN (kstuff stays)
+  python3 scripts/neohen_ctl.py menu     <PS5_IP>   # restart the home menu
 
 toolbox is how the Toolbox comes back after Rest Mode with
 rest_mode.toolbox_after_resume=manual (the default, stable, reloads it by
@@ -12,7 +13,8 @@ shutdown stops util, the private loader on 9020, restarts SceShellUI (which
 removes the in-memory Toolbox) and exits the daemon. kstuff keeps running.
 
 Wire format (little-endian): u32 magic 0x4F4E494F ('ONIO'), u32 command
-(1 = shutdown, 2 = toolbox). Reply: one byte, 0 = accepted.
+(1 = shutdown, 2 = toolbox, 3 = menu). Reply: one byte, 0 = accepted; menu
+replies 2 while a game or app is open, and does nothing then.
 """
 from __future__ import annotations
 
@@ -23,7 +25,7 @@ import sys
 
 PORT = 9048
 MAGIC = 0x4F4E494F
-COMMANDS = {"shutdown": 1, "toolbox": 2}
+COMMANDS = {"shutdown": 1, "toolbox": 2, "menu": 3}
 
 
 def send(host: str, command: str, port: int = PORT, timeout: float = 5.0) -> int:
@@ -40,6 +42,9 @@ def send(host: str, command: str, port: int = PORT, timeout: float = 5.0) -> int
     if not reply and command == "shutdown":
         print("shutdown requested (connection closed)")
         return 0
+    if reply == b"\2" and command == "menu":
+        print("menu: refused, a game or app is open", file=sys.stderr)
+        return 1
     if reply == b"\0":
         print(f"{command}: accepted")
         return 0

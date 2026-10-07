@@ -708,6 +708,10 @@ void append_toolbox_themes_group(ps5ui::Group& g) {
     g.button("id_theme_" + std::to_string(i), themes[i],
              toolbox_i18n::tr(themes[i] == active ? "themes.in_use" : "themes.apply.desc"),
              std::nullopt, kIconMonitor);
+  g.button("id_theme_restart", toolbox_i18n::tr("themes.restart"),
+           toolbox_i18n::tr("themes.restart.desc"), std::nullopt, kIconMonitor,
+           ps5ui::Style::None, toolbox_i18n::tr("themes.restart.confirm"),
+           toolbox_i18n::tr("cheats.repo.download.confirm_phrase"));
 }
 
 void append_toolbox_game_group(ps5ui::Group& g) {

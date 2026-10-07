@@ -54,9 +54,11 @@ bool crit_ipc_is_listening() {
  * PC control: TCP :9048
  * Frame (little-endian):
  *   u32 magic = ONION_CTRL_TCP_MAGIC (0x4F4E494F 'ONIO')
- *   u32 cmd   = ONION_CTRL_TCP_CMD_SHUTDOWN (1) or ONION_CTRL_TCP_CMD_TOOLBOX (2)
+ *   u32 cmd   = ONION_CTRL_TCP_CMD_SHUTDOWN (1), ONION_CTRL_TCP_CMD_TOOLBOX (2)
+ *               or ONION_CTRL_TCP_CMD_MENU (3)
  * Reply: 1 byte 0 = accepted. SHUTDOWN then shuts the stack down; TOOLBOX
- * injects the Toolbox in the background (the result is a notification).
+ * injects the Toolbox in the background (the result is a notification);
+ * MENU restarts the home menu, or replies 2 while a game or app is open.
  *
  * The listener self-heals: if accept() fails (socket dead after a standby
  * resume, or restart_crit_tcp requested), the port is re-bound.
@@ -159,6 +161,22 @@ void *control_tcp_loop(void *args) {
           pthread_detach(thread);
         else
           LOG_ERROR("control_tcp: cannot start Toolbox thread");
+        continue;
+      }
+
+      if (n == static_cast<ssize_t>(sizeof(frame)) &&
+          frame[0] == ONION_CTRL_TCP_MAGIC &&
+          frame[1] == ONION_CTRL_TCP_CMD_MENU) {
+        const uint8_t reply = get_game_pid() > 1 ? 2 : 0;
+        (void)send(client, &reply, 1, MSG_NOSIGNAL);
+        onion::ipc_release_fd(&g_ctrl_client_fd);
+        if (reply) {
+          LOG_INFO("control_tcp: MENU refused, a game is open");
+        } else {
+          LOG_INFO("control_tcp: MENU restart from client");
+          usleep(100 * 1000);
+          (void)daemon_restart_shellui();
+        }
         continue;
       }
 
