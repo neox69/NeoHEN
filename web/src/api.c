@@ -4,6 +4,7 @@
 
 #include <ctype.h>
 #include <errno.h>
+#include <limits.h>
 #include <signal.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -200,6 +201,151 @@ api_sys_notify(http_req_t *req) {
   http_send_ok(req);
 }
 
+/* ------------------------------------------------------------------ fan
+ * NeoHEN itself drives the fan: it reads its config.ini again within a
+ * second of a change and keeps the threshold applied. So this only edits
+ * the two lines of the [cooling] section, leaving the rest of the file as
+ * the user has it.
+ *
+ * The threshold is the temperature the console lets itself reach before
+ * the fan speeds up; 77 is what the console does by itself. From here it
+ * can be set between 50 and 80: lower is cooler and louder, and nothing
+ * above the console's own figure is offered. */
+#define NEOHEN_CONFIG "/data/neohen/config.ini"
+#define FAN_MIN 50
+#define FAN_MAX 80
+#define FAN_STOCK 77
+
+/* The value of `key` in [section], or "" if it is not there. */
+static void
+ini_get(const char *text, const char *section, const char *key, char *out, size_t size) {
+  char head[64];
+  const char *p;
+  size_t klen = strlen(key);
+
+  out[0] = 0;
+  snprintf(head, sizeof(head), "[%s]", section);
+  if(!(p = strstr(text, head))) {
+    return;
+  }
+  for(p = strchr(p, '\n'); p; p = strchr(p, '\n')) {
+    p++;
+    if(*p == '[') {
+      return;
+    }
+    if(!strncmp(p, key, klen) && p[klen] == '=') {
+      size_t n = strcspn(p + klen + 1, "\r\n");
+      snprintf(out, size, "%.*s", (int)n, p + klen + 1);
+      return;
+    }
+  }
+}
+
+/* A copy of the text with `key` set in [section]; NULL if the section or
+ * the key is not in the file (it is NeoHEN's file to lay out). */
+static char *
+ini_set(const char *text, const char *section, const char *key, const char *value) {
+  char head[64];
+  const char *p;
+  size_t klen = strlen(key);
+
+  snprintf(head, sizeof(head), "[%s]", section);
+  if(!(p = strstr(text, head))) {
+    return NULL;
+  }
+  for(p = strchr(p, '\n'); p; p = strchr(p, '\n')) {
+    p++;
+    if(*p == '[') {
+      return NULL;
+    }
+    if(!strncmp(p, key, klen) && p[klen] == '=') {
+      const char *old = p + klen + 1;
+      size_t olen = strcspn(old, "\r\n"), pre = (size_t)(old - text);
+      size_t total = pre + strlen(value) + strlen(old + olen) + 1;
+      char *out = malloc(total);
+      if(out) {
+        memcpy(out, text, pre);
+        snprintf(out + pre, total - pre, "%s%s", value, old + olen);
+      }
+      return out;
+    }
+  }
+  return NULL;
+}
+
+static void
+api_sys_fan_get(http_req_t *req) {
+  char local[PATH_MAX], mode[48], value[16];
+  char *text = NULL;
+  size_t len = 0;
+  jw_t w;
+
+  plat_path(NEOHEN_CONFIG, local, sizeof(local));
+  if(fs_read_file(local, &text, &len, 1 << 20)) {
+    http_send_error(req, 404, "NeoHEN's config.ini is not there");
+    return;
+  }
+  ini_get(text, "cooling", "fan_control", mode, sizeof(mode));
+  ini_get(text, "cooling", "temperature_threshold_celsius", value, sizeof(value));
+  free(text);
+  api_begin(&w);
+  jw_kbool(&w, "manual", !strcmp(mode, "temperature_threshold"));
+  jw_kint(&w, "threshold", value[0] ? atoi(value) : FAN_STOCK);
+  jw_kint(&w, "min", FAN_MIN);
+  jw_kint(&w, "max", FAN_MAX);
+  jw_kint(&w, "stock", FAN_STOCK);
+  api_finish(req, &w);
+}
+
+/* POST /api/sys/fan {"manual":true,"threshold":70} | {"manual":false} */
+static void
+api_sys_fan_set(http_req_t *req) {
+  char local[PATH_MAX], tmp[PATH_MAX], value[16];
+  char *text = NULL, *a = NULL, *b = NULL;
+  size_t len = 0;
+  jval_t *body = api_body(req);
+
+  if(!body) {
+    return;
+  }
+  int manual = json_get_bool(body, "manual", 0);
+  int threshold = (int)json_get_int(body, "threshold", FAN_STOCK);
+  json_free(body);
+  if(manual && (threshold < FAN_MIN || threshold > FAN_MAX)) {
+    http_send_error(req, 400, "the threshold goes from %d to %d", FAN_MIN, FAN_MAX);
+    return;
+  }
+  plat_path(NEOHEN_CONFIG, local, sizeof(local));
+  if(fs_read_file(local, &text, &len, 1 << 20)) {
+    http_send_error(req, 404, "NeoHEN's config.ini is not there");
+    return;
+  }
+  a = ini_set(text, "cooling", "fan_control", manual ? "temperature_threshold" : "automatic");
+  if(a && manual) {
+    snprintf(value, sizeof(value), "%d", threshold);
+    b = ini_set(a, "cooling", "temperature_threshold_celsius", value);
+    free(a);
+    a = b;
+  }
+  free(text);
+  if(!a) {
+    http_send_error(req, 500, "config.ini has no [cooling] settings to change");
+    return;
+  }
+  /* written whole next to it, then put in its place: never half a file */
+  snprintf(tmp, sizeof(tmp), "%s.neoweb", local);
+  if(fs_write_file(tmp, a, strlen(a)) || rename(tmp, local)) {
+    free(a);
+    unlink(tmp);
+    http_send_error(req, 500, "config.ini: %s", strerror(errno));
+    return;
+  }
+  free(a);
+  http_send_ok(req);
+}
+
+/* Rest Mode keeps NeoHEN; a restart or a power off does not: the console
+ * comes back as stock and the exploit has to be run again. */
 static void
 api_sys_power(http_req_t *req) {
   jval_t *b = api_body(req);
@@ -209,10 +355,16 @@ api_sys_power(http_req_t *req) {
   }
   snprintf(action, sizeof(action), "%s", json_get_str(b, "action", ""));
   json_free(b);
+  if(strcmp(action, "rest") && strcmp(action, "reboot") && strcmp(action, "poweroff")) {
+    http_send_error(req, 400, "unknown power action");
+    return;
+  }
   /* reply first: the console goes away right after */
   http_send_ok(req);
+  usleep(300 * 1000);
   if(plat_power(action)) {
     LOG_ERR("power %s: %s", action, plat_error());
+    plat_notify("NeoWEB: %s", plat_error());
   }
 }
 
@@ -360,6 +512,8 @@ static const api_route_t g_routes[] = {
 #ifdef NEOWEB_FULL
   {"POST", "/api/sys/kill",         api_sys_kill},
   {"POST", "/api/sys/power",        api_sys_power},
+  {"GET",  "/api/sys/fan",          api_sys_fan_get},
+  {"POST", "/api/sys/fan",          api_sys_fan_set},
   {"POST", "/api/sys/browser",      api_sys_browser},
   {"POST", "/api/sys/menu",         api_sys_menu},
 
