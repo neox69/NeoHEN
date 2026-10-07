@@ -3,6 +3,8 @@
 #include "neo_actions.hpp"
 
 #include "hooked_funcs.hpp"
+#include "ipc.hpp"
+#include "shellui_payload_state.hpp"
 #include "shellui_state.hpp"
 #include "shellui_types.hpp"
 #include "toolbox_i18n.hpp"
@@ -30,6 +32,7 @@ constexpr const char *kSmpElf = ONION_USER_DATA_DIR "/payloads/shadowmountplus.e
  * /user/data, a USB drive may be /usb0), so each place is tried both ways. */
 constexpr const char *kSmpLogs[] = {"/user/data/shadowmount/debug.log",
                                     "/data/shadowmount/debug.log"};
+constexpr long kSmpLogMax = 8L << 20;
 constexpr const char *kUsbRoots[] = {"/mnt/usb0", "/usb0"};
 constexpr const char *kSavesFolder = "/" ONION_BRAND_NAME "/saves";
 constexpr const char *kLocalSaves = ONION_USER_DATA_DIR "/saves";
@@ -359,6 +362,22 @@ void action_save_restore(const std::string &tid) {
   notify("notify.neo.restore_ok", tid.c_str(), files, from.c_str());
 }
 
+/* util keeps a payload it believes is running, so the old ShadowMount+ is
+ * stopped first; then the usual loader thread starts the new one. */
+void *smp_relaunch_thread(void *arg) {
+  PayloadEntry *entry = static_cast<PayloadEntry *>(arg);
+  char pid_path[256];
+  const int pid = static_cast<int>(shellui_payload_resolve_recorded_pid(
+      entry->tid.c_str(), pid_path, sizeof(pid_path)));
+  if (pid > 1) {
+    LOG_INFO("relaunch: stopping ShadowMount+ pid %d", pid);
+    IPC_Client::getInstance(false).ForceKillPID(pid);
+    unlink(pid_path);
+    sleep(1);
+  }
+  return load_payload_thread(entry);
+}
+
 struct Job {
   std::string uri;
   std::string tid;
@@ -411,8 +430,7 @@ void neo_smp_relaunch() {
   entry->id = identity;
   entry->name = "shadowmountplus.elf";
   pthread_t thread;
-  /* A new instance asks the old one to exit, so this replaces it. */
-  if (pthread_create(&thread, nullptr, load_payload_thread, entry) == 0) {
+  if (pthread_create(&thread, nullptr, smp_relaunch_thread, entry) == 0) {
     pthread_detach(thread);
   } else {
     delete entry;
@@ -428,8 +446,10 @@ std::string neo_smp_status() {
       break;
   if (f) {
     if (fseek(f, 0, SEEK_END) == 0) {
+      /* The "hooks installed" line is written once, at start, so the whole
+       * log is read (ShadowMount+ rotates it well below this cap). */
       const long size = ftell(f);
-      const long start = size > 131072 ? size - 131072 : 0;
+      const long start = size > kSmpLogMax ? size - kSmpLogMax : 0;
       if (fseek(f, start, SEEK_SET) == 0) {
         tail.resize(static_cast<size_t>(size - start));
         tail.resize(fread(tail.data(), 1, tail.size(), f));

@@ -26,7 +26,8 @@ constexpr const char *kLogPath = "/data/shadowmount/debug.log";
 constexpr const char *kElfPath = ONION_DATA_DIR "/payloads/shadowmountplus.elf";
 constexpr const char *kAutoStart =
     ONION_DATA_DIR "/payloads/shadowmountplus.elf.auto_start";
-constexpr long kTailBytes = 128 * 1024;
+/* The "hooks installed" line is written once, at start: read all of it. */
+constexpr long kTailBytes = 8L * 1024 * 1024;
 constexpr int kFirstCheckSeconds = 120;  // let autostart finish first
 constexpr int kResumeCheckSeconds = 60;  // ShadowMount+ resumes on WORKING
 constexpr int kRelaunchMinGapSeconds = 600;
