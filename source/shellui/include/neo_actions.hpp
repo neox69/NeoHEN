@@ -40,3 +40,6 @@ const std::vector<std::string> &neo_themes_refresh();
 std::string neo_theme_active();
 /** index -1 = stock look; otherwise an index into the refreshed list. */
 void neo_theme_set(int index);
+/** Starts the thread that reloads the home screen when the theme service
+ * reports a change, so the new background and music show at once. */
+void neo_theme_watch_start();

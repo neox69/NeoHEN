@@ -480,6 +480,43 @@ void neo_theme_set(int index) {
   notify("notify.neo.theme_wait");
 }
 
+namespace {
+/* neotheme.elf rewrites themes/state.txt each time it has put a theme (or the
+ * stock look) in place. The menu only reads backgrounds and music when it
+ * needs them, so it is told to reload its home screen. */
+void *theme_watch_thread(void *) {
+  const std::string path = std::string(kThemesDir) + "/state.txt";
+  struct stat last {};
+  bool have = stat(path.c_str(), &last) == 0;
+  for (;;) {
+    sleep(2);
+    struct stat now {};
+    if (stat(path.c_str(), &now) != 0)
+      continue;
+    if (have && now.st_mtime == last.st_mtime && now.st_size == last.st_size)
+      continue;
+    const bool first = !have;
+    have = true;
+    last = now;
+    if (first)
+      continue;
+    LOG_INFO("theme changed: reloading the home screen");
+    shellui_request_home_reload();
+  }
+  return nullptr;
+}
+} // namespace
+
+void neo_theme_watch_start() {
+  static bool started = false;
+  if (started)
+    return;
+  started = true;
+  pthread_t thread;
+  if (pthread_create(&thread, nullptr, theme_watch_thread, nullptr) == 0)
+    pthread_detach(thread);
+}
+
 void neo_smp_relaunch() {
   char identity[ONION_PAYLOAD_IDENTITY_SIZE];
   char canonical[ONION_PAYLOAD_PATH_SIZE];
