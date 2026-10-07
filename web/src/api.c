@@ -344,6 +344,16 @@ api_sys_fan_set(http_req_t *req) {
   http_send_ok(req);
 }
 
+static void
+api_sys_eject(http_req_t *req) {
+  http_drain_body(req);
+  if(plat_eject_disc()) {
+    http_send_error(req, 500, "%s", plat_error());
+    return;
+  }
+  http_send_ok(req);
+}
+
 /* Rest Mode keeps NeoHEN; a restart or a power off does not: the console
  * comes back as stock and the exploit has to be run again. */
 static void
@@ -512,6 +522,7 @@ static const api_route_t g_routes[] = {
 #ifdef NEOWEB_FULL
   {"POST", "/api/sys/kill",         api_sys_kill},
   {"POST", "/api/sys/power",        api_sys_power},
+  {"POST", "/api/sys/eject",        api_sys_eject},
   {"GET",  "/api/sys/fan",          api_sys_fan_get},
   {"POST", "/api/sys/fan",          api_sys_fan_set},
   {"POST", "/api/sys/browser",      api_sys_browser},

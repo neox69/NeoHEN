@@ -10,6 +10,7 @@
 #include <unistd.h>
 
 #include "api.h"
+#include <strings.h>
 #include "fsutil.h"
 #include "log.h"
 #include "plat.h"
@@ -536,6 +537,24 @@ api_apps_install_pkg(http_req_t *req) {
   if(!*url) {
     json_free(b);
     http_send_error(req, 400, "missing url");
+    return;
+  }
+  /* a web address, or a .pkg that is on the console or on a USB drive */
+  if(url[0] == '/') {
+    char local[PATH_MAX];
+    struct stat st;
+    size_t n = strlen(url);
+
+    plat_path(url, local, sizeof(local));
+    if(strstr(url, "..") || n < 5 || strcasecmp(url + n - 4, ".pkg") || stat(local, &st) ||
+       !S_ISREG(st.st_mode)) {
+      json_free(b);
+      http_send_error(req, 404, "there is no .pkg file at that path");
+      return;
+    }
+  } else if(strncmp(url, "http://", 7) && strncmp(url, "https://", 8)) {
+    json_free(b);
+    http_send_error(req, 400, "a path on the console or an http(s) address");
     return;
   }
   int r = plat_app_install_pkg(url, json_get_str(b, "name", ""),
