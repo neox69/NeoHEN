@@ -141,9 +141,28 @@ class PayloadTest(unittest.TestCase):
         with open(f"{r}/mnt/sandbox/pfsmnt/PPSA01234-app0/data/big.bin", "wb") as f:
             f.write(os.urandom(3 * 1024 * 1024 + 17))
 
+        # two users with saves, and a "USB drive"
+        for user, name in (("1d31cd9c", b"NeoX ESP"), ("1d31cda3", b"TaToR")):
+            os.makedirs(f"{r}/user/home/{user}")
+            with open(f"{r}/user/home/{user}/username.dat", "wb") as f:
+                f.write(name + b"\0" * (17 - len(name)))
+        cls.save = f"{r}/user/home/1d31cd9c/savedata_prospero/PPSA01234"
+        os.makedirs(cls.save)
+        os.makedirs(f"{r}/user/home/1d31cd9c/savedata_prospero_meta/user/PPSA01234")
+        os.makedirs(f"{r}/user/home/1d31cd9c/savedata_prospero/sce_backup")
+        os.makedirs(f"{r}/user/home/1d31cda3/savedata/CUSA00001")
+        with open(f"{cls.save}/sdimg_SAVEDATA0", "wb") as f:
+            f.write(os.urandom(200 * 1024 + 3))
+        with open(f"{r}/user/home/1d31cd9c/savedata_prospero_meta/user/PPSA01234/s_icon0.png", "wb") as f:
+            f.write(b"PNG!" * 100)
+        with open(f"{r}/user/home/1d31cda3/savedata/CUSA00001/sdimg_SAVEDATA", "wb") as f:
+            f.write(os.urandom(5000))
+        os.makedirs(f"{r}/mnt/usb0")
+
         cls.port = free_port()
         cls.ctl_port = free_port()
-        env = dict(os.environ, PS5AIO_ROOT=cls.root, NEOWEB_CTL_PORT=str(cls.ctl_port))
+        env = dict(os.environ, PS5AIO_ROOT=cls.root, NEOWEB_CTL_PORT=str(cls.ctl_port),
+                   NEOWEB_TEST_USB="1")
         cls.proc = subprocess.Popen([BIN, str(cls.port)], env=env,
                                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         cls.api = Api(f"http://127.0.0.1:{cls.port}")
@@ -276,6 +295,69 @@ class PayloadTest(unittest.TestCase):
         st, body, _ = self.api.req("PUT", "/fs/put?path=/data/t/h.bin&offset=%d" % (len(payload) + 10),
                                    raw=b"x")
         self.assertEqual(st, 409, body)
+
+    def test_saves(self):
+        import io
+        import zipfile
+        _, j = self.api.get("/api/saves/list")
+        users = {u["id"]: u for u in j["users"]}
+        self.assertEqual(users["1d31cd9c"]["name"], "NeoX_ESP")
+        self.assertEqual([(s["titleId"], s["kind"], s["files"]) for s in users["1d31cd9c"]["saves"]],
+                         [("PPSA01234", "ps5", 2)])
+        self.assertEqual(users["1d31cda3"]["saves"][0]["kind"], "ps4")
+        self.assertEqual(sorted(p["id"] for p in j["places"]), ["console", "usb0"])
+
+        # to the PC: a ZIP grouped by user
+        st, body, _ = self.api.req("GET", "/api/saves/zip")
+        self.assertEqual(st, 200)
+        z = zipfile.ZipFile(io.BytesIO(body))
+        self.assertIsNone(z.testzip())
+        names = sorted(z.namelist())
+        self.assertIn("NeoX_ESP (1d31cd9c)/PPSA01234/savedata_prospero/sdimg_SAVEDATA0", names)
+        self.assertIn("NeoX_ESP (1d31cd9c)/PPSA01234/savedata_prospero_meta/s_icon0.png", names)
+        self.assertIn("NeoX_ESP (1d31cd9c)/PPSA01234/info.json", names)
+        self.assertIn("TaToR (1d31cda3)/CUSA00001/savedata/sdimg_SAVEDATA", names)
+        with open(f"{self.save}/sdimg_SAVEDATA0", "rb") as f:
+            original = f.read()
+        self.assertEqual(z.read("NeoX_ESP (1d31cd9c)/PPSA01234/savedata_prospero/sdimg_SAVEDATA0"), original)
+        st, body, _ = self.api.req("GET", "/api/saves/zip?items=1d31cda3:ps4:CUSA00001")
+        self.assertEqual(len(zipfile.ZipFile(io.BytesIO(body)).namelist()), 2)
+        st, body, _ = self.api.req("GET", "/api/saves/zip?items=../x:ps4:CUSA00001")
+        self.assertEqual(st, 400, body)
+
+        # to the USB drive
+        st, body, _ = self.api.req("POST", "/api/saves/backup", body={"dest": "usb3"})
+        self.assertEqual(st, 404, body)
+        _, j = self.api.post("/api/saves/backup", {"dest": "usb0", "user": "1d31cd9c"})
+        job = self.api.wait_job(j["job"])
+        self.assertEqual(job["state"], "done", job)
+        kept = f"{self.root}/mnt/usb0/NeoHEN/saves/users/NeoX_ESP (1d31cd9c)/PPSA01234/{j['stamp']}"
+        with open(f"{kept}/savedata_prospero/sdimg_SAVEDATA0", "rb") as f:
+            self.assertEqual(f.read(), original)
+        self.assertTrue(os.path.exists(f"{kept}/savedata_prospero_meta/s_icon0.png"))
+        self.assertTrue(os.path.exists(f"{kept}/info.json"))
+        self.assertFalse(os.path.exists(f"{self.root}/mnt/usb0/NeoHEN/saves/users/TaToR (1d31cda3)"))
+        _, b = self.api.get("/api/saves/backups")
+        self.assertEqual([(x["dest"], x["user"], x["titleId"], x["stamp"], x["kind"]) for x in b["backups"]],
+                         [("usb0", "1d31cd9c", "PPSA01234", j["stamp"], "ps5")])
+
+        # and back: the save that was there is kept first
+        with open(f"{self.save}/sdimg_SAVEDATA0", "wb") as f:
+            f.write(b"played on")
+        _, r = self.api.post("/api/saves/restore", {"dest": "usb0", "folder": "NeoX_ESP (1d31cd9c)",
+                                                    "titleId": "PPSA01234", "stamp": j["stamp"]})
+        job = self.api.wait_job(r["job"])
+        self.assertEqual(job["state"], "done", job)
+        with open(f"{self.save}/sdimg_SAVEDATA0", "rb") as f:
+            self.assertEqual(f.read(), original)
+        _, b = self.api.get("/api/saves/backups")
+        pre = [x["stamp"] for x in b["backups"] if x["stamp"].endswith("-pre")]
+        self.assertEqual(len(pre), 1)
+        with open(f"{os.path.dirname(kept)}/{pre[0]}/savedata_prospero/sdimg_SAVEDATA0", "rb") as f:
+            self.assertEqual(f.read(), b"played on")
+        st, body, _ = self.api.req("POST", "/api/saves/restore", body={
+            "dest": "usb0", "folder": "../x (1d31cd9c)", "titleId": "PPSA01234", "stamp": j["stamp"]})
+        self.assertEqual(st, 400, body)
 
     def test_menu_restart(self):
         import threading

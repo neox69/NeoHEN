@@ -363,6 +363,12 @@ static const api_route_t g_routes[] = {
   {"POST", "/api/sys/browser",      api_sys_browser},
   {"POST", "/api/sys/menu",         api_sys_menu},
 
+  {"GET",  "/api/saves/list",       api_saves_list},
+  {"POST", "/api/saves/backup",     api_saves_backup},
+  {"GET",  "/api/saves/zip",        api_saves_zip},
+  {"GET",  "/api/saves/backups",    api_saves_backups},
+  {"POST", "/api/saves/restore",    api_saves_restore},
+
   {"GET",  "/api/jobs",             api_jobs_list},
   {"POST", "/api/jobs/cancel",      api_jobs_cancel},
   {"POST", "/api/jobs/clear",       api_jobs_clear},
