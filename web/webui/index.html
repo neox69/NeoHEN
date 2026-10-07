@@ -268,6 +268,28 @@ table.t tr:hover td.a .btn,table.t td.a .btn:focus{opacity:1}
 .log div{white-space:pre-wrap;word-break:break-word}
 .log .warn{color:var(--warn)} .log .error{color:var(--bad)} .log time{color:var(--faint);margin-right:10px}
 
+/* ------------------------------------------------------------ themes */
+.tgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:16px}
+.theme{overflow:hidden;display:flex;flex-direction:column;transition:border-color .2s,box-shadow .2s,transform .2s}
+.theme:hover{transform:translateY(-3px);border-color:var(--line2)}
+.theme.on{border-color:var(--ok);box-shadow:0 0 0 1px var(--ok),0 16px 40px -18px rgba(52,211,153,.6)}
+.theme .pv{aspect-ratio:16/9;background:#05080F center/cover;position:relative;display:grid;place-items:center;color:var(--faint)}
+.theme .pv svg{width:40px;height:40px}
+.theme .pv .tag{left:10px;top:10px}
+.theme .bd{padding:14px 16px;display:flex;flex-direction:column;gap:10px;flex:1}
+.theme .bd b{font-size:16px;font-weight:720;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.theme .bd small{font:500 11.5px var(--mono);color:var(--faint)}
+.theme .bd .acts{display:flex;gap:8px;margin-top:auto}
+.maker{display:grid;grid-template-columns:minmax(260px,420px) 1fr;gap:20px;align-items:start}
+.maker canvas,.maker .ph{width:100%;aspect-ratio:16/9;border-radius:12px;border:1px solid var(--line2);background:#05080F;display:block}
+.maker .ph{display:grid;place-items:center;color:var(--faint);text-align:center;padding:16px;cursor:pointer;border-style:dashed}
+.maker .f{display:flex;flex-direction:column;gap:12px}
+.maker label{font:700 10.5px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--dim);display:block;margin-bottom:6px}
+.maker .in{width:100%}
+.maker .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.maker p{margin:0;color:var(--dim);font-size:13px}
+@media (max-width:760px){.maker{grid-template-columns:1fr}}
+
 /* ------------------------------------------------------------ overlays */
 .toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,30px);opacity:0;pointer-events:none;transition:.25s;z-index:80;
   padding:11px 18px;border-radius:13px;background:rgba(15,21,37,.97);border:1px solid var(--line2);font-weight:620;max-width:92vw;box-shadow:0 20px 50px -20px #000}
@@ -331,6 +353,7 @@ dialog textarea{width:100%;height:min(60vh,560px);resize:vertical;font:500 12.5p
       <section id="v-library" hidden></section>
       <section id="v-files" hidden></section>
       <section id="v-payloads" hidden></section>
+      <section id="v-themes" hidden></section>
       <section id="v-transfers" hidden></section>
       <section id="v-procs" hidden></section>
       <section id="v-system" hidden></section>
@@ -344,6 +367,8 @@ dialog textarea{width:100%;height:min(60vh,560px);resize:vertical;font:500 12.5p
 <input type="file" id="pick-f" multiple hidden>
 <input type="file" id="pick-d" webkitdirectory multiple hidden>
 <input type="file" id="pick-p" accept=".elf,.bin" multiple hidden>
+<input type="file" id="pick-ti" accept="image/*" hidden>
+<input type="file" id="pick-tm" accept=".at9" hidden>
 <div class="toast" id="toast" role="status"></div>
 <dialog id="dlg"><h4 id="dh"></h4><p id="dp"></p><input class="in" id="di" hidden>
   <div class="row"><button class="btn" id="dno"></button><button class="btn pri" id="dyes"></button></div></dialog>
@@ -390,7 +415,8 @@ var P={
  clock:"M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 7v5l3 2",
  chip:"M8 8h8v8H8zM4 10h2M4 14h2M18 10h2M18 14h2M10 4v2M14 4v2M10 18v2M14 18v2",
  dots:"M5 12h.01M12 12h.01M19 12h.01",
- scale:"M4 20h16M6 20V10M12 20V4M18 20v-7"
+ scale:"M4 20h16M6 20V10M12 20V4M18 20v-7",
+ themes:"M12 3a9 9 0 1 0 0 18c1.2 0 2-.9 2-2 0-1.3 1-2 2.2-2H18a3 3 0 0 0 3-3c0-5-4-9-9-9zM7.5 12h.01M9.5 8h.01M14.5 8h.01"
 };
 function ic(n,cls){return '<svg class="i'+(cls?" "+cls:"")+'" viewBox="0 0 24 24"><path d="'+P[n]+'"/></svg>'}
 
@@ -434,6 +460,7 @@ var VIEWS=[
  ["library",L("Biblioteca","Library"),L("Juegos y aplicaciones instalados","Installed games and apps")],
  ["files",L("Ficheros","Files"),L("Explora, sube, descarga y edita","Browse, upload, download and edit"),1],
  ["payloads","Payloads",L("Lo que NeoHEN arranca y lo que puedes lanzar","What NeoHEN starts and what you can launch")],
+ ["themes",L("Temas","Themes"),L("Fondo y música del menú de la PS5","Background and music of the PS5 menu"),1],
  ["transfers",L("Transferencias","Transfers"),L("Subidas y tareas de la consola","Uploads and console jobs"),1],
  ["procs",L("Procesos","Processes"),L("Lo que está en ejecución ahora","What is running right now"),1],
  ["system",L("Sistema","System"),L("Información, almacenamiento y registro","Information, storage and log")]];
@@ -457,7 +484,7 @@ function show(v,push){
   $("vt").textContent=def[1];$("vs").textContent=def[2];
   if(push)history.replaceState(null,"","#"+v);
   $("side").className="side";paintNav();render();$("view").scrollTop=0;
-  if(v==="files")loadDir(S.cwd);if(v==="procs")loadProcs();if(v==="system")loadLog();if(v==="transfers")loadJobs();if(v==="payloads")loadPay();
+  if(v==="files")loadDir(S.cwd);if(v==="procs")loadProcs();if(v==="system")loadLog();if(v==="transfers")loadJobs();if(v==="payloads")loadPay();if(v==="themes")loadThemes();
 }
 $("nav").onclick=function(e){var b=e.target.closest("button[data-v]");if(b)show(b.getAttribute("data-v"),true)};
 window.addEventListener("hashchange",function(){var h=location.hash.slice(1);if(h!==S.view)show(h)});
@@ -465,7 +492,7 @@ $("burger").innerHTML=ic("menu");$("reload").innerHTML=ic("refresh");
 $("burger").onclick=function(){$("side").className="side open"};
 $("view").addEventListener("click",function(){$("side").className="side"});
 $("reload").onclick=function(){fast();slow();show(S.view);toast(L("Actualizado","Refreshed"))};
-function render(){({panel:paintPanel,library:paintLib,files:paintFiles,payloads:paintPay,transfers:paintTr,procs:paintProcs,system:paintSys})[S.view]()}
+function render(){({panel:paintPanel,library:paintLib,files:paintFiles,payloads:paintPay,themes:paintThemes,transfers:paintTr,procs:paintProcs,system:paintSys})[S.view]()}
 
 /* ------------------------------------------------------------ dashboard */
 function tcol(v){return v>=88?"var(--bad)":v>=78?"var(--warn)":"var(--ok)"}
@@ -833,6 +860,141 @@ function upPay(files){
   })();
 }
 $("pick-p").onchange=function(){upPay(this.files);this.value=""};
+
+/* ------------------------------------------------------------ themes */
+var TDIR="/data/neohen/themes";
+/* The 128 bytes that start a 3840x2160 DXT1 file, as the console's own are. */
+var DDS_HEAD="RERTIHwAAAAHEAoAcAgAAAAPAAAASD8AAQAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAAAAEAAAARFhUMQAAAAAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAA=";
+/* Every background of the menu; a theme made here uses one image for all. */
+var BGS=["bg_hub_default","Library_BG_blue_Low_Angle_001","bg_NPXS40037","bg_NPXS40047","bg_NPXS40053","bg_NPXS40054","bg_NPXS40056","bg_NPXS40063",
+  "bg_NPXS40071","bg_NPXS40075","bg_NPXS40080","bg_NPXS40110","bg_NPXS40139","bg_NPXS40144","bg_NPXS40154"];
+S.themes=[];S.tactive="";S.tstate="";S.tservice=true;S.tmk={name:"",img:null,at9:null,busy:"",pct:0};
+function text(p){return api("/api/fs/text?path="+enc(p)).then(function(j){return j.content||""},function(){return ""})}
+function loadThemes(){
+  if(!S.full)return Promise.resolve();
+  return Promise.all([api("/api/fs/walk?path="+enc(TDIR)+"&max=4000").catch(function(){return{entries:[]}}),text(TDIR+"/active.txt"),text(TDIR+"/state.txt")]).then(function(x){
+    var by={};(x[0].entries||[]).forEach(function(e){var i=e.path.indexOf("/"),n=i<0?e.path:e.path.slice(0,i);
+      if(i<0){if(e.type==="dir"&&n[0]!==".")by[n]=by[n]||{name:n,files:[],size:0}}
+      else if(n[0]!=="."){(by[n]=by[n]||{name:n,files:[],size:0}).files.push(e.path.slice(i+1));by[n].size+=e.size||0}});
+    S.themes=Object.keys(by).sort().map(function(k){return by[k]});
+    S.tactive=x[1].trim();var st=x[2].split("\n");S.tstate=(st[1]||"").trim();S.tshown=(st[0]||"").trim();
+    S.tservice=S.pay.some(function(p){return p.name==="neotheme.elf"&&p.running});
+    if(S.view==="themes"&&!S.tmk.busy)paintThemes()});
+}
+function paintThemes(){
+  var mk=S.tmk;
+  function card(t){
+    var on=t?S.tactive===t.name:!S.tactive,n=t?esc(t.name):"";
+    var bg=t?t.files.filter(function(f){return /\.dds\.zst$/.test(f)}).length:0,mu=t&&t.files.indexOf("bgm_home.at9")>=0,pv=t&&t.files.indexOf("preview.jpg")>=0;
+    return '<div class="card theme'+(on?" on":"")+'"><div class="pv" style="'+(pv?"background-image:url(/fs/get?path="+enc(TDIR+"/"+t.name+"/preview.jpg")+")":"")+'">'+
+      (pv?"":ic(t?"themes":"game"))+(on?'<div class="tag">'+(S.tstate==="pending"?L("PENDIENTE","PENDING"):L("ACTIVO","ACTIVE"))+'</div>':"")+'</div>'+
+      '<div class="bd"><b>'+(t?n:L("Aspecto de fábrica","Stock look"))+'</b><small>'+(t?(bg?bg+" "+L("fondos","backgrounds"):L("sin fondos","no backgrounds"))+" · "+(mu?L("con música","with music"):L("música original","stock music"))+" · "+size(t.size)
+        :L("Los fondos y la música originales de la consola","The console's own backgrounds and music"))+'</small>'+
+      '<div class="acts">'+(on?'<span class="chip ok">'+L("En uso","In use")+'</span>':'<button class="btn pri sm" data-on="'+n+'">'+L("Aplicar","Apply")+'</button>')+
+      (t&&!on?'<button class="btn sm danger" data-del="'+n+'">'+L("Borrar","Delete")+'</button>':"")+'</div></div></div>'}
+  $("v-themes").innerHTML=
+    (S.tservice?"":'<div class="note">'+L("El servicio de temas (neotheme.elf) no está en marcha: arráncalo en Payloads para que los temas se apliquen.","The theme service (neotheme.elf) is not running: start it in Payloads so themes are applied.")+'</div>')+
+    '<div class="note" style="border-color:rgba(77,163,255,.4);background:rgba(77,163,255,.08);color:#CFE4FF">'+
+    L("Un tema no modifica la consola: se muestra encima de sus ficheros mientras NeoHEN está cargado. Al reiniciar la PS5 vuelve siempre el aspecto de fábrica. El cambio se ve al salir de un juego o al moverte por el menú.",
+      "A theme does not modify the console: it is shown on top of its files while NeoHEN is loaded. Restarting the PS5 always brings the stock look back. The change shows when you leave a game or move around the menu.")+'</div>'+
+    '<div class="tgrid">'+card(null)+S.themes.map(card).join("")+'</div>'+
+    '<h3 class="h" style="margin-top:28px">'+L("Crear un tema","Make a theme")+'</h3><div class="card pad maker">'+
+    '<div>'+(mk.img?'<canvas id="tm-cv" width="640" height="360"></canvas>':'<div class="ph" id="tm-ph">'+ic("upload")+'<div>'+L("Elige una imagen para el fondo<br><small>Se recorta a 16:9 y se convierte a 4K</small>","Choose an image for the background<br><small>It is cropped to 16:9 and converted to 4K</small>")+'</div></div>')+'</div>'+
+    '<div class="f"><div><label>'+L("Nombre","Name")+'</label><input class="in" id="tm-n" maxlength="40" placeholder="'+L("Mi tema","My theme")+'" value="'+esc(mk.name)+'"></div>'+
+    '<div><label>'+L("Fondo","Background")+'</label><div class="row"><button class="btn" id="tm-i">'+ic("upload")+(mk.img?L("Cambiar imagen","Change image"):L("Elegir imagen","Choose image"))+'</button><p>'+(mk.img?esc(mk.imgName):"JPG, PNG, WebP…")+'</p></div></div>'+
+    '<div><label>'+L("Música del menú (opcional)","Menu music (optional)")+'</label><div class="row"><button class="btn" id="tm-m">'+ic("upload")+(mk.at9?L("Cambiar .at9","Change .at9"):L("Elegir .at9","Choose .at9"))+'</button>'+
+      (mk.at9?'<button class="btn ghost sm" id="tm-mx">'+L("Quitar","Remove")+'</button>':"")+'<p>'+(mk.at9?esc(mk.at9.name)+" · "+size(mk.at9.size):L("Solo ATRAC9 (.at9), 48 kHz. Sin fichero se queda la original.","ATRAC9 (.at9) only, 48 kHz. Without a file the stock one stays."))+'</p></div></div>'+
+    (mk.busy?'<div><p>'+esc(mk.busy)+'</p><div class="prog" style="margin-top:8px"><i style="width:'+mk.pct+'%"></i></div></div>'
+      :'<div class="row"><button class="btn pri" id="tm-go"'+(mk.img||mk.at9?"":" disabled")+'>'+ic("themes")+L("Crear tema","Make theme")+'</button></div>')+'</div></div>';
+  if(mk.img)$("tm-cv").getContext("2d").drawImage(mk.img,0,0,640,360);
+  var pickI=function(){if(!mk.busy)$("pick-ti").click()};
+  if($("tm-ph"))$("tm-ph").onclick=pickI;
+  $("tm-i").onclick=pickI;$("tm-m").onclick=function(){if(!mk.busy)$("pick-tm").click()};
+  if($("tm-mx"))$("tm-mx").onclick=function(){mk.at9=null;paintThemes()};
+  $("tm-n").oninput=function(){mk.name=this.value};
+  if($("tm-go"))$("tm-go").onclick=makeTheme;
+}
+$("v-themes").addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;var n;
+  if((n=b.getAttribute("data-on"))!=null)setTheme(n);
+  else if((n=b.getAttribute("data-del")))ask(L("Borrar el tema ","Delete the theme ")+n,L("Se eliminan sus ficheros de la consola.","Its files are removed from the console."),L("Borrar","Delete"),true).then(function(ok){
+    if(ok)api("/api/fs/delete",{path:TDIR+"/"+n}).then(loadThemes).catch(fail)})});
+function setTheme(n){
+  toast(n?L("Aplicando ","Applying ")+n+"…":L("Volviendo al aspecto de fábrica…","Going back to the stock look…"));
+  return api("/api/fs/text",{path:TDIR+"/active.txt",content:n?n+"\n":""}).then(function(){
+    var tries=0;(function chk(){loadThemes().then(function(){
+      if(S.tshown===n&&S.tstate==="ok")toast(n?L("Tema aplicado. Se ve al salir de un juego o moverte por el menú.","Theme applied. It shows when you leave a game or move around the menu."):L("Aspecto de fábrica","Stock look"));
+      else if(++tries<8)setTimeout(chk,1500);
+      else toast(L("Se aplicará en cuanto el menú suelte la música que está sonando.","It will be applied as soon as the menu lets go of the music that is playing."))})})()}).catch(fail)}
+$("pick-ti").onchange=function(){var f=this.files[0];this.value="";if(!f)return;var img=new Image();
+  img.onload=function(){var c=document.createElement("canvas");c.width=3840;c.height=2160;var g=c.getContext("2d"),r=Math.max(3840/img.width,2160/img.height),w=img.width*r,h=img.height*r;
+    g.imageSmoothingQuality="high";g.drawImage(img,(3840-w)/2,(2160-h)/2,w,h);S.tmk.img=c;S.tmk.imgName=f.name;
+    if(!S.tmk.name)S.tmk.name=f.name.replace(/\.[^.]+$/,"").replace(/[^A-Za-z0-9 ._-]/g," ").trim().slice(0,40);paintThemes()};
+  img.onerror=function(){toast(L("No se puede abrir esa imagen","That image cannot be opened"),true)};img.src=URL.createObjectURL(f)};
+$("pick-tm").onchange=function(){var f=this.files[0];this.value="";if(!f)return;
+  f.slice(0,12).arrayBuffer().then(function(b){var u=new Uint8Array(b),t=String.fromCharCode.apply(null,u);
+    if(t.slice(0,4)!=="RIFF"||t.slice(8,12)!=="WAVE"){toast(L("Ese fichero no es un .at9 válido","That file is not a valid .at9"),true);return}
+    S.tmk.at9=f;paintThemes()})};
+/* RGBA 3840x2160 -> DXT1, in slices so the page keeps answering. */
+function dxt1(px,W,H,step){return new Promise(function(done){
+  var out=new Uint8Array(W*H/2),o=0,by=0,BH=H/4;
+  function to565(r,g,b){return (r>>3)<<11|(g>>2)<<5|(b>>3)}
+  (function slice(){var end=Math.min(BH,by+24);
+    for(;by<end;by++)for(var bx=0;bx<W/4;bx++){
+      var r0=255,g0=255,b0=255,r1=0,g1=0,b1=0,x,y,i;
+      for(y=0;y<4;y++){i=((by*4+y)*W+bx*4)*4;for(x=0;x<4;x++,i+=4){var r=px[i],g=px[i+1],b=px[i+2];
+        if(r<r0)r0=r;if(g<g0)g0=g;if(b<b0)b0=b;if(r>r1)r1=r;if(g>g1)g1=g;if(b>b1)b1=b}}
+      var c0=to565(r1,g1,b1),c1=to565(r0,g0,b0),bits=0;
+      if(c0===c1){out[o]=c0&255;out[o+1]=c0>>8;out[o+2]=c1&255;out[o+3]=c1>>8;out[o+4]=out[o+5]=out[o+6]=out[o+7]=0;o+=8;continue}
+      if(c0<c1){var t=c0;c0=c1;c1=t;t=r0;r0=r1;r1=t;t=g0;g0=g1;g1=t;t=b0;b0=b1;b1=t}
+      /* Each pixel goes to the nearest of the four colours on the line from
+       * c1 (d = 0) to c0 (d = 1): codes 0 = c0, 1 = c1, 2 = 2/3 c0, 3 = 1/3 c0.
+       * One byte of indices per row, two bits per pixel. */
+      var dr=r1-r0,dg=g1-g0,db=b1-b0,len=dr*dr+dg*dg+db*db||1;
+      for(y=0;y<4;y++){i=((by*4+y)*W+bx*4)*4;var row=0;for(x=0;x<4;x++,i+=4){
+        var d=((px[i]-r0)*dr+(px[i+1]-g0)*dg+(px[i+2]-b0)*db)/len;
+        row|=(d>0.8333?0:d>0.5?2:d>0.1667?3:1)<<(x*2)}
+        out[o+4+y]=row}
+      out[o]=c0&255;out[o+1]=c0>>8;out[o+2]=c1&255;out[o+3]=c1>>8;o+=8}
+    step(by/BH);if(by<BH)setTimeout(slice,0);else done(out)})()})}
+/* A zstd frame of raw (uncompressed) blocks: valid for any zstd reader. */
+function zstdRaw(d){var n=Math.ceil(d.length/131072),out=new Uint8Array(9+n*3+d.length),o=0,p=0;
+  out.set([0x28,0xB5,0x2F,0xFD,0xA0,d.length&255,d.length>>8&255,d.length>>16&255,d.length>>>24]);o=9;
+  for(var i=0;i<n;i++){var len=Math.min(131072,d.length-p),h=(len<<3)|(i===n-1?1:0);
+    out[o]=h&255;out[o+1]=h>>8&255;out[o+2]=h>>16&255;o+=3;out.set(d.subarray(p,p+len),o);o+=len;p+=len}
+  return out}
+function putBlob(path,blob,onp){return new Promise(function(res,rej){var x=new XMLHttpRequest();
+  x.open("PUT","/fs/put?path="+enc(path));if(onp)x.upload.onprogress=function(e){if(e.lengthComputable)onp(e.loaded/e.total)};
+  x.onload=function(){var j={};try{j=JSON.parse(x.responseText)}catch(_){}
+    if(x.status===200&&j.ok!==false)res();else rej(new Error(j.error||("HTTP "+x.status)))};
+  x.onerror=function(){rej(new Error(L("Sin conexión","Connection lost")))};x.send(blob)})}
+function jobDone(id){return new Promise(function(res,rej){watchJob(id,function(j){j.state==="done"?res():rej(new Error(j.error||j.state))})})}
+function makeTheme(){
+  var mk=S.tmk,name=(mk.name||"").replace(/[^A-Za-z0-9 ._()-]/g," ").replace(/\s+/g," ").trim().replace(/^\.+/,"");
+  if(!name){toast(L("Ponle un nombre al tema","Give the theme a name"),true);return}
+  if(S.themes.some(function(t){return t.name===name})){toast(L("Ya hay un tema con ese nombre","There is already a theme with that name"),true);return}
+  var dir=TDIR+"/"+name;
+  function st(msg,p){mk.busy=msg;mk.pct=Math.round(p*100);paintThemes()}
+  var chain=api("/api/fs/mkdir",{path:dir});
+  if(mk.img){
+    chain=chain.then(function(){st(L("Convirtiendo la imagen a 4K…","Converting the image to 4K…"),0);return wait(30)})
+    .then(function(){var px=mk.img.getContext("2d").getImageData(0,0,3840,2160).data,last=0;
+      return dxt1(px,3840,2160,function(p){if(p-last>.04){last=p;st(L("Convirtiendo la imagen a 4K…","Converting the image to 4K…"),p*.4)}})})
+    .then(function(body){var head=Uint8Array.from(atob(DDS_HEAD),function(c){return c.charCodeAt(0)}),dds=new Uint8Array(128+body.length);
+      dds.set(head);dds.set(body,128);var z=zstdRaw(dds);
+      return putBlob(dir+"/"+BGS[0]+".dds.zst",new Blob([z]),function(p){st(L("Enviando el fondo a la consola…","Sending the background to the console…"),.4+p*.25)})})
+    .then(function(){var i=1;return (function next(){
+      if(i>=BGS.length)return;
+      st(L("Preparando los fondos en la consola…","Preparing the backgrounds on the console…")+" "+i+"/"+(BGS.length-1),.65+i/BGS.length*.25);
+      return api("/api/fs/copy",{from:dir+"/"+BGS[0]+".dds.zst",to:dir+"/"+BGS[i++]+".dds.zst"}).then(function(j){return jobDone(j.job)}).then(next)})()})
+    .then(function(){return new Promise(function(res){var c=document.createElement("canvas");c.width=640;c.height=360;
+      c.getContext("2d").drawImage(mk.img,0,0,640,360);c.toBlob(res,"image/jpeg",.82)})})
+    .then(function(b){return putBlob(dir+"/preview.jpg",b)});
+  }
+  if(mk.at9)chain=chain.then(function(){return putBlob(dir+"/bgm_home.at9",mk.at9,function(p){st(L("Enviando la música…","Sending the music…"),.9+p*.08)})});
+  chain.then(function(){return api("/api/fs/text",{path:dir+"/theme.json",content:JSON.stringify({name:name,created:new Date().toISOString(),by:"NeoWEB"})+"\n"})})
+  .then(function(){S.tmk={name:"",img:null,at9:null,busy:"",pct:0};toast(L("Tema creado: ","Theme made: ")+name);return loadThemes()})
+  .catch(function(e){mk.busy="";fail(e);api("/api/fs/delete",{path:dir}).catch(function(){}).then(loadThemes)});
+}
 
 /* ------------------------------------------------------------ processes */
 function loadProcs(){return api("/api/sys/procs").then(function(j){S.procs=j.procs||[];if(S.view==="procs")paintProcs()}).catch(function(){})}

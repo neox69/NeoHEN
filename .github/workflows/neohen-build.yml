@@ -77,6 +77,8 @@ jobs:
           export PATH="/usr/lib/llvm-18/bin:${PS5_PAYLOAD_SDK}/bin:${PATH}"
           make -C web
           test -f web/neoweb.elf
+          make -C themes
+          test -f themes/neotheme.elf
 
       # What NeoHEN carries inside and installs on first boot: the pinned
       # third-party payloads plus NeoWEB.
@@ -85,6 +87,7 @@ jobs:
           set -euo pipefail
           scripts/release/fetch_payloads.sh "${RUNNER_TEMP}/bundle"
           cp web/neoweb.elf "${RUNNER_TEMP}/bundle/neoweb.elf"
+          cp themes/neotheme.elf "${RUNNER_TEMP}/bundle/neotheme.elf"
           ls -l "${RUNNER_TEMP}/bundle"
 
       - name: Build NeoHEN

@@ -698,6 +698,18 @@ void append_toolbox_payloads_group(ps5ui::Group& g) {
   /* SPRX catalog UI is untested; restore id_sprx -> sprx.xml when it is. */
 }
 
+void append_toolbox_themes_group(ps5ui::Group& g) {
+  const std::string active = neo_theme_active();
+  g.button("id_theme_stock", toolbox_i18n::tr("themes.stock"),
+           toolbox_i18n::tr(active.empty() ? "themes.in_use" : "themes.stock.desc"),
+           std::nullopt, kIconMonitor);
+  const std::vector<std::string>& themes = neo_themes_refresh();
+  for (size_t i = 0; i < themes.size(); ++i)
+    g.button("id_theme_" + std::to_string(i), themes[i],
+             toolbox_i18n::tr(themes[i] == active ? "themes.in_use" : "themes.apply.desc"),
+             std::nullopt, kIconMonitor);
+}
+
 void append_toolbox_game_group(ps5ui::Group& g) {
   g.link("id_cheats", toolbox_i18n::tr("cheats.link"), "cheats.xml",
          toolbox_i18n::tr("cheats.link.sub"), kIconCheats)
@@ -1100,6 +1112,10 @@ void generate_toolbox_xml(std::string& new_xml) {
           "id_group_payloads", toolbox_i18n::tr("group.payloads"),
           [](ps5ui::Group& g) { append_toolbox_payloads_group(g); },
           toolbox_i18n::tr("group.payloads.sub"), kIconPlugins, "id_payloads")
+      .group(
+          "id_group_themes", toolbox_i18n::tr("group.themes"),
+          [](ps5ui::Group& g) { append_toolbox_themes_group(g); },
+          toolbox_i18n::tr("group.themes.sub"), kIconMonitor, "id_theme_stock")
       .group(
           "id_group_game", toolbox_i18n::tr("group.game"),
           [](ps5ui::Group& g) { append_toolbox_game_group(g); },

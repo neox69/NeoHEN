@@ -424,6 +424,62 @@ void neo_saves_restore(int index) {
     return;
   run_job(g_saves_listed[static_cast<size_t>(index)].path, g_saves_tid);
 }
+namespace {
+constexpr const char *kThemesDir = ONION_USER_DATA_DIR "/themes";
+std::vector<std::string> g_themes_listed;
+} // namespace
+
+const std::vector<std::string> &neo_themes_refresh() {
+  g_themes_listed.clear();
+  if (DIR *dir = opendir(kThemesDir)) {
+    while (const dirent *e = readdir(dir)) {
+      /* "." folders are hidden; "_" ones are work in progress */
+      if (e->d_name[0] == '.' || e->d_name[0] == '_')
+        continue;
+      if (is_dir(std::string(kThemesDir) + "/" + e->d_name))
+        g_themes_listed.push_back(e->d_name);
+    }
+    closedir(dir);
+  }
+  std::sort(g_themes_listed.begin(), g_themes_listed.end());
+  if (g_themes_listed.size() > static_cast<size_t>(kNeoThemesListed))
+    g_themes_listed.resize(kNeoThemesListed);
+  return g_themes_listed;
+}
+
+std::string neo_theme_active() {
+  std::string name;
+  if (FILE *f = fopen((std::string(kThemesDir) + "/active.txt").c_str(), "rb")) {
+    char line[160] = {};
+    if (fgets(line, sizeof(line), f))
+      name = line;
+    fclose(f);
+  }
+  while (!name.empty() && (name.back() == '\n' || name.back() == '\r'))
+    name.pop_back();
+  return name;
+}
+
+void neo_theme_set(int index) {
+  std::string name;
+  if (index >= 0) {
+    if (static_cast<size_t>(index) >= g_themes_listed.size())
+      return;
+    name = g_themes_listed[static_cast<size_t>(index)];
+  }
+  mkdirs(kThemesDir);
+  FILE *f = fopen((std::string(kThemesDir) + "/active.txt").c_str(), "wb");
+  if (!f) {
+    notify("notify.neo.failed", name.empty() ? "-" : name.c_str(), strerror(errno));
+    return;
+  }
+  if (!name.empty())
+    fprintf(f, "%s\n", name.c_str());
+  fclose(f);
+  /* neotheme.elf sees the change within seconds and says when it is on. */
+  notify("notify.neo.theme_wait");
+}
+
 void neo_smp_relaunch() {
   char identity[ONION_PAYLOAD_IDENTITY_SIZE];
   char canonical[ONION_PAYLOAD_PATH_SIZE];
