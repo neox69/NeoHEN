@@ -218,6 +218,19 @@ h3.h .sp{flex:1}
 .places button{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:11px;border:1px solid var(--line);background:rgba(132,153,204,.05);font-weight:620;color:var(--dim)}
 .places button:hover{border-color:var(--blue);color:var(--text)}
 .places button small{font:500 11px var(--mono);color:var(--faint)}
+.svbar{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;padding:16px 18px;margin-bottom:16px}
+.svbar label{display:block;font:700 10.5px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--faint);margin-bottom:7px}
+.svbar .sp,.svh .sp{flex:1}
+.svjob{flex-basis:100%}.svjob p{margin:2px 0 8px;color:var(--dim);font-size:13px}
+.svu{margin-bottom:14px;overflow:hidden}
+.svh{display:flex;align-items:center;gap:13px;padding:14px 18px;cursor:pointer}
+.svh:hover{background:rgba(77,163,255,.05)}
+.svh b{display:block;font-size:15.5px}.svh small{font:500 11.5px var(--mono);color:var(--faint)}
+.svh .av{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;font-weight:800;color:#06101F;background:var(--grad)}
+.svh .chev{color:var(--faint);width:14px;text-align:center}
+.svu table.t{border-top:1px solid var(--line)}
+.svi{width:30px;height:30px;border-radius:7px;object-fit:cover;background:rgba(132,153,204,.12);flex:none;display:inline-block}
+table.t td small{font:500 11px var(--mono);color:var(--faint);margin-left:6px}
 table.t{width:100%;border-collapse:collapse}
 table.t th{position:sticky;top:0;text-align:left;font:700 10.5px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--faint);padding:11px 14px;border-bottom:1px solid var(--line);background:rgba(13,18,32,.96);cursor:pointer;user-select:none;white-space:nowrap}
 table.t td{padding:9px 14px;border-bottom:1px solid var(--line);white-space:nowrap}
@@ -354,6 +367,7 @@ dialog textarea{width:100%;height:min(60vh,560px);resize:vertical;font:500 12.5p
       <section id="v-files" hidden></section>
       <section id="v-payloads" hidden></section>
       <section id="v-themes" hidden></section>
+      <section id="v-saves" hidden></section>
       <section id="v-transfers" hidden></section>
       <section id="v-procs" hidden></section>
       <section id="v-system" hidden></section>
@@ -416,6 +430,7 @@ var P={
  chip:"M8 8h8v8H8zM4 10h2M4 14h2M18 10h2M18 14h2M10 4v2M14 4v2M10 18v2M14 18v2",
  dots:"M5 12h.01M12 12h.01M19 12h.01",
  scale:"M4 20h16M6 20V10M12 20V4M18 20v-7",
+ saves:"M5 4h11l3 3v13H5zM8 4v5h7V4M8 20v-6h8v6",
  themes:"M12 3a9 9 0 1 0 0 18c1.2 0 2-.9 2-2 0-1.3 1-2 2.2-2H18a3 3 0 0 0 3-3c0-5-4-9-9-9zM7.5 12h.01M9.5 8h.01M14.5 8h.01"
 };
 function ic(n,cls){return '<svg class="i'+(cls?" "+cls:"")+'" viewBox="0 0 24 24"><path d="'+P[n]+'"/></svg>'}
@@ -461,6 +476,7 @@ var VIEWS=[
  ["files",L("Ficheros","Files"),L("Explora, sube, descarga y edita","Browse, upload, download and edit"),1],
  ["payloads","Payloads",L("Lo que NeoHEN arranca y lo que puedes lanzar","What NeoHEN starts and what you can launch")],
  ["themes",L("Temas","Themes"),L("Fondo y música del menú de la PS5","Background and music of the PS5 menu"),1],
+ ["saves",L("Partidas","Saves"),L("Copias de seguridad de las partidas, por usuario","Backups of save data, by user"),1],
  ["transfers",L("Transferencias","Transfers"),L("Subidas y tareas de la consola","Uploads and console jobs"),1],
  ["procs",L("Procesos","Processes"),L("Lo que está en ejecución ahora","What is running right now"),1],
  ["system",L("Sistema","System"),L("Información, almacenamiento y registro","Information, storage and log")]];
@@ -484,7 +500,7 @@ function show(v,push){
   $("vt").textContent=def[1];$("vs").textContent=def[2];
   if(push)history.replaceState(null,"","#"+v);
   $("side").className="side";paintNav();render();$("view").scrollTop=0;
-  if(v==="files")loadDir(S.cwd);if(v==="procs")loadProcs();if(v==="system")loadLog();if(v==="transfers")loadJobs();if(v==="payloads")loadPay();if(v==="themes")loadThemes();
+  if(v==="files")loadDir(S.cwd);if(v==="procs")loadProcs();if(v==="system")loadLog();if(v==="transfers")loadJobs();if(v==="payloads")loadPay();if(v==="themes")loadThemes();if(v==="saves")loadSaves();
 }
 $("nav").onclick=function(e){var b=e.target.closest("button[data-v]");if(b)show(b.getAttribute("data-v"),true)};
 window.addEventListener("hashchange",function(){var h=location.hash.slice(1);if(h!==S.view)show(h)});
@@ -492,7 +508,7 @@ $("burger").innerHTML=ic("menu");$("reload").innerHTML=ic("refresh");
 $("burger").onclick=function(){$("side").className="side open"};
 $("view").addEventListener("click",function(){$("side").className="side"});
 $("reload").onclick=function(){fast();slow();show(S.view);toast(L("Actualizado","Refreshed"))};
-function render(){({panel:paintPanel,library:paintLib,files:paintFiles,payloads:paintPay,themes:paintThemes,transfers:paintTr,procs:paintProcs,system:paintSys})[S.view]()}
+function render(){({panel:paintPanel,library:paintLib,files:paintFiles,payloads:paintPay,themes:paintThemes,saves:paintSaves,transfers:paintTr,procs:paintProcs,system:paintSys})[S.view]()}
 
 /* ------------------------------------------------------------ dashboard */
 function tcol(v){return v>=88?"var(--bad)":v>=78?"var(--warn)":"var(--ok)"}
@@ -860,6 +876,93 @@ function upPay(files){
   })();
 }
 $("pick-p").onchange=function(){upPay(this.files);this.value=""};
+
+/* ------------------------------------------------------------ saves */
+S.sv={users:[],places:[],backups:[],dest:"",sel:{},open:{},job:null,busy:false,loaded:false};
+function svKey(u,s){return u.id+":"+s.kind+":"+s.titleId}
+function svPlaceName(p){return p.usb?L("USB ","USB ")+(+p.id.slice(3)+1):L("Disco de la consola","Console disk")}
+function loadSaves(){
+  if(!S.full)return Promise.resolve();
+  return Promise.all([api("/api/saves/list"),api("/api/saves/backups").catch(function(){return{backups:[]}})]).then(function(x){
+    var sv=S.sv;sv.users=(x[0].users||[]).filter(function(u){return u.saves.length});sv.places=x[0].places||[];sv.backups=x[1].backups||[];sv.loaded=true;
+    sv.users.forEach(function(u){u.saves.sort(function(a,b){return b.mtime-a.mtime});u.bytes=u.saves.reduce(function(n,s){return n+s.bytes},0)});
+    sv.users.sort(function(a,b){return b.saves.length-a.saves.length});
+    var ids=["pc"].concat(sv.places.map(function(p){return p.id}));
+    if(ids.indexOf(sv.dest)<0){var usb=sv.places.filter(function(p){return p.usb})[0];sv.dest=usb?usb.id:"pc"}
+    if(sv.users.length&&!Object.keys(sv.open).length)sv.open[sv.users[0].id]=true;
+    if(S.view==="saves")paintSaves()}).catch(fail);
+}
+function paintSaves(){
+  var sv=S.sv,nsel=Object.keys(sv.sel).length,hasUsb=sv.places.some(function(p){return p.usb});
+  if(!sv.loaded){$("v-saves").innerHTML='<div class="empty">'+L("Leyendo las partidas de la consola…","Reading the console saves…")+'</div>';return}
+  var total=sv.users.reduce(function(n,u){return n+u.saves.length},0),tbytes=sv.users.reduce(function(n,u){return n+u.bytes},0);
+  var dests=sv.places.map(function(p){return '<button data-dest="'+p.id+'" class="'+(sv.dest===p.id?"on":"")+'">'+svPlaceName(p)+' · '+size(p.free)+" "+L("libres","free")+'</button>'}).join("")+
+    '<button data-dest="pc" class="'+(sv.dest==="pc"?"on":"")+'">'+L("Este PC (ZIP)","This PC (ZIP)")+'</button>';
+  var job=sv.job,pct=job&&job.bytes_total?Math.min(100,Math.round(100*job.bytes_done/job.bytes_total)):0;
+  var h='<div class="card svbar"><div><label>'+L("Destino de la copia","Where the copy goes")+'</label><div class="seg">'+dests+'</div></div><span class="sp"></span>'+
+    '<button class="btn" id="sv-sel"'+(nsel&&!sv.busy?"":" disabled")+'>'+L("Copiar seleccionadas","Copy selected")+(nsel?" ("+nsel+")":"")+'</button>'+
+    '<button class="btn pri" id="sv-all"'+(total&&!sv.busy?"":" disabled")+'>'+ic("saves")+L("Copiar todo","Copy everything")+'</button>'+
+    (job?'<div class="svjob"><p>'+esc(job.msg)+'</p><div class="prog'+(job.state==="done"?" ok":job.state==="failed"?" bad":"")+'"><i style="width:'+(job.state==="running"?pct:100)+'%"></i></div></div>':"")+'</div>'+
+    (hasUsb?"":'<div class="note">'+L("No hay ningún USB conectado a la consola. Puedes copiar al PC o al disco de la consola; conecta un USB y pulsa actualizar para usarlo.","No USB drive is plugged into the console. You can copy to the PC or to the console disk; plug a drive in and press refresh to use it.")+'</div>')+
+    '<div class="note" style="border-color:rgba(77,163,255,.4);background:rgba(77,163,255,.08);color:#CFE4FF">'+L("Las copias se guardan por usuario: una carpeta por cada uno, con sus juegos dentro. Son los ficheros de la propia consola, cifrados para ella: sirven para devolverlos a esta misma PS5.","Copies are kept by user: one folder each, with their games inside. They are the console own files, encrypted for it: they are for putting back on this same PS5.")+'</div>'+
+    '<h3 class="h">'+L("Partidas en la consola","Saves on the console")+' <em>'+total+" · "+size(tbytes)+'</em></h3>';
+  h+=sv.users.length?sv.users.map(function(u){
+    var open=!!sv.open[u.id],all=u.saves.every(function(s){return sv.sel[svKey(u,s)]});
+    return '<div class="card svu"><div class="svh" data-open="'+u.id+'"><div class="av">'+esc(u.name.slice(0,1).toUpperCase())+'</div><div><b>'+esc(u.name)+'</b><small>'+u.saves.length+" "+L("partidas","saves")+" · "+size(u.bytes)+" · "+u.id+'</small></div><span class="sp"></span>'+
+      '<button class="btn sm" data-user="'+u.id+'"'+(sv.busy?" disabled":"")+'>'+L("Copiar las de este usuario","Copy this user")+'</button><span class="chev">'+(open?"▾":"▸")+'</span></div>'+
+      (open?'<table class="t"><thead><tr><th><input type="checkbox" data-allu="'+u.id+'"'+(all?" checked":"")+'></th><th>'+L("Juego","Game")+'</th><th></th><th>'+L("Tamaño","Size")+'</th><th>'+L("Último cambio","Last change")+'</th><th></th></tr></thead><tbody>'+
+        u.saves.map(function(s){var k=svKey(u,s),a=app(s.titleId),t=a&&a.title?a.title:"";
+          return '<tr><td><input type="checkbox" data-k="'+k+'"'+(sv.sel[k]?" checked":"")+'></td><td class="n"><a>'+(a&&a.hasIcon?'<img class="svi" loading="lazy" alt="" src="/apps/icon?id='+s.titleId+'">':'<span class="svi"></span>')+
+            '<span>'+(t?esc(t)+' <small>'+s.titleId+'</small>':s.titleId)+'</span></a></td><td><span class="chip">'+s.kind.toUpperCase()+'</span></td><td>'+size(s.bytes)+'</td><td>'+when(s.mtime)+'</td>'+
+            '<td><button class="btn sm" data-one="'+k+'"'+(sv.busy?" disabled":"")+'>'+L("Copiar","Copy")+'</button></td></tr>'}).join("")+'</tbody></table>':"")+'</div>'}).join("")
+    :'<div class="card"><div class="empty">'+L("Ningún usuario tiene partidas guardadas.","No user has any saves.")+'</div></div>';
+  var names={};sv.users.forEach(function(u){names[u.id]=u.name});
+  var bk=sv.backups.slice().sort(function(a,b){return a.folder<b.folder?-1:a.folder>b.folder?1:a.titleId<b.titleId?-1:a.titleId>b.titleId?1:a.stamp<b.stamp?1:-1});
+  h+='<h3 class="h" style="margin-top:28px">'+L("Copias guardadas","Copies kept")+' <em>'+bk.length+'</em></h3><div class="card">'+(bk.length?'<table class="t"><thead><tr><th>'+L("Usuario","User")+'</th><th>'+L("Juego","Game")+'</th><th>'+L("Fecha","Date")+'</th><th>'+L("Dónde","Where")+'</th><th>'+L("Tamaño","Size")+'</th><th></th></tr></thead><tbody>'+
+    bk.map(function(b,i){var a=app(b.titleId),pl=sv.places.filter(function(p){return p.id===b.dest})[0],pre=/-pre$/.test(b.stamp);
+      var d=b.stamp.replace(/^(\d{4})(\d\d)(\d\d)-(\d\d)(\d\d)(\d\d).*$/,"$3/$2/$1 $4:$5");
+      return '<tr><td>'+esc(b.folder)+'</td><td class="n"><a><span>'+(a&&a.title?esc(a.title)+' <small>'+b.titleId+'</small>':b.titleId)+'</span></a></td><td>'+esc(d)+(pre?' <span class="chip warn">'+L("ANTES DE RESTAURAR","BEFORE A RESTORE")+'</span>':"")+'</td><td>'+(pl?svPlaceName(pl):b.dest)+'</td><td>'+size(b.bytes)+'</td>'+
+        '<td><button class="btn sm" data-rest="'+i+'"'+(sv.busy?" disabled":"")+'>'+L("Restaurar","Restore")+'</button> <button class="btn sm danger" data-bdel="'+i+'"'+(sv.busy?" disabled":"")+'>'+L("Borrar","Delete")+'</button></td></tr>'}).join("")+'</tbody></table>'
+    :'<div class="empty">'+L("Todavía no hay copias en el USB ni en la consola. Las que bajes al PC no aparecen aquí.","There are no copies on the USB drive or the console yet. The ones you download to the PC are not listed here.")+'</div>')+'</div>';
+  S.sv.bk=bk;$("v-saves").innerHTML=h;
+}
+function svRun(body,n){
+  var sv=S.sv;
+  if(sv.dest==="pc"){
+    var q=body.items?"?items="+body.items.join(","):body.user?"?user="+body.user:"";
+    if(q.length>7000){toast(L("Demasiadas partidas sueltas para una descarga: copia el usuario entero o todo.","Too many single saves for one download: copy the whole user or everything."),true);return}
+    toast(L("Preparando el ZIP… la descarga empieza en unos segundos","Preparing the ZIP… the download starts in a few seconds"));
+    var a=document.createElement("a");a.href="/api/saves/zip"+q;a.download="";document.body.appendChild(a);a.click();a.remove();return}
+  body.dest=sv.dest;sv.busy=true;sv.job={state:"running",msg:L("Empezando…","Starting…"),bytes_done:0,bytes_total:0};paintSaves();
+  api("/api/saves/backup",body).then(function(j){svWatch(j.job,L("Copiando ","Copying ")+n+" "+L("partidas","saves"),L("Copia terminada: ","Copy finished: ")+n+" "+L("partidas","saves"))}).catch(function(e){sv.busy=false;sv.job=null;paintSaves();fail(e)});
+}
+function svWatch(id,doing,done){
+  var sv=S.sv;(function p(){api("/api/jobs?id="+id).then(function(j){var x=j.job;
+    sv.job={state:x.state,bytes_done:x.bytesDone,bytes_total:x.bytesTotal,msg:x.state==="running"?doing+" · "+size(x.bytesDone)+" / "+size(x.bytesTotal):x.state==="done"?done:L("Ha fallado: ","It failed: ")+(x.error||x.state)};
+    if(x.state==="running"){if(S.view==="saves")paintSaves();setTimeout(p,700)}
+    else{sv.busy=false;if(x.state==="done")sv.sel={};loadJobs();loadSaves();toast(sv.job.msg,x.state!=="done")}}).catch(function(e){sv.busy=false;paintSaves();fail(e)})})()}
+$("v-saves").addEventListener("click",function(e){
+  var sv=S.sv,b=e.target.closest("button"),hd=e.target.closest("[data-open]"),v;
+  if(b){
+    if((v=b.getAttribute("data-dest"))){sv.dest=v;paintSaves()}
+    else if(b.id==="sv-all")svRun({},sv.users.reduce(function(n,u){return n+u.saves.length},0));
+    else if(b.id==="sv-sel")svRun({items:Object.keys(sv.sel)},Object.keys(sv.sel).length);
+    else if((v=b.getAttribute("data-user"))){var u=sv.users.filter(function(x){return x.id===v})[0];svRun({user:v},u?u.saves.length:0)}
+    else if((v=b.getAttribute("data-one")))svRun({items:[v]},1);
+    else if((v=b.getAttribute("data-rest"))!=null){var k=sv.bk[+v];
+      ask(L("Restaurar esta copia","Restore this copy"),L("La partida de ","The save of ")+k.titleId+L(" que hay ahora en la consola se sustituye por la del ","  on the console now is replaced by the one from ")+k.stamp+L(". Antes se guarda la actual junto a la copia, por si quieres volver atrás. Cierra el juego antes.",". The current one is kept next to the copy first, in case you want to go back. Close the game first."),L("Restaurar","Restore"),true).then(function(ok){
+        if(!ok)return;sv.busy=true;sv.job={state:"running",msg:L("Empezando…","Starting…"),bytes_done:0,bytes_total:0};paintSaves();
+        api("/api/saves/restore",{dest:k.dest,folder:k.folder,titleId:k.titleId,stamp:k.stamp}).then(function(j){svWatch(j.job,L("Restaurando ","Restoring ")+k.titleId,L("Partida restaurada: ","Save restored: ")+k.titleId)}).catch(function(er){sv.busy=false;sv.job=null;paintSaves();
+          toast(/open/.test(er.message)?L("Cierra antes el juego o la aplicación abierta","Close the open game or app first"):er.message,true)})})}
+    else if((v=b.getAttribute("data-bdel"))!=null){var d=sv.bk[+v],pl=sv.places.filter(function(p){return p.id===d.dest})[0];
+      if(pl)ask(L("Borrar esta copia","Delete this copy"),d.folder+" · "+d.titleId+" · "+d.stamp,L("Borrar","Delete"),true).then(function(ok){
+        if(ok)api("/api/fs/delete",{path:pl.path+"/"+d.folder+"/"+d.titleId+"/"+d.stamp}).then(loadSaves).catch(fail)})}
+    return}
+  if(hd&&!e.target.closest("input")){v=hd.getAttribute("data-open");sv.open[v]=!sv.open[v];paintSaves()}});
+$("v-saves").addEventListener("change",function(e){
+  var sv=S.sv,t=e.target,v;
+  if((v=t.getAttribute("data-k"))){if(t.checked)sv.sel[v]=1;else delete sv.sel[v];paintSaves()}
+  else if((v=t.getAttribute("data-allu"))){sv.users.forEach(function(u){if(u.id===v)u.saves.forEach(function(s){if(t.checked)sv.sel[svKey(u,s)]=1;else delete sv.sel[svKey(u,s)]})});paintSaves()}});
 
 /* ------------------------------------------------------------ themes */
 var TDIR="/data/neohen/themes";
