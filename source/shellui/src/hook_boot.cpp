@@ -63,9 +63,16 @@ bool handle_uri_boot_common(MonoString* uri, int opt, MonoString* titleIdForBoot
     if (!shellui_hooks_are_ready())
       return boot_orig ? boot_orig(uri, opt, titleIdForBootAction) : false;
 
+    const std::string neo_uri = Mono_to_String(uri);
+    const std::string neo_tid =
+        titleIdForBootAction ? Mono_to_String(titleIdForBootAction) : "";
+    /* The save data page is a Toolbox page: open the Toolbox, which shows it. */
+    if (neo_saves_page_request(neo_uri, neo_tid))
+      return boot_orig(
+          mono_string_new(Root_Domain, shellui_debug_settings_toolbox_uri()), opt,
+          titleIdForBootAction);
     /* A game menu action runs in place: nothing to open. */
-    if (neo_game_action(Mono_to_String(uri),
-                        titleIdForBootAction ? Mono_to_String(titleIdForBootAction) : ""))
+    if (neo_game_action(neo_uri, neo_tid))
       return true;
 
     if(handle_uri_boot_common(uri, opt, titleIdForBootAction)) {
@@ -92,6 +99,11 @@ bool handle_uri_boot_common(MonoString* uri, int opt, MonoString* titleIdForBoot
 
     const std::string original_uri = Mono_to_String(uri);
     LOG_DEBUG("uri_boot_hook_2: %s, opt: %i", original_uri.c_str(), opt);
+    if (neo_saves_page_request(original_uri, ""))
+      return boot_orig_2(
+          mono_string_new(Root_Domain,
+                          shellui_debug_settings_toolbox_uri_simple()),
+          opt);
     if (neo_game_action(original_uri, ""))
       return true;
     if(handle_uri_boot_common(uri, opt, nullptr)) {

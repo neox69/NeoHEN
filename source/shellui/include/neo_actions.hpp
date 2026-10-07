@@ -1,15 +1,15 @@
 /* NeoHEN: ShadowMount+ relaunch from the Toolbox and the per-game actions of
- * the game options menu (info, backport on/off, save backup and restore). */
+ * the game options menu (save data page, backport on/off). */
 #pragma once
 
 #include <string>
 
-/* URIs of the game options menu entries; all start with kNeoActionPrefix. */
-inline constexpr const char kNeoActionPrefix[] = "OnionHEN?Neo_";
-inline constexpr const char kNeoActionInfo[] = "OnionHEN?Neo_Info";
+/* URIs of the game options menu entries. */
 inline constexpr const char kNeoActionBackport[] = "OnionHEN?Neo_Backport";
-inline constexpr const char kNeoActionSaveBackup[] = "OnionHEN?Neo_SaveBackup";
-inline constexpr const char kNeoActionSaveRestore[] = "OnionHEN?Neo_SaveRestore";
+/* Opens the save data page of the game instead of running in place. */
+inline constexpr const char kNeoActionSaves[] = "OnionHEN?Neo_Saves";
+/* Backups offered on the save data page (ids id_save_restore_0 .. _7). */
+inline constexpr int kNeoSavesListed = 8;
 
 /** Starts shadowmountplus.elf again; the new instance replaces the old one. */
 void neo_smp_relaunch();
@@ -19,3 +19,13 @@ std::string neo_smp_status();
 
 /** Runs a game menu action on its own thread. False if the URI is not one. */
 bool neo_game_action(const std::string &uri, const std::string &title_id);
+
+/** True if the URI asks for the save data page; the next Toolbox page that
+ * is built is then that one (see neo_saves_page_pending). */
+bool neo_saves_page_request(const std::string &uri, const std::string &title_id);
+bool neo_saves_page_pending();
+/** Builds the page: back up now, and the backups there are to restore. */
+void neo_generate_saves_xml(std::string &xml);
+/** Buttons of that page. */
+void neo_saves_backup_now();
+void neo_saves_restore(int index);

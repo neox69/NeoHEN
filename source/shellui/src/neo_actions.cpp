@@ -10,7 +10,9 @@
 #include "toolbox_i18n.hpp"
 #include <onion/brand.h>
 #include <onion/payload.h>
+#include "ps5_settings_ui.hpp"
 
+#include <algorithm>
 #include <cerrno>
 #include <cstdio>
 #include <cstring>
@@ -20,6 +22,7 @@
 #include <pthread.h>
 #include <string>
 #include <sys/stat.h>
+#include <utility>
 #include <unistd.h>
 #include <vector>
 
@@ -32,6 +35,8 @@ constexpr const char *kSmpElf = ONION_USER_DATA_DIR "/payloads/shadowmountplus.e
  * /user/data, a USB drive may be /usb0), so each place is tried both ways. */
 constexpr const char *kSmpLogs[] = {"/user/data/shadowmount/debug.log",
                                     "/data/shadowmount/debug.log"};
+/* Not a path: the job that backs up instead of restoring one. */
+constexpr const char *kSaveBackupJob = "backup";
 constexpr long kSmpLogMax = 8L << 20;
 constexpr const char *kUsbRoots[] = {"/mnt/usb0", "/usb0"};
 constexpr const char *kSavesFolder = "/" ONION_BRAND_NAME "/saves";
@@ -135,71 +140,10 @@ int copy_tree(const std::string &from, const std::string &to) {
   return files;
 }
 
-std::string read_small(const std::string &path, size_t limit = 4096) {
-  std::string out;
-  FILE *f = fopen(path.c_str(), "rb");
-  if (!f)
-    return out;
-  out.resize(limit);
-  out.resize(fread(out.data(), 1, limit, f));
-  fclose(f);
-  while (!out.empty() && (out.back() == '\n' || out.back() == '\r' || out.back() == '\0'))
-    out.pop_back();
-  return out;
-}
-
-/* The value of "key":"value" in a small JSON text; enough for param.json. */
-std::string json_string(const std::string &text, const char *key) {
-  const std::string needle = std::string("\"") + key + "\"";
-  size_t at = text.find(needle);
-  if (at == std::string::npos)
-    return {};
-  at = text.find(':', at + needle.size());
-  if (at == std::string::npos)
-    return {};
-  const size_t open_quote = text.find('"', at);
-  if (open_quote == std::string::npos)
-    return {};
-  const size_t close_quote = text.find('"', open_quote + 1);
-  if (close_quote == std::string::npos)
-    return {};
-  return text.substr(open_quote + 1, close_quote - open_quote - 1);
-}
-
-std::string size_text(off_t bytes) {
-  char out[32];
-  if (bytes >= (1LL << 30))
-    snprintf(out, sizeof(out), "%.1f GB", static_cast<double>(bytes) / (1LL << 30));
-  else
-    snprintf(out, sizeof(out), "%lld MB", static_cast<long long>(bytes >> 20));
-  return out;
-}
-
 bool game_is_open(const std::string &title_id) {
   std::string running;
   int app_id = 0;
   return Get_Running_App_TID(running, app_id) && running == title_id;
-}
-
-/* ---------------------------------------------------------------- info */
-
-void action_info(const std::string &tid) {
-  const std::string param = read_small("/user/appmeta/" + tid + "/param.json", 256 * 1024);
-  std::string version = json_string(param, "contentVersion");
-  if (version.empty())
-    version = "?";
-  std::string source = read_small("/user/app/" + tid + "/mount_img.lnk");
-  if (source.empty())
-    source = read_small("/user/app/" + tid + "/mount.lnk");
-  if (source.empty())
-    source = "/user/app/" + tid;
-  struct stat st {};
-  bool found = stat(source.c_str(), &st) == 0;
-  if (!found && source.rfind("/data/", 0) == 0)
-    found = stat(("/user" + source).c_str(), &st) == 0;
-  const std::string size = found && S_ISREG(st.st_mode) ? size_text(st.st_size)
-                                                        : std::string("-");
-  notify("notify.neo.info", tid.c_str(), version.c_str(), source.c_str(), size.c_str());
 }
 
 /* ---------------------------------------------------------------- backport */
@@ -296,40 +240,37 @@ void action_save_backup(const std::string &tid) {
     notify("notify.neo.save_ok", tid.c_str(), files, dest.c_str());
 }
 
-/* The newest backup folder of the game, in the USB or on the console. */
-std::string latest_backup(const std::string &tid) {
-  std::string best_name, best_path;
-  std::vector<std::string> roots;
+struct Backup {
+  std::string name; /* 20261007-160057, or the same with -pre */
+  std::string path;
+  bool usb;
+};
+
+/* Every backup of the game, newest first. */
+std::vector<Backup> list_backups(const std::string &tid) {
+  std::vector<Backup> out;
+  std::vector<std::pair<std::string, bool>> roots;
   for (const char *usb : kUsbRoots)
-    roots.push_back(std::string(usb) + kSavesFolder);
-  roots.push_back(kLocalSaves);
-  for (const std::string &root : roots) {
-    const std::string base = root + "/" + tid;
+    roots.push_back({std::string(usb) + kSavesFolder, true});
+  roots.push_back({kLocalSaves, false});
+  for (const auto &root : roots) {
+    const std::string base = root.first + "/" + tid;
     DIR *dir = opendir(base.c_str());
     if (!dir)
       continue;
-    while (const dirent *e = readdir(dir)) {
-      /* Folders made before a restore are a safety net, not a backup. */
-      if (e->d_name[0] == '.' || std::strstr(e->d_name, "-pre"))
-        continue;
-      if (best_name.empty() || best_name < e->d_name) {
-        best_name = e->d_name;
-        best_path = base + "/" + e->d_name;
-      }
-    }
+    while (const dirent *e = readdir(dir))
+      if (e->d_name[0] != '.' && is_dir(base + "/" + e->d_name))
+        out.push_back({e->d_name, base + "/" + e->d_name, root.second});
     closedir(dir);
   }
-  return best_path;
+  std::sort(out.begin(), out.end(),
+            [](const Backup &a, const Backup &b) { return a.name > b.name; });
+  return out;
 }
 
-void action_save_restore(const std::string &tid) {
+void action_save_restore(const std::string &tid, const std::string &from) {
   if (game_is_open(tid)) {
     notify("notify.neo.game_open", tid.c_str());
-    return;
-  }
-  const std::string from = latest_backup(tid);
-  if (from.empty()) {
-    notify("notify.neo.restore_none", tid.c_str());
     return;
   }
   /* What is on the console now is kept first, whatever happens next. */
@@ -362,6 +303,19 @@ void action_save_restore(const std::string &tid) {
   notify("notify.neo.restore_ok", tid.c_str(), files, from.c_str());
 }
 
+/* The save data page: which game it is for and what it listed. */
+std::string g_saves_tid;
+bool g_saves_pending = false;
+std::vector<Backup> g_saves_listed;
+
+/* 20261007-160057 -> 07/10/2026 16:00 */
+std::string backup_date(const std::string &name) {
+  if (name.size() < 15)
+    return name;
+  return name.substr(6, 2) + "/" + name.substr(4, 2) + "/" + name.substr(0, 4) +
+         " " + name.substr(9, 2) + ":" + name.substr(11, 2);
+}
+
 /* util keeps a payload it believes is running, so the old ShadowMount+ is
  * stopped first; then the usual loader thread starts the new one. */
 void *smp_relaunch_thread(void *arg) {
@@ -387,33 +341,85 @@ void *action_thread(void *arg) {
   Job *job = static_cast<Job *>(arg);
   if (job->tid.empty())
     notify("notify.neo.no_title");
-  else if (job->uri == kNeoActionInfo)
-    action_info(job->tid);
   else if (job->uri == kNeoActionBackport)
     action_backport(job->tid);
-  else if (job->uri == kNeoActionSaveBackup)
+  else if (job->uri == kSaveBackupJob)
     action_save_backup(job->tid);
-  else if (job->uri == kNeoActionSaveRestore)
-    action_save_restore(job->tid);
+  else
+    action_save_restore(job->tid, job->uri);
   delete job;
   return nullptr;
 }
 
-} // namespace
-
-bool neo_game_action(const std::string &uri, const std::string &title_id) {
-  if (uri.rfind(kNeoActionPrefix, 0) != 0)
-    return false;
-  Job *job = new Job{uri, title_id.empty() ? g_ui.current_menu_tid : title_id};
-  LOG_INFO("game menu action %s for %s", uri.c_str(), job->tid.c_str());
+void run_job(const std::string &what, const std::string &tid) {
+  Job *job = new Job{what, tid};
   pthread_t thread;
   if (pthread_create(&thread, nullptr, action_thread, job) == 0)
     pthread_detach(thread);
   else
     delete job;
+}
+
+} // namespace
+
+bool neo_game_action(const std::string &uri, const std::string &title_id) {
+  if (uri != kNeoActionBackport)
+    return false;
+  const std::string tid = title_id.empty() ? g_ui.current_menu_tid : title_id;
+  LOG_INFO("game menu action %s for %s", uri.c_str(), tid.c_str());
+  run_job(uri, tid);
   return true;
 }
 
+bool neo_saves_page_request(const std::string &uri, const std::string &title_id) {
+  if (uri != kNeoActionSaves)
+    return false;
+  g_saves_tid = title_id.empty() ? g_ui.current_menu_tid : title_id;
+  g_saves_pending = true;
+  LOG_INFO("save data page for %s", g_saves_tid.c_str());
+  return true;
+}
+
+bool neo_saves_page_pending() { return g_saves_pending; }
+
+void neo_generate_saves_xml(std::string &xml) {
+  g_saves_pending = false;
+  const std::string &tid = g_saves_tid;
+  ps5ui::Page page("id_neo_saves", toolbox_i18n::format("saves.title_fmt", tid.c_str()));
+  page.root_style(ps5ui::Style::Center);
+  if (find_saves(tid).empty())
+    page.label("id_save_none", toolbox_i18n::tr("saves.no_save"), ps5ui::Style::Center);
+  else
+    page.button("id_save_backup", toolbox_i18n::tr("saves.backup"),
+                toolbox_i18n::format("saves.backup.desc_fmt", saves_root().c_str()),
+                std::nullopt, std::nullopt, ps5ui::Style::Center);
+
+  g_saves_listed = list_backups(tid);
+  if (g_saves_listed.size() > static_cast<size_t>(kNeoSavesListed))
+    g_saves_listed.resize(kNeoSavesListed);
+  if (g_saves_listed.empty())
+    page.label("id_save_empty", toolbox_i18n::tr("saves.none"), ps5ui::Style::Center);
+  for (size_t i = 0; i < g_saves_listed.size(); ++i) {
+    const Backup &b = g_saves_listed[i];
+    std::string where = toolbox_i18n::tr(b.usb ? "saves.where_usb" : "saves.where_console");
+    if (b.name.find("-pre") != std::string::npos)
+      where += std::string(" · ") + toolbox_i18n::tr("saves.pre");
+    page.button("id_save_restore_" + std::to_string(i),
+                toolbox_i18n::format("saves.restore_fmt", backup_date(b.name).c_str()),
+                where, std::nullopt, std::nullopt, ps5ui::Style::Center,
+                toolbox_i18n::tr("saves.restore.confirm"),
+                toolbox_i18n::tr("cheats.repo.download.confirm_phrase"));
+  }
+  xml = page.build();
+}
+
+void neo_saves_backup_now() { run_job(kSaveBackupJob, g_saves_tid); }
+
+void neo_saves_restore(int index) {
+  if (index < 0 || static_cast<size_t>(index) >= g_saves_listed.size())
+    return;
+  run_job(g_saves_listed[static_cast<size_t>(index)].path, g_saves_tid);
+}
 void neo_smp_relaunch() {
   char identity[ONION_PAYLOAD_IDENTITY_SIZE];
   char canonical[ONION_PAYLOAD_PATH_SIZE];
