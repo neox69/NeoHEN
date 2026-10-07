@@ -29,8 +29,8 @@
  * SceShellUI (NPXS40087) reads /system_ex through its own sandbox, a nullfs
  * view made when it starts, so the mounts go on that path and are made
  * again whenever the menu restarts (Rest Mode, a NeoHEN reload, "apply in
- * full"). A new menu is looked for ten times a second, to be there before
- * it reads anything.
+ * full"). A new menu is looked for forty times a second, to be there before
+ * it reads anything: its sounds and icons are read once, as it starts.
  *
  * Two rules. Nothing here writes below /system or /system_ex: a mount lives
  * in the kernel's mount table, so a reboot always brings the stock files
@@ -51,6 +51,7 @@
 #include <sys/stat.h>
 #include <sys/syscall.h>
 #include <sys/sysctl.h>
+#include <sys/time.h>
 #include <sys/uio.h>
 #include <sys/user.h>
 #include <time.h>
@@ -59,6 +60,7 @@
 #define THEMES   "/data/neohen/themes"
 #define ACTIVE   THEMES "/active.txt"
 #define STATE    THEMES "/state.txt"
+#define LOGFILE  THEMES "/neotheme.log"
 #define DEFAULT  THEMES "/default.txt"
 #define CURRENT  THEMES "/.current"
 #define OVERLAY  THEMES "/.overlay"
@@ -70,8 +72,8 @@
 #define RNPS_LIVE  "mnt/rnps/"
 #define SELF     "neotheme.elf"
 
-#define TICK_MS        100 /* how often a new menu is looked for */
-#define TICKS_PER_PASS 20  /* the theme itself is looked at every 2 s */
+#define TICK_MS        25 /* how often a new menu is looked for */
+#define TICKS_PER_PASS 80 /* the theme itself is looked at every 2 s */
 #define CRASH_SECONDS  20  /* a menu gone sooner than this did not start well */
 #define MAX_LAYERS     96
 #define MAX_DEPTH      8
@@ -102,6 +104,56 @@ say(const char *fmt, ...) {
   vsnprintf(req.message, sizeof(req.message), fmt, ap);
   va_end(ap);
   sceKernelSendNotificationRequest(0, &req, sizeof(req), 0);
+}
+
+/* A short diary, started again each run. */
+static void
+note(const char *fmt, ...) {
+  va_list ap;
+  FILE *f = fopen(LOGFILE, "a");
+
+  if(!f) {
+    return;
+  }
+  fprintf(f, "%ld ", (long)time(NULL));
+  va_start(ap, fmt);
+  vfprintf(f, fmt, ap);
+  va_end(ap);
+  fputc('\n', f);
+  fclose(f);
+}
+
+/* How long ago the menu's process started, in ms; -1 if it is not found. */
+static long
+menu_age_ms(void) {
+  int mib[4] = {CTL_KERN, KERN_PROC, KERN_PROC_PROC, 0};
+  size_t size = 0;
+  long age = -1;
+  struct timeval now;
+  char *buf;
+
+  if(sysctl(mib, 4, NULL, &size, NULL, 0)) {
+    return -1;
+  }
+  size += 16 * sizeof(struct kinfo_proc);
+  if(!(buf = malloc(size)) || sysctl(mib, 4, buf, &size, NULL, 0)) {
+    free(buf);
+    return -1;
+  }
+  gettimeofday(&now, NULL);
+  for(char *ptr = buf; ptr < buf + size;) {
+    struct kinfo_proc *ki = (struct kinfo_proc *)ptr;
+    if(ki->ki_structsize <= 0) {
+      break;
+    }
+    ptr += ki->ki_structsize;
+    if(!strcmp(ki->ki_comm, "SceShellUI")) {
+      age = (now.tv_sec - ki->ki_start.tv_sec) * 1000L +
+            (now.tv_usec - ki->ki_start.tv_usec) / 1000L;
+    }
+  }
+  free(buf);
+  return age;
 }
 
 /* What the web page and the Toolbox read: the theme that is really on. */
@@ -335,7 +387,9 @@ menu_alive(const char *sandbox) {
   return !stat(path, &st);
 }
 
-/* The sandbox of the menu that is running, "" if there is none. */
+/* The sandbox of the newest menu that is running, "" if there is none. The
+ * one before it stays for a moment after it is killed, and names only go
+ * up, so the newest is the highest. */
 static void
 live_menu(char *out, size_t size) {
   struct dirent *e;
@@ -346,7 +400,8 @@ live_menu(char *out, size_t size) {
     return;
   }
   while((e = readdir(dir))) {
-    if(!strncmp(e->d_name, MENU, strlen(MENU)) && menu_alive(e->d_name)) {
+    if(!strncmp(e->d_name, MENU, strlen(MENU)) && strcmp(e->d_name, out) > 0 &&
+       menu_alive(e->d_name)) {
       snprintf(out, size, "%s", e->d_name);
     }
   }
@@ -591,12 +646,14 @@ main(void) {
   time_t menu_since = 0; /* when it was first seen */
   int short_lived = 0;   /* menus in a row that died right after starting */
   int uncovered = 0;     /* the live menu has not got the stores yet */
+  int settle = 0;        /* ticks left of covering a new menu at every tick */
   int said = 0;
 
   kill_previous();
   syscall(SYS_thr_set_name, -1, SELF);
   mkdir(THEMES, 0777);
   mkdir(CURRENT, 0777);
+  unlink(LOGFILE);
   load_layers();
 
   /* themes/default.txt names the theme every start begins with, whatever
@@ -640,10 +697,21 @@ main(void) {
       snprintf(menu, sizeof(menu), "%s", now);
       menu_since = t;
       uncovered = 1;
+      settle = 2000 / TICK_MS;
+      note("menu %s seen, its process is %ld ms old", menu, menu_age_ms());
     }
-    if(uncovered) {
+    /* its folders show up one after another while it starts: keep at it
+     * every tick until the assets are covered, and two seconds more for
+     * the rest */
+    if(uncovered || settle > 0) {
       cover_menus();
-      uncovered = !assets_covered(menu);
+      if(uncovered && assets_covered(menu)) {
+        uncovered = 0;
+        note("menu %s covered, its process is %ld ms old", menu, menu_age_ms());
+      }
+      if(settle > 0) {
+        settle--;
+      }
     }
 
     if(tick % TICKS_PER_PASS == 0) {
