@@ -271,7 +271,7 @@ inline constexpr int kSmpWatchdogNotify = 1;
 inline constexpr int kSmpWatchdogRelaunch = 2;
 inline constexpr int kSmpWatchdogMinSeconds = 30;
 inline constexpr int kSmpWatchdogMaxSeconds = 3600;
-inline constexpr int kSmpWatchdogDefaultSeconds = 300;
+inline constexpr int kSmpWatchdogDefaultSeconds = 60;
 inline constexpr int clamp_fan_threshold(int celsius) {
   if (celsius < kFanThresholdMinCelsius)
     return kFanThresholdMinCelsius;
