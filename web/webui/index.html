@@ -383,6 +383,7 @@ dialog textarea{width:100%;height:min(60vh,560px);resize:vertical;font:500 12.5p
 <input type="file" id="pick-p" accept=".elf,.bin" multiple hidden>
 <input type="file" id="pick-ti" accept="image/*" hidden>
 <input type="file" id="pick-tm" accept=".at9" hidden>
+<input type="file" id="pick-sz" accept=".zip" hidden>
 <div class="toast" id="toast" role="status"></div>
 <dialog id="dlg"><h4 id="dh"></h4><p id="dp"></p><input class="in" id="di" hidden>
   <div class="row"><button class="btn" id="dno"></button><button class="btn pri" id="dyes"></button></div></dialog>
@@ -901,6 +902,7 @@ function paintSaves(){
   var job=sv.job,pct=job&&job.bytes_total?Math.min(100,Math.round(100*job.bytes_done/job.bytes_total)):0;
   var h='<div class="card svbar"><div><label>'+L("Destino de la copia","Where the copy goes")+'</label><div class="seg">'+dests+'</div></div><span class="sp"></span>'+
     '<button class="btn" id="sv-sel"'+(nsel&&!sv.busy?"":" disabled")+'>'+L("Copiar seleccionadas","Copy selected")+(nsel?" ("+nsel+")":"")+'</button>'+
+    '<button class="btn" id="sv-up"'+(sv.busy?" disabled":"")+'>'+ic("upload")+L("Traer un ZIP del PC","Bring a ZIP from the PC")+'</button>'+
     '<button class="btn pri" id="sv-all"'+(total&&!sv.busy?"":" disabled")+'>'+ic("saves")+L("Copiar todo","Copy everything")+'</button>'+
     (job?'<div class="svjob"><p>'+esc(job.msg)+'</p><div class="prog'+(job.state==="done"?" ok":job.state==="failed"?" bad":"")+'"><i style="width:'+(job.state==="running"?pct:100)+'%"></i></div></div>':"")+'</div>'+
     (hasUsb?"":'<div class="note">'+L("No hay ningún USB conectado a la consola. Puedes copiar al PC o al disco de la consola; conecta un USB y pulsa actualizar para usarlo.","No USB drive is plugged into the console. You can copy to the PC or to the console disk; plug a drive in and press refresh to use it.")+'</div>')+
@@ -921,9 +923,9 @@ function paintSaves(){
   h+='<h3 class="h" style="margin-top:28px">'+L("Copias guardadas","Copies kept")+' <em>'+bk.length+'</em></h3><div class="card">'+(bk.length?'<table class="t"><thead><tr><th>'+L("Usuario","User")+'</th><th>'+L("Juego","Game")+'</th><th>'+L("Fecha","Date")+'</th><th>'+L("Dónde","Where")+'</th><th>'+L("Tamaño","Size")+'</th><th></th></tr></thead><tbody>'+
     bk.map(function(b,i){var a=app(b.titleId),pl=sv.places.filter(function(p){return p.id===b.dest})[0],pre=/-pre$/.test(b.stamp);
       var d=b.stamp.replace(/^(\d{4})(\d\d)(\d\d)-(\d\d)(\d\d)(\d\d).*$/,"$3/$2/$1 $4:$5");
-      return '<tr><td>'+esc(b.folder)+'</td><td class="n"><a><span>'+(a&&a.title?esc(a.title)+' <small>'+b.titleId+'</small>':b.titleId)+'</span></a></td><td>'+esc(d)+(pre?' <span class="chip warn">'+L("ANTES DE RESTAURAR","BEFORE A RESTORE")+'</span>':"")+'</td><td>'+(pl?svPlaceName(pl):b.dest)+'</td><td>'+size(b.bytes)+'</td>'+
+      return '<tr><td>'+esc(b.folder)+'</td><td class="n"><a><span>'+(a&&a.title?esc(a.title)+' <small>'+b.titleId+'</small>':b.titleId)+'</span></a></td><td>'+esc(d)+(/-pc$/.test(b.stamp)?' <span class="chip ok">'+L("DEL PC","FROM THE PC")+'</span>':"")+(pre?' <span class="chip warn">'+L("ANTES DE RESTAURAR","BEFORE A RESTORE")+'</span>':"")+'</td><td>'+(pl?svPlaceName(pl):b.dest)+'</td><td>'+size(b.bytes)+'</td>'+
         '<td><button class="btn sm" data-rest="'+i+'"'+(sv.busy?" disabled":"")+'>'+L("Restaurar","Restore")+'</button> <button class="btn sm danger" data-bdel="'+i+'"'+(sv.busy?" disabled":"")+'>'+L("Borrar","Delete")+'</button></td></tr>'}).join("")+'</tbody></table>'
-    :'<div class="empty">'+L("Todavía no hay copias en el USB ni en la consola. Las que bajes al PC no aparecen aquí.","There are no copies on the USB drive or the console yet. The ones you download to the PC are not listed here.")+'</div>')+'</div>';
+    :'<div class="empty">'+L("Todavía no hay copias en el USB ni en la consola. Las que bajes al PC aparecen aquí cuando las traigas de vuelta con el botón de arriba.","There are no copies on the USB drive or the console yet. The ones you download to the PC show up here once you bring them back with the button above.")+'</div>')+'</div>';
   S.sv.bk=bk;$("v-saves").innerHTML=h;
 }
 function svRun(body,n){
@@ -938,13 +940,14 @@ function svRun(body,n){
 }
 function svWatch(id,doing,done){
   var sv=S.sv;(function p(){api("/api/jobs?id="+id).then(function(j){var x=j.job;
-    sv.job={state:x.state,bytes_done:x.bytesDone,bytes_total:x.bytesTotal,msg:x.state==="running"?doing+" · "+size(x.bytesDone)+" / "+size(x.bytesTotal):x.state==="done"?done:L("Ha fallado: ","It failed: ")+(x.error||x.state)};
+    sv.job={state:x.state,bytes_done:x.bytesDone,bytes_total:x.bytesTotal,msg:x.state==="running"?doing+" · "+size(x.bytesDone)+" / "+size(x.bytesTotal):x.state==="done"?done:L("Ha fallado: ","It failed: ")+(/compressed/.test(x.error)?L("el ZIP está comprimido; usa el que descargó NeoWEB, sin recomprimir","the ZIP is compressed; use the one NeoWEB made, not re-zipped"):/not a ZIP|no saves/.test(x.error)?L("no es un ZIP de partidas de NeoWEB","it is not a NeoWEB ZIP of saves"):/damaged|cut short/.test(x.error)?L("el ZIP está dañado o incompleto","the ZIP is damaged or incomplete"):(x.error||x.state))};
     if(x.state==="running"){if(S.view==="saves")paintSaves();setTimeout(p,700)}
     else{sv.busy=false;if(x.state==="done")sv.sel={};loadJobs();loadSaves();toast(sv.job.msg,x.state!=="done")}}).catch(function(e){sv.busy=false;paintSaves();fail(e)})})()}
 $("v-saves").addEventListener("click",function(e){
   var sv=S.sv,b=e.target.closest("button"),hd=e.target.closest("[data-open]"),v;
   if(b){
     if((v=b.getAttribute("data-dest"))){sv.dest=v;paintSaves()}
+    else if(b.id==="sv-up")$("pick-sz").click();
     else if(b.id==="sv-all")svRun({},sv.users.reduce(function(n,u){return n+u.saves.length},0));
     else if(b.id==="sv-sel")svRun({items:Object.keys(sv.sel)},Object.keys(sv.sel).length);
     else if((v=b.getAttribute("data-user"))){var u=sv.users.filter(function(x){return x.id===v})[0];svRun({user:v},u?u.saves.length:0)}
@@ -959,6 +962,17 @@ $("v-saves").addEventListener("click",function(e){
         if(ok)api("/api/fs/delete",{path:pl.path+"/"+d.folder+"/"+d.titleId+"/"+d.stamp}).then(loadSaves).catch(fail)})}
     return}
   if(hd&&!e.target.closest("input")){v=hd.getAttribute("data-open");sv.open[v]=!sv.open[v];paintSaves()}});
+$("pick-sz").onchange=function(){
+  var f=this.files[0],sv=S.sv;this.value="";if(!f||sv.busy)return;
+  var u={f:f,name:f.name,dest:"/data/neohen/saves/incoming/"+f.name.replace(/[^A-Za-z0-9._-]/g,"_"),size:f.size,done:0,cur:0,base:0,st:"run",t0:Date.now()};
+  sv.busy=true;sv.job={state:"running",msg:"",bytes_done:0,bytes_total:f.size};
+  var tm=setInterval(function(){sv.job={state:"running",msg:L("Subiendo ","Uploading ")+f.name+" · "+size(u.done+(u.cur||0))+" / "+size(f.size),bytes_done:u.done+(u.cur||0),bytes_total:f.size};if(S.view==="saves")paintSaves()},500);
+  paintSaves();
+  loop(u,0).then(function(){clearInterval(tm);if(u.st==="cancel")throw new Error(L("Cancelado","Cancelled"));
+    return api("/api/saves/import",{path:u.dest})}).then(function(j){
+    svWatch(j.job,L("Desempaquetando ","Unpacking ")+f.name,L("ZIP añadido a las copias guardadas. Restaura desde ahí la partida que quieras.","ZIP added to the copies kept. Restore the save you want from there."))})
+  .catch(function(e){clearInterval(tm);sv.busy=false;sv.job={state:"failed",msg:L("Ha fallado: ","It failed: ")+e.message,bytes_done:0,bytes_total:0};paintSaves();fail(e)});
+};
 $("v-saves").addEventListener("change",function(e){
   var sv=S.sv,t=e.target,v;
   if((v=t.getAttribute("data-k"))){if(t.checked)sv.sel[v]=1;else delete sv.sel[v];paintSaves()}
