@@ -9,8 +9,17 @@ $(error PS5_PAYLOAD_SDK is undefined (export PS5_PAYLOAD_SDK=/opt/ps5-payload-sd
 endif
 include $(PS5_PAYLOAD_SDK)/toolchain/prospero.mk
 
-neotheme.elf: src/neotheme.c
-	$(CC) -O2 -g -Wall -Wextra -Werror -o $@ $< -lkernel_sys
+all: neotheme.elf
 
+# the themes in bundled/ go inside the program (see tools/pack_themes.py)
+BUNDLED := $(shell find bundled -type f 2>/dev/null | sed 's/ /\\ /g')
+
+build/themes.pack: tools/pack_themes.py $(BUNDLED)
+	python3 tools/pack_themes.py bundled $@
+
+neotheme.elf: src/neotheme.c src/pack.S build/themes.pack
+	$(CC) -O2 -g -Wall -Wextra -Werror -o $@ src/neotheme.c src/pack.S -lkernel_sys
+
+.PHONY: all clean
 clean:
-	rm -f neotheme.elf
+	rm -rf neotheme.elf build
