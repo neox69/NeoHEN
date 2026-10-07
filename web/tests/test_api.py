@@ -158,6 +158,18 @@ class PayloadTest(unittest.TestCase):
         with open(f"{r}/user/home/1d31cda3/savedata/CUSA00001/sdimg_SAVEDATA", "wb") as f:
             f.write(os.urandom(5000))
         os.makedirs(f"{r}/mnt/usb0")
+        # a screenshot and a clip, with the .dat the console writes next to them
+        dat = b"\x01\x00\x59\x12" + bytes.fromhex("9ccd311d") + b"\0" * 0x3c + b"My Game: II_20250615150127\0" + b"\0" * 900
+        for kind, name, body in (("photo", "20250615_150127_00997366.jxr", b"II\xbc\x01" + b"x" * 3000),
+                                 ("video", "20261005_180320_00660961.webm", b"\x1a\x45\xdf\xa3" + b"v" * 9000)):
+            d = f"{r}/user/av_contents/{kind}/NPXS40087/PPSA01234/2fc"
+            os.makedirs(d, exist_ok=True)
+            with open(f"{d}/{name}", "wb") as f:
+                f.write(body)
+            with open(f"{d}/{name.rsplit('.', 1)[0]}.dat", "wb") as f:
+                f.write(dat)
+            with open(f"{d}/{name.rsplit('.', 1)[0]}.meta", "wb") as f:
+                f.write(b"{}")
 
         cls.port = free_port()
         cls.ctl_port = free_port()
@@ -295,6 +307,30 @@ class PayloadTest(unittest.TestCase):
         st, body, _ = self.api.req("PUT", "/fs/put?path=/data/t/h.bin&offset=%d" % (len(payload) + 10),
                                    raw=b"x")
         self.assertEqual(st, 409, body)
+
+    def test_captures(self):
+        import io
+        import zipfile
+        _, j = self.api.get("/api/captures/list")
+        items = sorted(j["items"], key=lambda x: x["id"])
+        self.assertEqual([(x["id"], x["kind"], x["ext"], x["titleId"], x["title"], x["user"]) for x in items],
+                         [("20250615_150127_00997366", "photo", "jxr", "PPSA01234", "My Game: II", "1d31cd9c"),
+                          ("20261005_180320_00660961", "video", "webm", "PPSA01234", "My Game: II", "1d31cd9c")])
+        self.assertEqual(j["users"], {"1d31cd9c": "NeoX ESP"})
+        self.assertEqual(items[0]["size"], 3004)
+        st, body, _ = self.api.req("GET", "/api/captures/zip")
+        self.assertEqual(st, 200)
+        z = zipfile.ZipFile(io.BytesIO(body))
+        self.assertIsNone(z.testzip())
+        self.assertEqual(sorted(z.namelist()),
+                         ["NeoX ESP/My Game_ II (PPSA01234)/20250615_150127_00997366.jxr",
+                          "NeoX ESP/My Game_ II (PPSA01234)/20261005_180320_00660961.webm"])
+        st, body, _ = self.api.req("GET", "/api/captures/zip?kind=video")
+        self.assertEqual(len(zipfile.ZipFile(io.BytesIO(body)).namelist()), 1)
+        st, body, _ = self.api.req("GET", "/api/captures/zip?ids=20250615_150127_00997366,nope")
+        self.assertEqual(len(zipfile.ZipFile(io.BytesIO(body)).namelist()), 1)
+        st, body, _ = self.api.req("GET", "/api/captures/zip?user=1d31cda3")
+        self.assertEqual(st, 404, body)
 
     def test_saves(self):
         import io

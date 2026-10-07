@@ -70,6 +70,8 @@ void api_apps_install_dir(http_req_t *req);
 void api_apps_install_pkg(http_req_t *req);
 void api_apps_uninstall(http_req_t *req);
 
+void api_captures_list(http_req_t *req);
+void api_captures_zip(http_req_t *req);
 void api_saves_list(http_req_t *req);
 void api_saves_backup(http_req_t *req);
 void api_saves_zip(http_req_t *req);
