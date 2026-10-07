@@ -385,7 +385,11 @@ bool neo_saves_page_pending() { return g_saves_pending; }
 void neo_generate_saves_xml(std::string &xml) {
   g_saves_pending = false;
   const std::string &tid = g_saves_tid;
-  ps5ui::Page page("id_neo_saves", toolbox_i18n::format("saves.title_fmt", tid.c_str()));
+  /* Shown in place of the Toolbox root, so it must carry the root list's id
+   * (as the cheats page does when a game's menu opens it); with any other
+   * id SceShellUI crashes while it lays the page out. */
+  ps5ui::Page page("id_debug_settings",
+                   toolbox_i18n::format("saves.title_fmt", tid.c_str()));
   page.root_style(ps5ui::Style::Center);
   if (find_saves(tid).empty())
     page.label("id_save_none", toolbox_i18n::tr("saves.no_save"), ps5ui::Style::Center);
