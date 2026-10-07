@@ -398,6 +398,7 @@ dialog textarea{width:100%;height:min(60vh,560px);resize:vertical;font:500 12.5p
 <input type="file" id="pick-p" accept=".elf,.bin" multiple hidden>
 <input type="file" id="pick-ti" accept="image/*" hidden>
 <input type="file" id="pick-tm" accept=".at9" hidden>
+<input type="file" id="pick-tz" accept=".zip" hidden>
 <input type="file" id="pick-sz" accept=".zip" hidden>
 <input type="file" id="pick-ch" accept=".json,.shn,.mc4" multiple hidden>
 <input type="file" id="pick-pkg" accept=".pkg" hidden>
@@ -1174,10 +1175,10 @@ function paintThemes(){
   var mk=S.tmk;
   function card(t){
     var on=t?S.tactive===t.name:!S.tactive,n=t?esc(t.name):"";
-    var bg=t?t.files.filter(function(f){return /\.dds\.zst$/.test(f)}).length:0,mu=t&&t.files.indexOf("bgm_home.at9")>=0,pv=t&&t.files.indexOf("preview.jpg")>=0,icn=t?t.files.filter(function(f){return /^system_ex\/.*\/icon0\.png$/.test(f)}).length:0;
+    var bg=t?t.files.filter(function(f){return /\.dds\.zst$/.test(f)}).length:0,mu=t&&t.files.indexOf("bgm_home.at9")>=0,pv=t&&t.files.indexOf("preview.jpg")>=0,icn=t?t.files.filter(function(f){return /^system_ex\/.*\/icon0\.png$/.test(f)}).length:0,snd=t?t.files.filter(function(f){return /^sounds\/.*\.vag$/.test(f)}).length:0;
     return '<div class="card theme'+(on?" on":"")+'"><div class="pv" style="'+(pv?"background-image:url(/fs/get?path="+enc(TDIR+"/"+t.name+"/preview.jpg")+")":"")+'">'+
       (pv?"":ic(t?"themes":"game"))+(on?'<div class="tag">'+(S.tstate==="pending"?L("PENDIENTE","PENDING"):L("ACTIVO","ACTIVE"))+'</div>':"")+'</div>'+
-      '<div class="bd"><b>'+(t?n:L("Aspecto de fábrica","Stock look"))+'</b><small>'+(t?(bg?bg+" "+L("fondos","backgrounds"):L("sin fondos","no backgrounds"))+" · "+(mu?L("con música","with music"):L("música original","stock music"))+(icn?" · "+icn+" "+L("iconos","icons"):"")+" · "+size(t.size)
+      '<div class="bd"><b>'+(t?n:L("Aspecto de fábrica","Stock look"))+'</b><small>'+(t?(bg?bg+" "+L("fondos","backgrounds"):L("sin fondos","no backgrounds"))+" · "+(mu?L("con música","with music"):L("música original","stock music"))+(icn?" · "+icn+" "+L("iconos","icons"):"")+(snd?" · "+snd+" "+L("sonidos","sounds"):"")+" · "+size(t.size)
         :L("Los fondos y la música originales de la consola","The console's own backgrounds and music"))+'</small>'+
       '<div class="acts">'+(on?'<span class="chip ok">'+L("En uso","In use")+'</span>':'<button class="btn pri sm" data-on="'+n+'">'+L("Aplicar","Apply")+'</button>')+
       (t&&!on?'<button class="btn sm danger" data-del="'+n+'">'+L("Borrar","Delete")+'</button>':"")+'</div></div></div>'}
@@ -1186,7 +1187,7 @@ function paintThemes(){
     '<div class="note" style="border-color:rgba(77,163,255,.4);background:rgba(77,163,255,.08);color:#CFE4FF">'+
     L("Un tema no modifica la consola: se muestra encima de sus ficheros mientras NeoHEN está cargado. Al reiniciar la PS5 vuelve siempre el aspecto de fábrica. El fondo cambia al salir de un juego o al moverte por el menú; la música, los iconos y los sonidos, al reiniciar el menú con «Aplicar del todo».",
       "A theme does not modify the console: it is shown on top of its files while NeoHEN is loaded. Restarting the PS5 always brings the stock look back. The background changes when you leave a game or move around the menu; music, icons and sounds, when the menu is restarted with “Apply in full”.")+'</div>'+
-    '<div class="row" style="margin:0 0 16px"><button class="btn pri" id="t-restart">'+ic("refresh")+L("Aplicar del todo","Apply in full")+'</button><p>'+L("Reinicia solo el menú de la PS5 (unos segundos) para que cargue el tema entero. No se puede con un juego abierto.","Restarts only the PS5 menu (a few seconds) so it loads the whole theme. Not possible with a game open.")+'</p></div>'+
+    '<div class="row" style="margin:0 0 16px"><button class="btn pri" id="t-restart">'+ic("refresh")+L("Aplicar del todo","Apply in full")+'</button><button class="btn" id="t-zip"'+(S.tzip?" disabled":"")+'>'+ic("upload")+(S.tzip?esc(S.tzip):L("Instalar tema (.zip)","Install theme (.zip)"))+'</button><p>'+L("Reinicia solo el menú de la PS5 (unos segundos) para que cargue el tema entero. No se puede con un juego abierto.","Restarts only the PS5 menu (a few seconds) so it loads the whole theme. Not possible with a game open.")+'</p></div>'+
     '<div class="tgrid">'+card(null)+S.themes.map(card).join("")+'</div>'+
     '<h3 class="h" style="margin-top:28px">'+L("Crear un tema","Make a theme")+'</h3><div class="card pad maker">'+
     '<div>'+(mk.img?'<canvas id="tm-cv" width="640" height="360"></canvas>':'<div class="ph" id="tm-ph">'+ic("upload")+'<div>'+L("Elige una imagen para el fondo<br><small>Se recorta a 16:9 y se convierte a 4K</small>","Choose an image for the background<br><small>It is cropped to 16:9 and converted to 4K</small>")+'</div></div>')+'</div>'+
@@ -1204,6 +1205,7 @@ function paintThemes(){
   $("tm-n").oninput=function(){mk.name=this.value};
   if($("tm-go"))$("tm-go").onclick=makeTheme;
   $("t-restart").onclick=restartMenu;
+  $("t-zip").onclick=function(){if(!S.tzip)$("pick-tz").click()};
 }
 function restartMenu(){
   ask(L("Reiniciar el menú","Restart the menu"),L("El menú de la PS5 se cierra y vuelve en unos segundos con el tema completo. La Toolbox de NeoHEN tarda medio minuto en volver.","The PS5 menu closes and comes back in a few seconds with the whole theme. The NeoHEN Toolbox takes half a minute to return."),L("Reiniciar menú","Restart menu")).then(function(ok){
@@ -1215,6 +1217,50 @@ $("v-themes").addEventListener("click",function(e){var b=e.target.closest("butto
   if((n=b.getAttribute("data-on"))!=null)setTheme(n);
   else if((n=b.getAttribute("data-del")))ask(L("Borrar el tema ","Delete the theme ")+n,L("Se eliminan sus ficheros de la consola.","Its files are removed from the console."),L("Borrar","Delete"),true).then(function(ok){
     if(ok)api("/api/fs/delete",{path:TDIR+"/"+n}).then(loadThemes).catch(fail)})});
+/* A theme as a .zip: read here, in the browser, and its files sent one by
+ * one into the themes folder. The ZIP may hold the theme's folder or its
+ * files loose; then the theme takes the name of the ZIP. */
+S.tzip="";
+function zipEntries(buf){
+  var dv=new DataView(buf),i=buf.byteLength-22,out=[],td=new TextDecoder();
+  while(i>=0&&dv.getUint32(i,true)!==0x06054b50)i--;
+  if(i<0)throw new Error(L("No es un fichero ZIP","Not a ZIP file"));
+  var n=dv.getUint16(i+10,true),p=dv.getUint32(i+16,true);
+  for(var k=0;k<n&&p+46<=buf.byteLength&&dv.getUint32(p,true)===0x02014b50;k++){
+    var nl=dv.getUint16(p+28,true),xl=dv.getUint16(p+30,true),cl=dv.getUint16(p+32,true);
+    out.push({name:td.decode(new Uint8Array(buf,p+46,nl)),method:dv.getUint16(p+10,true),csize:dv.getUint32(p+20,true),usize:dv.getUint32(p+24,true),at:dv.getUint32(p+42,true)});
+    p+=46+nl+xl+cl}
+  return out;
+}
+function zipData(buf,e){
+  var dv=new DataView(buf),st=e.at+30+dv.getUint16(e.at+26,true)+dv.getUint16(e.at+28,true),raw=new Blob([new Uint8Array(buf,st,e.csize)]);
+  if(e.method===0)return Promise.resolve(raw);
+  if(e.method!==8||typeof DecompressionStream==="undefined")return Promise.reject(new Error(L("Este navegador no sabe abrir ese ZIP; prueba con Chrome o Edge al día","This browser cannot open that ZIP; try an up to date Chrome or Edge")));
+  return new Response(raw.stream().pipeThrough(new DecompressionStream("deflate-raw"))).blob();
+}
+$("pick-tz").onchange=function(){
+  var f=this.files[0];this.value="";if(!f||S.tzip)return;
+  f.arrayBuffer().then(function(buf){
+    var es=zipEntries(buf).filter(function(e){return e.name.slice(-1)!=="/"&&!/^__MACOSX\/|(^|\/)\.|\.\.|^\/|\\/.test(e.name)});
+    if(!es.length)throw new Error(L("El ZIP está vacío","The ZIP is empty"));
+    var top=es[0].name.split("/")[0],one=es.every(function(e){return e.name.indexOf(top+"/")===0});
+    var name=(one?top:f.name.replace(/\.zip$/i,"")).replace(/[^A-Za-z0-9 ._()-]/g,"_").replace(/^[. ]+|[. ]+$/g,"").slice(0,60);
+    if(one)es.forEach(function(e){e.name=e.name.slice(top.length+1)});
+    es=es.filter(function(e){return e.name&&(e.name.indexOf("/")<0||/^(system_ex|sounds)\//.test(e.name))});
+    if(!name||!es.some(function(e){return /\.dds\.zst$|\.at9$|icon0\.png$|\.vag$|\.rco$/.test(e.name)}))throw new Error(L("Ese ZIP no parece un tema de NeoHEN","That ZIP does not look like a NeoHEN theme"));
+    var had=S.themes.some(function(t){return t.name===name});
+    return (had?ask(L("Ya hay un tema llamado ","There is already a theme called ")+name,L("¿Sustituirlo por el del ZIP?","Replace it with the one in the ZIP?"),L("Sustituir","Replace"),true):Promise.resolve(true)).then(function(ok){
+      if(!ok)return;
+      S.tzip=L("Instalando…","Installing…");paintThemes();
+      var pre=had?api("/api/fs/delete",{path:TDIR+"/"+name}):Promise.resolve();
+      return pre.then(function(){var i=0;return (function next(){
+        if(i>=es.length)return;
+        var e=es[i++];S.tzip=L("Instalando ","Installing ")+i+"/"+es.length;paintThemes();
+        return zipData(buf,e).then(function(b){return fetch("/fs/put?path="+enc(TDIR+"/"+name+"/"+e.name)+"&size="+b.size,{method:"PUT",body:b})}).then(function(r){
+          if(!r.ok)throw new Error(e.name+": HTTP "+r.status);return next()})})()}).then(function(){
+        S.tzip="";toast(L("Tema instalado: ","Theme installed: ")+name+L(". Pulsa Aplicar para ponerlo.",". Press Apply to put it on."));return loadThemes()})})
+  }).catch(function(e){S.tzip="";paintThemes();fail(e)});
+};
 function setTheme(n){
   toast(n?L("Aplicando ","Applying ")+n+"…":L("Volviendo al aspecto de fábrica…","Going back to the stock look…"));
   return api("/api/fs/text",{path:TDIR+"/active.txt",content:n?n+"\n":""}).then(function(){
