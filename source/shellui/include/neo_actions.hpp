@@ -3,6 +3,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 
 /* URIs of the game options menu entries. */
 inline constexpr const char kNeoActionBackport[] = "OnionHEN?Neo_Backport";
@@ -29,3 +30,13 @@ void neo_generate_saves_xml(std::string &xml);
 /** Buttons of that page. */
 void neo_saves_backup_now();
 void neo_saves_restore(int index);
+
+/* Themes: folders in the data dir's themes/, shown over the menu's assets by
+ * the neotheme.elf payload, which follows themes/active.txt. */
+inline constexpr int kNeoThemesListed = 8;
+/** The themes there are (up to kNeoThemesListed), as listed for the Toolbox. */
+const std::vector<std::string> &neo_themes_refresh();
+/** The theme in use, "" for the stock look. */
+std::string neo_theme_active();
+/** index -1 = stock look; otherwise an index into the refreshed list. */
+void neo_theme_set(int index);

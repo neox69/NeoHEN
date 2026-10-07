@@ -15,8 +15,10 @@ if [[ ! -x "${PS5_PAYLOAD_SDK}/bin/prospero-cmake" || ! -f /sdk/.deps-ok ]]; the
   touch /sdk/.deps-ok
 fi
 make -C web
+make -C themes
 scripts/release/fetch_payloads.sh /tmp/bundle
 cp web/neoweb.elf /tmp/bundle/neoweb.elf
+cp themes/neotheme.elf /tmp/bundle/neotheme.elf
 git status --porcelain | head
 export ONION_BUNDLE_DIR=/tmp/bundle
 ./scripts/build-neohen.sh --release --jobs "$(nproc)"

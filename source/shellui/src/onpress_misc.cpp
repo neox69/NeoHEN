@@ -114,8 +114,23 @@ static OnPressResult id_save_restore(OnPressContext &ctx) {
   neo_saves_restore(ctx.id.back() - '0');
   return OnPressResult::Consumed;
 }
+static OnPressResult id_theme(OnPressContext &ctx) {
+  /* id_theme_stock, or id_theme_<n> */
+  ctx.dirty = false;
+  neo_theme_set(ctx.id == "id_theme_stock" ? -1 : ctx.id.back() - '0');
+  return OnPressResult::Consumed;
+}
 static const OnPressExactEntry kRootExact[] = {
     {"id_smp_relaunch", id_smp_relaunch},
+    {"id_theme_stock", id_theme},
+    {"id_theme_0", id_theme},
+    {"id_theme_1", id_theme},
+    {"id_theme_2", id_theme},
+    {"id_theme_3", id_theme},
+    {"id_theme_4", id_theme},
+    {"id_theme_5", id_theme},
+    {"id_theme_6", id_theme},
+    {"id_theme_7", id_theme},
     {"id_save_backup", id_save_backup},
     {"id_save_restore_0", id_save_restore},
     {"id_save_restore_1", id_save_restore},
