@@ -13,6 +13,8 @@
 #include <unistd.h>
 
 #include "api.h"
+#include <time.h>
+#include <ctype.h>
 #include "fsutil.h"
 #include "sha256.h"
 #include "jobs.h"
@@ -199,6 +201,113 @@ api_fs_walk(http_req_t *req) {
   walk(&w, local, "", &count, max);
   jw_arr_end(&w);
   jw_kbool(&w, "truncated", count >= max);
+  api_finish(req, &w);
+}
+
+/* ---------------------------------------------------------------- search
+ * Files and folders below a folder whose name has the text in it, in any
+ * case. It stops at `max` results, after a few seconds or after a great
+ * many entries, and says so. The views other programs have of the same
+ * files (/mnt/sandbox) and what is not a disk (/dev, /proc) are left out. */
+typedef struct search {
+  jw_t *w;
+  const char *needle; /* lower case */
+  size_t found, max;
+  uint64_t seen;
+  time_t until;
+  int cut;
+} search_t;
+
+static int
+name_has(const char *name, const char *needle) {
+  size_t n = strlen(needle);
+
+  for(const char *p = name; *p; p++) {
+    size_t i = 0;
+    while(i < n && p[i] && tolower((unsigned char)p[i]) == needle[i]) {
+      i++;
+    }
+    if(i == n) {
+      return 1;
+    }
+  }
+  return 0;
+}
+
+static void
+search_dir(search_t *s, const char *local, const char *console, int depth) {
+  DIR *d;
+  struct dirent *e;
+
+  if(depth > 24 || !(d = opendir(local))) {
+    return;
+  }
+  while(!s->cut && (e = readdir(d))) {
+    char lchild[PATH_MAX], cchild[PATH_MAX];
+    struct stat st;
+
+    if(!strcmp(e->d_name, ".") || !strcmp(e->d_name, "..")) {
+      continue;
+    }
+    if(s->found >= s->max || ++s->seen > 400000 || (!(s->seen & 255) && time(NULL) > s->until)) {
+      s->cut = 1;
+      break;
+    }
+    snprintf(lchild, sizeof(lchild), "%s/%s", local, e->d_name);
+    snprintf(cchild, sizeof(cchild), "%s%s%s", console, strcmp(console, "/") ? "/" : "", e->d_name);
+    if(lstat(lchild, &st)) {
+      continue;
+    }
+    if(name_has(e->d_name, s->needle)) {
+      jw_obj(s->w);
+      jw_kstr(s->w, "path", cchild);
+      jw_kstr(s->w, "type", S_ISDIR(st.st_mode) ? "dir" : S_ISREG(st.st_mode) ? "file" : "other");
+      jw_kuint(s->w, "size", S_ISREG(st.st_mode) ? (uint64_t)st.st_size : 0);
+      jw_kint(s->w, "mtime", (int64_t)st.st_mtime);
+      jw_obj_end(s->w);
+      s->found++;
+    }
+    if(S_ISDIR(st.st_mode) && strcmp(cchild, "/dev") && strcmp(cchild, "/proc") &&
+       strcmp(cchild, "/mnt/sandbox")) {
+      search_dir(s, lchild, cchild, depth + 1);
+    }
+  }
+  closedir(d);
+}
+
+/* GET /api/fs/search?path=/data&q=text[&max=300] */
+void
+api_fs_search(http_req_t *req) {
+  char console[PATH_MAX], local[PATH_MAX], q[128] = "";
+  search_t s = {0};
+  jw_t w;
+
+  if(api_query_path(req, "path", console, sizeof(console), local, sizeof(local))) {
+    return;
+  }
+  http_query(req, "q", q, sizeof(q));
+  if(strlen(q) < 2) {
+    http_send_error(req, 400, "at least two characters to look for");
+    return;
+  }
+  for(char *p = q; *p; p++) {
+    *p = (char)tolower((unsigned char)*p);
+  }
+  s.w = &w;
+  s.needle = q;
+  s.max = (size_t)http_query_int(req, "max", 300);
+  if(s.max < 1 || s.max > 5000) {
+    s.max = 300;
+  }
+  s.until = time(NULL) + 8;
+  api_begin(&w);
+  jw_kstr(&w, "path", console);
+  jw_key(&w, "entries");
+  jw_arr(&w);
+  search_dir(&s, local, console, 0);
+  jw_arr_end(&w);
+  jw_kbool(&w, "truncated", s.cut);
+  jw_kuint(&w, "scanned", s.seen);
   api_finish(req, &w);
 }
 

@@ -47,6 +47,7 @@ int  is_title_id(const char *s);
 void api_fs_list(http_req_t *req);
 void api_fs_stat(http_req_t *req);
 void api_fs_walk(http_req_t *req);
+void api_fs_search(http_req_t *req);
 void api_fs_mkdir(http_req_t *req);
 void api_fs_delete(http_req_t *req);
 void api_fs_rename(http_req_t *req);

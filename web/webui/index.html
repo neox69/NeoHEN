@@ -659,7 +659,7 @@ $("drawer").onclick=function(e){if(e.target===this)this.className="drawer"};
 
 /* ------------------------------------------------------------ files */
 var TXT=/\.(txt|ini|json|cfg|conf|log|lst|xml|md|sh|py|yaml|yml|csv|html?|js|css|plist|sfv|nfo|bak)$/i;
-function loadDir(p){
+function loadDir(p){S.fsr=null;
   S.cwd=p||"/";
   return api("/api/fs/list?path="+enc(S.cwd)).then(function(j){S.dir=j.entries||[];S.dirErr="";if(S.view==="files")paintFiles()})
     .catch(function(e){S.dir=[];S.dirErr=e.message;if(S.view==="files")paintFiles()});
@@ -672,7 +672,15 @@ function paintFiles(){
   var rows=S.dir.filter(function(e){return !q||e.name.toLowerCase().indexOf(q)>=0}).sort(function(a,b){
     var d=(b.type==="dir")-(a.type==="dir");if(d)return d;
     var k=S.fsort,r=k==="size"?a.size-b.size:k==="mtime"?a.mtime-b.mtime:a.name.localeCompare(b.name,undefined,{numeric:true});return r*S.fdir});
-  var body=S.dirErr?'<tr><td colspan="4"><div class="empty">'+esc(S.dirErr)+'</div></td></tr>':
+  var sr=S.fsr;
+  if(sr)rows=sr.entries.slice().sort(function(a,b){var d=(b.type==="dir")-(a.type==="dir");return d||a.path.localeCompare(b.path,undefined,{numeric:true})});
+  var body=sr?(sr.busy?'<tr><td colspan="4"><div class="empty">'+L("Buscando en ","Searching in ")+esc(sr.base)+'…</div></td></tr>':
+    rows.length?rows.map(function(e){var d=e.type==="dir",p=esc(e.path),rel=e.path.slice(sr.base==="/"?1:sr.base.length+1);
+      return '<tr class="'+(d?"d":"")+'"><td class="n"><a '+(d?'data-p="'+p+'"':'data-f="'+p+'"')+' title="'+p+'">'+ic(d?"files":"file")+'<span>'+esc(rel)+'</span></a></td>'+
+        '<td class="m r">'+(d?"":size(e.size))+'</td><td class="m hide-m">'+when(e.mtime)+'</td>'+
+        '<td class="a"><button class="btn sm ghost" data-p="'+esc(parent(e.path))+'" title="'+L("Abrir la carpeta que lo contiene","Open the folder it is in")+'">'+ic("up")+'</button><button class="btn ic ghost sm" data-m="'+p+'" data-d="'+(d?1:0)+'" data-s="'+(e.size||0)+'">'+ic("dots")+'</button></td></tr>'}).join("")
+    :'<tr><td colspan="4"><div class="empty">'+ic("search")+'<div>'+L("Nada con ese nombre aquí dentro.","Nothing with that name in here.")+'</div></div></td></tr>'):
+  S.dirErr?'<tr><td colspan="4"><div class="empty">'+esc(S.dirErr)+'</div></td></tr>':
     (S.cwd!=="/"?'<tr class="d"><td class="n"><a data-p="'+esc(parent(S.cwd))+'">'+ic("up")+'<span>..</span></a></td><td></td><td></td><td></td></tr>':"")+
     (rows.length?rows.map(function(e){var d=e.type==="dir",p=esc(pj(S.cwd,e.name));
       return '<tr class="'+(d?"d":"")+'"><td class="n"><a '+(d?'data-p="'+p+'"':'data-f="'+p+'"')+' title="'+esc(e.name)+'">'+ic(d?"files":"file")+'<span>'+esc(e.name)+'</span></a></td>'+
@@ -682,13 +690,21 @@ function paintFiles(){
   function th(k,t,c){return '<th class="'+(c||"")+'" data-k="'+k+'">'+t+(S.fsort===k?(S.fdir>0?" ↑":" ↓"):"")+'</th>'}
   var keep=document.activeElement&&document.activeElement.id==="f-q";
   $("v-files").innerHTML='<div class="places">'+places.map(function(p){return '<button data-p="'+p[0]+'">'+ic(p[0]==="/mnt/usb0"?"disk":"files")+p[1]+'</button>'}).join("")+'</div>'+
-    '<div class="tools"><div class="crumbs">'+crumbs+'</div><div class="srch">'+ic("search")+'<input class="in" id="f-q" type="search" style="width:180px" placeholder="'+L("Filtrar…","Filter…")+'" value="'+esc(S.fq||"")+'"></div>'+
+    '<div class="tools"><div class="crumbs">'+crumbs+'</div><div class="srch">'+ic("search")+'<input class="in" id="f-q" type="search" style="width:180px" placeholder="'+L("Filtrar · Intro busca dentro","Filter · Enter searches inside")+'" title="'+L("Escribe para filtrar esta carpeta. Pulsa Intro para buscar también en todas sus subcarpetas.","Type to filter this folder. Press Enter to search all its subfolders too.")+'" value="'+esc(S.fq||"")+'"></div>'+
     '<button class="btn" data-a="mkdir">'+ic("plus")+L("Carpeta","Folder")+'</button><button class="btn" data-a="updir">'+ic("files")+L("Subir carpeta","Upload folder")+'</button>'+
     '<button class="btn pri" data-a="up">'+ic("upload")+L("Subir ficheros","Upload files")+'</button></div>'+
     (S.ro?'<div class="note">'+L("NeoWEB está en solo lectura (existe /data/neohen/web/readonly).","NeoWEB is read-only (/data/neohen/web/readonly exists).")+'</div>':"")+
+    (sr&&!sr.busy?'<div class="note" style="border-color:rgba(77,163,255,.4);background:rgba(77,163,255,.08);color:#CFE4FF"><span style="flex:1">'+sr.entries.length+" "+L("resultados de","results for")+" «"+esc(sr.q)+"» "+L("dentro de","inside")+" "+esc(sr.base)+
+      (sr.truncated?" · "+L("la búsqueda se cortó: hay más; afina el texto o entra en una carpeta más concreta","the search was cut short: there are more; narrow the text or go into a more specific folder"):"")+'</span><button class="btn sm" id="f-sx">'+L("Volver a la carpeta","Back to the folder")+'</button></div>':"")+
     '<div class="card tw"><table class="t"><thead><tr>'+th("name",L("Nombre","Name"))+th("size",L("Tamaño","Size"),"r")+th("mtime",L("Modificado","Modified"),"hide-m")+'<th></th></tr></thead><tbody>'+body+'</tbody></table></div>'+
     '<div style="margin-top:10px;font:500 11.5px var(--mono);color:var(--faint)">'+S.dir.length+" "+L("elementos","items")+" · "+size(S.dir.reduce(function(a,e){return a+(e.type==="dir"?0:e.size)},0))+'</div>';
-  $("f-q").oninput=function(){S.fq=this.value;paintFiles()};
+  $("f-q").oninput=function(){S.fq=this.value;if(S.fsr&&!this.value)S.fsr=null;if(!S.fsr)paintFiles()};
+  $("f-q").onkeydown=function(e){if(e.key!=="Enter")return;var q=this.value.trim();
+    if(q.length<2){toast(L("Escribe al menos dos letras","Type at least two characters"),true);return}
+    var base=S.cwd;S.fsr={q:q,base:base,entries:[],busy:true};paintFiles();
+    api("/api/fs/search?path="+enc(base)+"&q="+enc(q)+"&max=500").then(function(j){if(S.fsr&&S.fsr.busy&&S.fsr.q===q){S.fsr={q:q,base:base,entries:j.entries||[],truncated:j.truncated};paintFiles()}})
+      .catch(function(er){S.fsr=null;paintFiles();fail(er)})};
+  if($("f-sx"))$("f-sx").onclick=function(){S.fsr=null;S.fq="";paintFiles()};
   if(keep){var q2=$("f-q");q2.focus();q2.setSelectionRange(q2.value.length,q2.value.length)}
 }
 $("v-files").addEventListener("click",function(e){
