@@ -4,9 +4,9 @@
 The originals are never modified. Outputs:
 
   source/bootstrapper/assets/neohen/neohen_sicon.png
-      128x128 RGBA, under 8 KB (24 colours), default. neohen_sicon_full.png is the
-      same icon in full colour (~25 KB), selectable with NEOHEN_ICON=full.
-      Colour emblem on a transparent background. Replaces
+      128x128 RGBA, under 8 KB (16 greys), default. neohen_sicon_full.png is the
+      same icon without that reduction (~26 KB), selectable with NEOHEN_ICON=full.
+      The crown, black and white, on a transparent background. Replaces
       onionhen_sicon.png: startup notification icon, HomeUI top-nav icon
       (normal and focused/inverted state) and the Settings entry icon.
   assets/neohen-logo.png
@@ -32,7 +32,7 @@ import io
 import sys
 from pathlib import Path
 
-from PIL import Image, ImageFilter
+from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[2]
 SRC = ROOT / "branding"
@@ -48,11 +48,9 @@ SICON_SIZE = 128
 # The OnionHEN icon that HomeUI is known to load is 128x128 RGBA, 5.9 KB.
 # Stay in the same order of magnitude until a larger file is tested.
 SICON_MAX_BYTES = 32 * 1024
-# The default icon is reduced towards that known-good size: colour noise is
-# smoothed (alpha untouched) and the image limited to SICON_LIGHT_COLORS
-# colours, then stored again as 128x128 RGBA.
-SICON_LIGHT_COLORS = 24
-SICON_LIGHT_SMOOTH = 0.9
+# The default icon is reduced towards that known-good size by limiting it to
+# SICON_LIGHT_LEVELS greys, then stored again as 128x128 RGBA.
+SICON_LIGHT_LEVELS = 16
 SICON_LIGHT_MAX_BYTES = 8 * 1024
 LOGO_SIZE = 512
 SPLASH_WIDTH = 1280
@@ -81,16 +79,14 @@ def build_emblem(size: int, margin: float) -> Image.Image:
 
 
 def lighten(img: Image.Image) -> Image.Image:
-    """Fewer colours and alpha levels, same size and RGBA mode: a much
-    smaller PNG. The crown has far more detail than fits in 8 KB, so this
-    one is soft; at the ~40 px HomeUI draws it, it reads the same."""
-    rgb = img.convert("RGB").filter(ImageFilter.GaussianBlur(SICON_LIGHT_SMOOTH))
+    """Fewer grey and alpha levels, same size and RGBA mode: a much smaller
+    PNG that looks the same. The crown is black and white, so SICON_LIGHT_LEVELS
+    greys are enough."""
+    step = 255 / (SICON_LIGHT_LEVELS - 1)
+    grey = img.convert("L").point(lambda v: round(round(v / step) * step))
     alpha = img.getchannel("A").point(
         lambda v: 0 if v < 24 else 255 if v > 231 else round(v / 51) * 51)
-    out = rgb.quantize(colors=SICON_LIGHT_COLORS,
-                       method=Image.Quantize.MAXCOVERAGE,
-                       dither=Image.Dither.NONE).convert("RGBA")
-    out.putalpha(alpha)
+    out = Image.merge("RGBA", (grey, grey, grey, alpha))
     # fully transparent pixels all get the same colour, so they compress
     clear = Image.new("RGBA", out.size, (0, 0, 0, 0))
     return Image.composite(out, clear, alpha.point(lambda v: 255 if v else 0))

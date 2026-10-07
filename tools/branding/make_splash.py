@@ -21,7 +21,7 @@ WORD = ROOT / "branding/neohen-wordmark.png"
 OUT = ROOT / "branding/neohen-splash.png"
 
 W, H = 2560, 960
-BG = (7, 9, 26)
+BG = (9, 10, 13)
 
 
 def main() -> int:
