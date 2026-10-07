@@ -451,6 +451,35 @@ copy_file(const char *from, const char *to) {
   return fclose(out) || !ok ? -1 : 0;
 }
 
+/* A theme's .rco bundle only fits the firmware it was made from: one made
+ * with themes/tools/rco.py keeps the original's header but for the size of
+ * its file table, the last of its numbers. Any other is left out, and the
+ * menu keeps its own. */
+#define RCO_SAME_BYTES 76
+
+static int
+rco_fits(const char *path, const char *name) {
+  unsigned char mine[RCO_SAME_BYTES], stock[RCO_SAME_BYTES];
+  char original[512];
+  int ok = 0;
+  FILE *a, *b;
+
+  snprintf(original, sizeof(original), "/" ASSETS "/%s", name);
+  a = fopen(path, "rb");
+  b = fopen(original, "rb");
+  if(a && b && fread(mine, 1, sizeof(mine), a) == sizeof(mine) &&
+     fread(stock, 1, sizeof(stock), b) == sizeof(stock)) {
+    ok = !memcmp(mine, stock, sizeof(mine));
+  }
+  if(a) {
+    fclose(a);
+  }
+  if(b) {
+    fclose(b);
+  }
+  return ok;
+}
+
 typedef struct tally {
   unsigned long long bytes;
   long newest;
@@ -507,6 +536,12 @@ walk(const char *dir_path, const char *rel, int depth, int fill, tally_t *t) {
       continue;
     }
     if(!layer && !(layer = layer_for(rel[0] ? rel : ASSETS))) {
+      t->failed++;
+      continue;
+    }
+    size_t len = strlen(e->d_name);
+    if(len > 4 && !strcmp(e->d_name + len - 4, ".rco") && !strcmp(layer->rel, ASSETS) &&
+       !rco_fits(path, e->d_name)) {
       t->failed++;
       continue;
     }
@@ -594,6 +629,7 @@ main(void) {
           if(act) {
             fclose(act);
           }
+          unlink(DEFAULT); /* or the next start would put it back */
           fill_stores("");
           snprintf(shown, sizeof(shown), "-");
           write_state("", "reverted");
