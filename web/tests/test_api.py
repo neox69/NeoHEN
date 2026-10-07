@@ -308,6 +308,34 @@ class PayloadTest(unittest.TestCase):
                                    raw=b"x")
         self.assertEqual(st, 409, body)
 
+    def test_fan_and_power(self):
+        cfg = f"{self.root}/data/neohen/config.ini"
+        text = ("# NeoHEN\r\n[general]\r\nlanguage=system\r\n\r\n[cooling]\r\n# a comment\r\n"
+                "fan_control=automatic\r\ntemperature_threshold_celsius=77\r\n\r\n[overlay]\r\nfan_control=keep\r\n")
+        os.makedirs(os.path.dirname(cfg), exist_ok=True)
+        with open(cfg, "w", newline="") as f:
+            f.write(text)
+        _, j = self.api.get("/api/sys/fan")
+        self.assertEqual((j["manual"], j["threshold"], j["min"], j["max"]), (False, 77, 50, 80))
+        st, body, _ = self.api.req("POST", "/api/sys/fan", body={"manual": True, "threshold": 95})
+        self.assertEqual(st, 400, body)
+        st, body, _ = self.api.req("POST", "/api/sys/fan", body={"manual": True, "threshold": 68})
+        self.assertEqual(st, 200, body)
+        with open(cfg, newline="") as f:
+            self.assertEqual(f.read(), text.replace("fan_control=automatic", "fan_control=temperature_threshold")
+                             .replace("celsius=77", "celsius=68"))
+        _, j = self.api.get("/api/sys/fan")
+        self.assertEqual((j["manual"], j["threshold"]), (True, 68))
+        self.api.post("/api/sys/fan", {"manual": False})
+        with open(cfg, newline="") as f:
+            self.assertEqual(f.read(), text.replace("celsius=77", "celsius=68"))
+        _, j = self.api.get("/api/sys/sensors")
+        self.assertEqual(j["fanDuty"], 37)
+        st, body, _ = self.api.req("POST", "/api/sys/power", body={"action": "explode"})
+        self.assertEqual(st, 400, body)
+        st, body, _ = self.api.req("POST", "/api/sys/power", body={"action": "rest"})
+        self.assertEqual(st, 200, body)
+
     def test_captures(self):
         import io
         import zipfile

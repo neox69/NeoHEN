@@ -111,6 +111,7 @@ plat_sensors(jw_t *w) {
     fclose(f);
   }
   jw_kint(w, "cpuFreqMhz", 3500);
+  jw_kint(w, "fanDuty", 37);
 }
 
 void
@@ -480,6 +481,10 @@ plat_app_uninstall(const char *title_id) {
 int
 plat_power(const char *action) {
   LOG_INFO("[emu] power action: %s", action);
+  if(strcmp(action, "rest") && strcmp(action, "reboot") && strcmp(action, "poweroff")) {
+    plat_set_error("unknown power action '%s'", action);
+    return -1;
+  }
   return 0;
 }
 

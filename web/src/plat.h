@@ -54,7 +54,7 @@ int         plat_app_install_pkg(const char *url, const char *name,
 int         plat_app_uninstall(const char *title_id);
 
 /* power / misc */
-int         plat_power(const char *action); /* "reboot" | "poweroff" */
+int         plat_power(const char *action); /* "rest" | "reboot" | "poweroff" */
 int         plat_open_browser(const char *url);
 
 /* human readable reason for the last failing plat_* call (thread-local) */

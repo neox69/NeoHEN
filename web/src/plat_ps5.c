@@ -81,6 +81,12 @@ int  sceKernelGetHwSerialNumber(char *);
 long sceKernelGetCpuFrequency(void);
 int  sceKernelGetCpuTemperature(int *);
 int  sceKernelGetSocSensorTemperature(int, int *);
+int  sceKernelGetCurrentFanDuty(uint16_t *, uint64_t *);
+/* the console's own way of going to Rest Mode, restarting and turning off:
+ * it closes what is open and flushes the disks first */
+int  sceSystemStateMgrEnterStandby(int);
+int  sceSystemStateMgrReboot(void);
+int  sceSystemStateMgrTurnOff(void);
 
 int  sceUserServiceInitialize(void *);
 int  sceUserServiceGetForegroundUser(uint32_t *user_id);
@@ -247,6 +253,23 @@ plat_sensors(jw_t *w) {
     jw_kint(w, "socTemp", temp);
   }
   jw_kint(w, "cpuFreqMhz", sceKernelGetCpuFrequency() / (1000 * 1000));
+  {
+    uint16_t duty = 0;
+    uint64_t chassis = 0;
+    if(!sceKernelGetCurrentFanDuty(&duty, &chassis)) {
+      jw_kint(w, "fanDuty", (duty * 100 + 512) / 1024); /* percent */
+    }
+  }
+  /* every sensor of the SoC; the first one is socTemp */
+  jw_key(w, "socSensors");
+  jw_arr(w);
+  for(int i = 0; i < 12; i++) {
+    if(sceKernelGetSocSensorTemperature(i, &temp)) {
+      break;
+    }
+    jw_int(w, temp);
+  }
+  jw_arr_end(w);
 }
 
 void
@@ -764,18 +787,21 @@ plat_app_uninstall(const char *title_id) {
 
 int
 plat_power(const char *action) {
-  int how;
-  if(!strcmp(action, "reboot")) {
-    how = RB_AUTOBOOT;
+  int r;
+
+  sync();
+  if(!strcmp(action, "rest")) {
+    r = sceSystemStateMgrEnterStandby(0);
+  } else if(!strcmp(action, "reboot")) {
+    r = sceSystemStateMgrReboot();
   } else if(!strcmp(action, "poweroff")) {
-    how = RB_POWEROFF;
+    r = sceSystemStateMgrTurnOff();
   } else {
     plat_set_error("unknown power action '%s'", action);
     return -1;
   }
-  sync();
-  if(reboot(how)) {
-    plat_set_error("reboot(%d): %s", how, strerror(errno));
+  if(r) {
+    plat_set_error("the console refused to %s (0x%x)", action, r);
     return -1;
   }
   return 0;

@@ -517,7 +517,7 @@ function show(v,push){
   $("vt").textContent=def[1];$("vs").textContent=def[2];
   if(push)history.replaceState(null,"","#"+v);
   $("side").className="side";paintNav();render();$("view").scrollTop=0;
-  if(v==="files")loadDir(S.cwd);if(v==="procs")loadProcs();if(v==="system")loadLog();if(v==="transfers")loadJobs();if(v==="payloads")loadPay();if(v==="themes")loadThemes();if(v==="saves")loadSaves();if(v==="captures")loadCaps();
+  if(v==="files")loadDir(S.cwd);if(v==="procs")loadProcs();if(v==="system"){loadLog();S.fanEdit=null;loadFan()}if(v==="transfers")loadJobs();if(v==="payloads")loadPay();if(v==="themes")loadThemes();if(v==="saves")loadSaves();if(v==="captures")loadCaps();
 }
 $("nav").onclick=function(e){var b=e.target.closest("button[data-v]");if(b)show(b.getAttribute("data-v"),true)};
 window.addEventListener("hashchange",function(){var h=location.hash.slice(1);if(h!==S.view)show(h)});
@@ -1218,6 +1218,27 @@ $("v-procs").addEventListener("click",function(e){var b=e.target.closest("[data-
 /* ------------------------------------------------------------ system */
 S.log=[];
 function loadLog(){return api("/api/sys/log").then(function(j){S.log=j.entries||[];if(S.view==="system")paintSys()}).catch(function(){})}
+S.fan=null;S.fanEdit=null;
+function loadFan(){if(!S.full)return Promise.resolve();return api("/api/sys/fan").then(function(j){S.fan=j;if(!S.fanEdit)S.fanEdit={manual:j.manual,threshold:Math.min(j.max,Math.max(j.min,j.threshold))};if(S.view==="system")paintSys()}).catch(function(){})}
+function fanHtml(){
+  var f=S.fan,e=S.fanEdit;if(!f||!e)return '<p style="margin:0;color:var(--dim)">'+L("Leyendo el ajuste…","Reading the setting…")+'</p>';
+  var same=e.manual===f.manual&&(!e.manual||e.threshold===f.threshold);
+  return '<p style="margin:0 0 12px;color:var(--dim)">'+L("El umbral es la temperatura que la consola se permite alcanzar antes de acelerar el ventilador. Más bajo: más fresca y más ruidosa. De fábrica son ","The threshold is the temperature the console lets itself reach before speeding the fan up. Lower: cooler and louder. Stock is ")+f.stock+' °C.</p>'+
+    '<div class="seg" style="margin-bottom:14px"><button data-fm="0" class="'+(e.manual?"":"on")+'">'+L("Automático","Automatic")+'</button><button data-fm="1" class="'+(e.manual?"on":"")+'">'+L("Umbral propio","My threshold")+'</button></div>'+
+    (e.manual?'<div style="display:flex;align-items:center;gap:14px;margin-bottom:14px"><input type="range" id="fan-r" min="'+f.min+'" max="'+f.max+'" step="1" value="'+e.threshold+'" style="flex:1"><b id="fan-v" style="font:700 20px var(--mono);min-width:64px;text-align:right">'+e.threshold+' °C</b></div>':"")+
+    '<div class="row"><button class="btn pri" id="fan-go"'+(same?" disabled":"")+'>'+L("Aplicar","Apply")+'</button><p>'+(f.manual?L("Ahora: umbral propio a ","Now: my threshold at ")+f.threshold+" °C":L("Ahora: automático","Now: automatic"))+'</p></div>';
+}
+function fanWire(){
+  var e=S.fanEdit;if(!e||!$("fan-go"))return;
+  [].forEach.call($("v-system").querySelectorAll("[data-fm]"),function(b){b.onclick=function(){e.manual=b.getAttribute("data-fm")==="1";paintSys()}});
+  if($("fan-r"))$("fan-r").oninput=function(){e.threshold=+this.value;$("fan-v").textContent=e.threshold+" °C";$("fan-go").disabled=e.manual===S.fan.manual&&e.threshold===S.fan.threshold};
+  $("fan-go").onclick=function(){api("/api/sys/fan",{manual:e.manual,threshold:e.threshold}).then(function(){toast(e.manual?L("Ventilador: umbral a ","Fan: threshold at ")+e.threshold+" °C":L("Ventilador en automático","Fan back to automatic"));S.fanEdit=null;return loadFan()}).catch(fail)};
+  [].forEach.call($("v-system").querySelectorAll("[data-pw]"),function(b){b.onclick=function(){var a=b.getAttribute("data-pw");
+    var t={rest:[L("Poner la consola en reposo","Put the console in Rest Mode"),L("La consola se duerme ahora. NeoHEN sigue cargado al despertarla. Si hay un juego abierto, se queda en pausa.","The console goes to sleep now. NeoHEN is still loaded when it wakes. An open game stays suspended."),L("Poner en reposo","Rest Mode")],
+      reboot:[L("Reiniciar la consola","Restart the console"),L("Se cierra todo y la consola arranca de fábrica: NeoHEN desaparece hasta que lances el exploit otra vez.","Everything is closed and the console starts stock: NeoHEN is gone until you run the exploit again."),L("Reiniciar","Restart")],
+      poweroff:[L("Apagar la consola","Turn the console off"),L("Se cierra todo y la consola se apaga del todo. Al encenderla habrá que lanzar el exploit otra vez.","Everything is closed and the console turns off completely. When it is turned on the exploit has to be run again."),L("Apagar","Power off")]}[a];
+    ask(t[0],t[1],t[2],a!=="rest").then(function(ok){if(ok)api("/api/sys/power",{action:a}).then(function(){toast(L("Orden enviada a la consola","Order sent to the console"))}).catch(fail)})}});
+}
 function paintSys(){
   var i=S.info;
   function kv(k,v){return v?'<dt>'+k+'</dt><dd>'+esc(v)+'</dd>':""}
@@ -1228,12 +1249,17 @@ function paintSys(){
     kv("NeoWEB",(i.version||"")+" · "+(S.full?L("completa","full"):L("restringida","restricted"))+(S.ro?" · "+L("solo lectura","read-only"):""))+'</dl></div>'+
     '<div class="card pad"><h3 class="h">'+L("Aviso en pantalla","On-screen notification")+'</h3><p style="margin:0 0 12px;color:var(--dim)">'+L("Envía un mensaje que aparece como notificación en la PS5.","Send a message that pops up as a notification on the PS5.")+'</p>'+
     '<div style="display:flex;gap:10px"><input class="in" id="nt" style="flex:1" maxlength="200" placeholder="'+L("Texto del aviso…","Notification text…")+'"><button class="btn pri" id="nb">'+ic("bell")+L("Enviar","Send")+'</button></div></div></div>'+
+    (S.full?'<div class="g2"><div class="card pad"><h3 class="h">'+L("Ventilador","Fan")+' <em>'+(i.fanDuty!=null?L("girando al ","spinning at ")+i.fanDuty+"%":"")+'</em></h3>'+fanHtml()+'</div>'+
+      '<div class="card pad"><h3 class="h">'+L("Energía","Power")+'</h3><p style="margin:0 0 12px;color:var(--dim)">'+L("El reposo conserva NeoHEN. Reiniciar o apagar no: la consola vuelve de fábrica y hay que lanzar el exploit otra vez.","Rest Mode keeps NeoHEN. A restart or a power off does not: the console comes back stock and the exploit has to be run again.")+'</p>'+
+      '<div class="row"><button class="btn pri" data-pw="rest">'+L("Poner en reposo","Rest Mode")+'</button><button class="btn danger" data-pw="reboot">'+L("Reiniciar","Restart")+'</button><button class="btn danger" data-pw="poweroff">'+L("Apagar","Power off")+'</button></div>'+
+      (i.socSensors&&i.socSensors.length?'<p style="margin:14px 0 0;font:500 11.5px var(--mono);color:var(--faint)">'+L("Sensores del SoC: ","SoC sensors: ")+i.socSensors.join(" · ")+' °C</p>':"")+'</div></div>':"")+
     '<h3 class="h" style="margin-top:24px">'+L("Volúmenes montados","Mounted volumes")+' <em>'+mounts.length+'</em></h3><div class="card tw" style="max-height:340px"><table class="t"><thead><tr><th>'+L("Ruta","Path")+'</th><th class="hide-m">'+L("Tipo","Type")+'</th><th class="r">'+L("Tamaño","Size")+'</th><th class="r">'+L("Libre","Free")+'</th><th>'+L("Uso","Used")+'</th></tr></thead><tbody>'+
     mounts.map(function(m){var pct=Math.round((m.total-m.free)/m.total*100);
       return '<tr><td class="n"><a '+(S.full?'data-open="'+esc(m.path)+'"':'style="cursor:default"')+'>'+ic("disk")+'<span>'+esc(m.path)+'</span></a></td><td class="m hide-m">'+esc(m.fs)+(m.readonly?" · ro":"")+'</td><td class="m r">'+size(m.total)+'</td><td class="m r">'+size(m.free)+
       '</td><td style="min-width:130px"><div style="display:flex;align-items:center;gap:8px"><div class="prog '+(pct>=92?"bad":"")+'" style="flex:1"><i style="width:'+pct+'%"></i></div><span class="mono" style="font-size:11.5px;color:var(--dim)">'+pct+'%</span></div></td></tr>'}).join("")+'</tbody></table></div>'+
     '<h3 class="h" style="margin-top:24px">'+L("Registro de NeoWEB","NeoWEB log")+' <em>'+S.log.length+'</em><span class="sp"></span><button class="btn sm ghost" id="lr">'+ic("refresh")+'</button></h3><div class="card log">'+
     (S.log.length?S.log.slice().reverse().map(function(e){return '<div class="'+esc(e.level)+'"><time>'+new Date(e.ts*1000).toLocaleTimeString()+'</time>'+esc(e.msg)+'</div>'}).join(""):'<div style="color:var(--faint)">–</div>')+'</div>';
+  fanWire();
   $("nb").onclick=function(){var t=$("nt").value.trim();if(t)api("/api/sys/notify",{text:t}).then(function(){toast(L("Enviado","Sent"));$("nt").value=""}).catch(fail)};
   $("nt").onkeydown=function(e){if(e.key==="Enter")$("nb").click()};
   $("lr").onclick=loadLog;
@@ -1259,7 +1285,7 @@ function fast(){
 function slow(){
   return Promise.all([api("/api/apps/list"),api("/api/sys/mounts")]).then(function(x){
     S.apps=x[0].apps||[];S.mounts=x[1].mounts||[];paintNav();
-    if(S.view==="panel")paintPanel();else if(S.view==="library")paintGrid();else if(S.view==="system")paintSys();
+    if(S.view==="panel")paintPanel();else if(S.view==="library")paintGrid();else if(S.view==="system"&&!/^(fan-r|nt)$/.test((document.activeElement||{}).id||""))paintSys();
   }).catch(function(){});
 }
 function probe(){return fetch("/api/fs/stat?path=/data").then(function(r){S.full=r.status!==404},function(){S.full=false})}
