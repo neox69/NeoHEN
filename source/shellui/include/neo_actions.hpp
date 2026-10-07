@@ -43,3 +43,6 @@ void neo_theme_set(int index);
 /** Starts the thread that reloads the home screen when the theme service
  * reports a change, so the new background and music show at once. */
 void neo_theme_watch_start();
+/** Asks the daemon to restart the home menu, which then reads the theme's
+ *  files again. It says so if a game or app is open, and does nothing. */
+void neo_menu_restart();

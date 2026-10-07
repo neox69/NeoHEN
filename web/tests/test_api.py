@@ -142,7 +142,8 @@ class PayloadTest(unittest.TestCase):
             f.write(os.urandom(3 * 1024 * 1024 + 17))
 
         cls.port = free_port()
-        env = dict(os.environ, PS5AIO_ROOT=cls.root)
+        cls.ctl_port = free_port()
+        env = dict(os.environ, PS5AIO_ROOT=cls.root, NEOWEB_CTL_PORT=str(cls.ctl_port))
         cls.proc = subprocess.Popen([BIN, str(cls.port)], env=env,
                                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         cls.api = Api(f"http://127.0.0.1:{cls.port}")
@@ -275,6 +276,35 @@ class PayloadTest(unittest.TestCase):
         st, body, _ = self.api.req("PUT", "/fs/put?path=/data/t/h.bin&offset=%d" % (len(payload) + 10),
                                    raw=b"x")
         self.assertEqual(st, 409, body)
+
+    def test_menu_restart(self):
+        import threading
+        # nobody on NeoHEN's control port
+        st, body, _ = self.api.req("POST", "/api/sys/menu", body={})
+        self.assertEqual(st, 502, body)
+        # a stand-in for NeoHEN: accepts the first request, refuses the second
+        got = []
+        srv = socket.socket()
+        srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        srv.bind(("127.0.0.1", self.ctl_port))
+        srv.listen(2)
+
+        def serve():
+            for reply in (b"\0", b"\2"):
+                c, _ = srv.accept()
+                got.append(struct.unpack("<II", c.recv(8)))
+                c.sendall(reply)
+                c.close()
+
+        t = threading.Thread(target=serve, daemon=True)
+        t.start()
+        st, body, _ = self.api.req("POST", "/api/sys/menu", body={})
+        self.assertEqual(st, 200, body)
+        st, body, _ = self.api.req("POST", "/api/sys/menu", body={})
+        self.assertEqual(st, 409, body)
+        t.join(5)
+        srv.close()
+        self.assertEqual(got, [(0x4F4E494F, 3)] * 2)
 
     def test_copy_job(self):
         _, j = self.api.post("/api/fs/copy", {"from": "/mnt/sandbox/pfsmnt/PPSA01234-app0",

@@ -112,6 +112,9 @@ enum DaemonCommands : unsigned int {
 #define ONION_CTRL_TCP_CMD_SHUTDOWN 1u
 /* Inject the Toolbox now (NeoHEN; manual Rest Mode policy). */
 #define ONION_CTRL_TCP_CMD_TOOLBOX 2u
+/* Restart the home menu only (NeoHEN; a theme applied in full). Refused,
+ * reply 2, while a game or app is open. */
+#define ONION_CTRL_TCP_CMD_MENU 3u
 
 struct IPCMessage {
   int magic = 0xDEADBABE;

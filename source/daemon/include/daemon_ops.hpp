@@ -65,6 +65,9 @@ void *system_language_poll_thread(void *args) noexcept;
  */
 [[noreturn]] void cmd_shutdown_onion_stack(void);
 
+/** NeoHEN: restart SceShellUI and nothing else. False if it was not found. */
+bool daemon_restart_shellui(void);
+
 bool cmd_enable_toolbox();
 /** Schedule injection for an identified SceShellUI EXEC without blocking kevent. */
 void toolbox_on_new_shellui(pid_t pid);

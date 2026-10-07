@@ -3,12 +3,17 @@
 #include "api.h"
 
 #include <ctype.h>
+#include <errno.h>
 #include <signal.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/time.h>
+#include <netinet/in.h>
 
 #include "fsutil.h"
 #include "jobs.h"
@@ -211,6 +216,49 @@ api_sys_power(http_req_t *req) {
   }
 }
 
+/* Asks NeoHEN (its control port, on this console) to restart the home menu:
+ * that is what makes it read a theme's files again. NeoHEN refuses while a
+ * game or app is open. */
+static void
+api_sys_menu(http_req_t *req) {
+  const uint32_t frame[2] = {0x4F4E494Fu, 3};
+  struct sockaddr_in addr;
+  struct timeval tv = {3, 0};
+  unsigned char reply = 0xff;
+  int port = 9048;
+  const char *env = getenv("NEOWEB_CTL_PORT"); /* the tests' stand-in */
+  int s = socket(AF_INET, SOCK_STREAM, 0);
+
+  if(env && atoi(env) > 0) {
+    port = atoi(env);
+  }
+  memset(&addr, 0, sizeof(addr));
+  addr.sin_family = AF_INET;
+  addr.sin_port = htons((uint16_t)port);
+  addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+  if(s < 0) {
+    http_send_error(req, 500, "socket: %s", strerror(errno));
+    return;
+  }
+  setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+  setsockopt(s, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
+  if(connect(s, (struct sockaddr *)&addr, sizeof(addr)) ||
+     send(s, frame, sizeof(frame), 0) != (ssize_t)sizeof(frame) ||
+     recv(s, &reply, 1, 0) != 1) {
+    close(s);
+    http_send_error(req, 502, "NeoHEN does not answer on its control port");
+    return;
+  }
+  close(s);
+  if(reply == 2) {
+    http_send_error(req, 409, "a game or app is open");
+  } else if(reply) {
+    http_send_error(req, 501, "this NeoHEN cannot restart the menu");
+  } else {
+    http_send_ok(req);
+  }
+}
+
 static void
 api_sys_browser(http_req_t *req) {
   jval_t *b = api_body(req);
@@ -313,6 +361,7 @@ static const api_route_t g_routes[] = {
   {"POST", "/api/sys/kill",         api_sys_kill},
   {"POST", "/api/sys/power",        api_sys_power},
   {"POST", "/api/sys/browser",      api_sys_browser},
+  {"POST", "/api/sys/menu",         api_sys_menu},
 
   {"GET",  "/api/jobs",             api_jobs_list},
   {"POST", "/api/jobs/cancel",      api_jobs_cancel},

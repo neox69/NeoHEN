@@ -120,7 +120,14 @@ static OnPressResult id_theme(OnPressContext &ctx) {
   neo_theme_set(ctx.id == "id_theme_stock" ? -1 : ctx.id.back() - '0');
   return OnPressResult::Consumed;
 }
+static OnPressResult id_theme_restart(OnPressContext &ctx) {
+  /* The confirmation has been accepted before this handler runs. */
+  ctx.dirty = false;
+  neo_menu_restart();
+  return OnPressResult::Consumed;
+}
 static const OnPressExactEntry kRootExact[] = {
+    {"id_theme_restart", id_theme_restart},
     {"id_smp_relaunch", id_smp_relaunch},
     {"id_theme_stock", id_theme},
     {"id_theme_0", id_theme},

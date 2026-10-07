@@ -885,18 +885,19 @@ function paintThemes(){
   var mk=S.tmk;
   function card(t){
     var on=t?S.tactive===t.name:!S.tactive,n=t?esc(t.name):"";
-    var bg=t?t.files.filter(function(f){return /\.dds\.zst$/.test(f)}).length:0,mu=t&&t.files.indexOf("bgm_home.at9")>=0,pv=t&&t.files.indexOf("preview.jpg")>=0;
+    var bg=t?t.files.filter(function(f){return /\.dds\.zst$/.test(f)}).length:0,mu=t&&t.files.indexOf("bgm_home.at9")>=0,pv=t&&t.files.indexOf("preview.jpg")>=0,icn=t?t.files.filter(function(f){return /^system_ex\/.*\/icon0\.png$/.test(f)}).length:0;
     return '<div class="card theme'+(on?" on":"")+'"><div class="pv" style="'+(pv?"background-image:url(/fs/get?path="+enc(TDIR+"/"+t.name+"/preview.jpg")+")":"")+'">'+
       (pv?"":ic(t?"themes":"game"))+(on?'<div class="tag">'+(S.tstate==="pending"?L("PENDIENTE","PENDING"):L("ACTIVO","ACTIVE"))+'</div>':"")+'</div>'+
-      '<div class="bd"><b>'+(t?n:L("Aspecto de fábrica","Stock look"))+'</b><small>'+(t?(bg?bg+" "+L("fondos","backgrounds"):L("sin fondos","no backgrounds"))+" · "+(mu?L("con música","with music"):L("música original","stock music"))+" · "+size(t.size)
+      '<div class="bd"><b>'+(t?n:L("Aspecto de fábrica","Stock look"))+'</b><small>'+(t?(bg?bg+" "+L("fondos","backgrounds"):L("sin fondos","no backgrounds"))+" · "+(mu?L("con música","with music"):L("música original","stock music"))+(icn?" · "+icn+" "+L("iconos","icons"):"")+" · "+size(t.size)
         :L("Los fondos y la música originales de la consola","The console's own backgrounds and music"))+'</small>'+
       '<div class="acts">'+(on?'<span class="chip ok">'+L("En uso","In use")+'</span>':'<button class="btn pri sm" data-on="'+n+'">'+L("Aplicar","Apply")+'</button>')+
       (t&&!on?'<button class="btn sm danger" data-del="'+n+'">'+L("Borrar","Delete")+'</button>':"")+'</div></div></div>'}
   $("v-themes").innerHTML=
     (S.tservice?"":'<div class="note">'+L("El servicio de temas (neotheme.elf) no está en marcha: arráncalo en Payloads para que los temas se apliquen.","The theme service (neotheme.elf) is not running: start it in Payloads so themes are applied.")+'</div>')+
     '<div class="note" style="border-color:rgba(77,163,255,.4);background:rgba(77,163,255,.08);color:#CFE4FF">'+
-    L("Un tema no modifica la consola: se muestra encima de sus ficheros mientras NeoHEN está cargado. Al reiniciar la PS5 vuelve siempre el aspecto de fábrica. El cambio se ve al salir de un juego o al moverte por el menú.",
-      "A theme does not modify the console: it is shown on top of its files while NeoHEN is loaded. Restarting the PS5 always brings the stock look back. The change shows when you leave a game or move around the menu.")+'</div>'+
+    L("Un tema no modifica la consola: se muestra encima de sus ficheros mientras NeoHEN está cargado. Al reiniciar la PS5 vuelve siempre el aspecto de fábrica. El fondo cambia al salir de un juego o al moverte por el menú; la música, los iconos y los sonidos, al reiniciar el menú con «Aplicar del todo».",
+      "A theme does not modify the console: it is shown on top of its files while NeoHEN is loaded. Restarting the PS5 always brings the stock look back. The background changes when you leave a game or move around the menu; music, icons and sounds, when the menu is restarted with "Apply in full".")+'</div>'+
+    '<div class="row" style="margin:0 0 16px"><button class="btn pri" id="t-restart">'+ic("refresh")+L("Aplicar del todo","Apply in full")+'</button><p>'+L("Reinicia solo el menú de la PS5 (unos segundos) para que cargue el tema entero. No se puede con un juego abierto.","Restarts only the PS5 menu (a few seconds) so it loads the whole theme. Not possible with a game open.")+'</p></div>'+
     '<div class="tgrid">'+card(null)+S.themes.map(card).join("")+'</div>'+
     '<h3 class="h" style="margin-top:28px">'+L("Crear un tema","Make a theme")+'</h3><div class="card pad maker">'+
     '<div>'+(mk.img?'<canvas id="tm-cv" width="640" height="360"></canvas>':'<div class="ph" id="tm-ph">'+ic("upload")+'<div>'+L("Elige una imagen para el fondo<br><small>Se recorta a 16:9 y se convierte a 4K</small>","Choose an image for the background<br><small>It is cropped to 16:9 and converted to 4K</small>")+'</div></div>')+'</div>'+
@@ -913,7 +914,14 @@ function paintThemes(){
   if($("tm-mx"))$("tm-mx").onclick=function(){mk.at9=null;paintThemes()};
   $("tm-n").oninput=function(){mk.name=this.value};
   if($("tm-go"))$("tm-go").onclick=makeTheme;
+  $("t-restart").onclick=restartMenu;
 }
+function restartMenu(){
+  ask(L("Reiniciar el menú","Restart the menu"),L("El menú de la PS5 se cierra y vuelve en unos segundos con el tema completo. La Toolbox de NeoHEN tarda medio minuto en volver.","The PS5 menu closes and comes back in a few seconds with the whole theme. The NeoHEN Toolbox takes half a minute to return."),L("Reiniciar menú","Restart menu")).then(function(ok){
+    if(!ok)return;
+    api("/api/sys/menu",{}).then(function(){toast(L("Menú reiniciándose…","Menu restarting…"))},function(e){
+      var m=String(e&&e.message||e);
+      toast(/open/.test(m)?L("Cierra antes el juego o la aplicación abierta","Close the open game or app first"):/control port|cannot/.test(m)?L("El NeoHEN cargado es anterior a esta función: actualízalo","The loaded NeoHEN is older than this feature: update it"):m,true)})})}
 $("v-themes").addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;var n;
   if((n=b.getAttribute("data-on"))!=null)setTheme(n);
   else if((n=b.getAttribute("data-del")))ask(L("Borrar el tema ","Delete the theme ")+n,L("Se eliminan sus ficheros de la consola.","Its files are removed from the console."),L("Borrar","Delete"),true).then(function(ok){
