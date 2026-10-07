@@ -76,6 +76,9 @@ On a PS5 CFI-7021, firmware 13.42, with kstuff-lite 1.11 and ShadowMount+
 
 ## In progress
 
+- **0.1.0-rc4** — in development, not released: the crown logo, ShadowMount+
+  1.7beta4, the watchdog checking every minute, and NeoWEB 0.2.0 shipping its
+  full variant by default (file manager, resumable and verified uploads).
 - **0.1.0-rc3** — pre-release. Fixes what a 29 hour Rest Mode broke on
   0.1.0-rc2: NeoWEB stopped answering on port 8686 (it now reopens its port)
   and ShadowMount+ lost its install hook. With `watchdog=relaunch` the
@@ -89,7 +92,7 @@ On a PS5 CFI-7021, firmware 13.42, with kstuff-lite 1.11 and ShadowMount+
 - **NeoAPP** — a PC app on top of the full NeoWEB build: upload games
   with resumable transfers, file manager, library with covers, installer,
   per-game name, icon and background, themes. Not started; the service side
-  already exists behind `make FULL=1`.
+  already exists.
 - **Per-game profiles** — kstuff pause, plugins, cheats, patches, AMPR,
   fan threshold and region in one place.
 - **Game patches** (FPS, resolution), payload repositories with updates and

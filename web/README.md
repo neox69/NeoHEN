@@ -11,10 +11,15 @@ It started as the payload of the PS5AIO project and was brought into NeoHEN.
 
 | Build | Command | What it can do |
 |---|---|---|
-| safe (default) | `make` | read the console's state, list the library, serve covers, launch or close a game, manage the payloads in NeoHEN's payloads folder |
-| full | `make FULL=1` | the above plus file manager with resumable transfers, installer, memory tools, dumper, power |
+| safe | `make SAFE=1` | read the console's state, list the library, serve covers, launch or close a game, manage the payloads in NeoHEN's payloads folder |
+| full (default) | `make` | the above plus file manager with resumable transfers, installer, memory tools, dumper, power |
 
-The safe build is the one NeoHEN autostarts. It has no file manager, no
+The full build is the one NeoHEN ships and autostarts since 0.1.0-rc4: the
+file manager, uploads and the rest are there for anyone on the local network,
+without a password. Creating the empty file `/data/neohen/web/readonly` on the
+console turns every route that changes something off, in either build.
+
+The safe build has no file manager, no
 installer, no memory access and no power control; those handlers are not
 registered at all (`web/tests/test_safe.py` checks every one of them answers
 404).
@@ -109,11 +114,11 @@ and wake.
 
 ```sh
 export PS5_PAYLOAD_SDK=/opt/ps5-payload-sdk
-make -C web                 # web/neoweb.elf, safe build
+make -C web                 # web/neoweb.elf, full build (SAFE=1 for the safe one)
 
-make -C web host            # Linux build that emulates a console
+make -C web host SAFE=1            # Linux build that emulates a console
 python3 web/tests/test_safe.py
-make -C web clean && make -C web host FULL=1
+make -C web clean && make -C web host
 python3 web/tests/test_api.py
 ```
 
