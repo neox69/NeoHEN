@@ -273,16 +273,37 @@ fill_current(const char *theme) {
   return failed ? -1 : 0;
 }
 
-/* Changes when the theme, or what is inside its folder, changes. */
+/* Changes when the theme changes, and when a file of it is added, removed
+ * or written again (a new music file uploaded over the old one). */
 static void
 signature(const char *theme, char *out, size_t size) {
-  struct stat st;
+  unsigned long long bytes = 0;
+  long newest = 0;
+  int files = 0;
+  struct dirent *e;
+  DIR *dir;
 
-  if(!theme[0] || stat(theme, &st)) {
+  if(!theme[0] || !(dir = opendir(theme))) {
     snprintf(out, size, "-");
-  } else {
-    snprintf(out, size, "%s|%ld|%ld", theme, (long)st.st_mtime, (long)st.st_nlink);
+    return;
   }
+  while((e = readdir(dir))) {
+    char path[768];
+    struct stat st;
+    if(skipped(e->d_name)) {
+      continue;
+    }
+    snprintf(path, sizeof(path), "%s/%s", theme, e->d_name);
+    if(!stat(path, &st) && S_ISREG(st.st_mode)) {
+      files++;
+      bytes += (unsigned long long)st.st_size;
+      if((long)st.st_mtime > newest) {
+        newest = (long)st.st_mtime;
+      }
+    }
+  }
+  closedir(dir);
+  snprintf(out, size, "%s|%d|%llu|%ld", theme, files, bytes, newest);
 }
 
 int
