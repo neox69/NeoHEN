@@ -76,10 +76,13 @@ En una PS5 CFI-7021, firmware 13.42, con kstuff-lite 1.11 y ShadowMount+
 
 ## En desarrollo
 
-- **0.1.0-rc4** — en desarrollo, sin publicar: el logotipo de la corona,
-  ShadowMount+ 1.7beta4, el vigilante comprobando cada minuto y NeoWEB 0.2.0
-  con su variante completa por defecto (explorador de ficheros, subidas
-  reanudables y verificadas).
+- **0.1.0-rc4** — en desarrollo, sin publicar: ShadowMount+ 1.7beta4, el
+  vigilante comprobando cada minuto, NeoWEB 0.2.0 con su variante completa
+  por defecto (explorador de ficheros, subidas reanudables y verificadas) y
+  página nueva, copias de las partidas guardadas y más entradas en el menú
+  Opciones de un juego, y temas para el menú de la PS5 (fondos, música,
+  iconos) mostrados con una capa de solo lectura que un reinicio quita
+  siempre.
 - **0.1.0-rc3** — versión preliminar. Corrige lo que un reposo de 29 horas
   rompió en la 0.1.0-rc2: NeoWEB dejaba de responder en el puerto 8686
   (ahora reabre su puerto) y ShadowMount+ perdía su hook de instalación. Con
@@ -186,6 +189,7 @@ Desde un PC de la misma red:
 ```sh
 python3 scripts/neohen_ctl.py toolbox  <IP_PS5>   # cargar la Toolbox ahora
 python3 scripts/neohen_ctl.py shutdown <IP_PS5>   # parar NeoHEN; kstuff sigue
+python3 scripts/neohen_ctl.py menu     <IP_PS5>   # reiniciar solo el menú
 ```
 
 Los logs están en `/data/neohen/`: `NeoHEN.log`, `NeoHEN_crash.log` y

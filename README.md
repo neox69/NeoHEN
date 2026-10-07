@@ -76,9 +76,12 @@ On a PS5 CFI-7021, firmware 13.42, with kstuff-lite 1.11 and ShadowMount+
 
 ## In progress
 
-- **0.1.0-rc4** — in development, not released: the crown logo, ShadowMount+
-  1.7beta4, the watchdog checking every minute, and NeoWEB 0.2.0 shipping its
-  full variant by default (file manager, resumable and verified uploads).
+- **0.1.0-rc4** — in development, not released: ShadowMount+ 1.7beta4, the
+  watchdog checking every minute, NeoWEB 0.2.0 shipping its full variant by
+  default (file manager, resumable and verified uploads) behind a new page,
+  save data backups and more entries in a game's Options menu, and themes
+  for the PS5 menu (backgrounds, music, icons) shown through a read-only
+  overlay that a reboot always removes.
 - **0.1.0-rc3** — pre-release. Fixes what a 29 hour Rest Mode broke on
   0.1.0-rc2: NeoWEB stopped answering on port 8686 (it now reopens its port)
   and ShadowMount+ lost its install hook. With `watchdog=relaunch` the
@@ -181,6 +184,7 @@ From a PC on the same network:
 ```sh
 python3 scripts/neohen_ctl.py toolbox  <PS5_IP>   # load the Toolbox now
 python3 scripts/neohen_ctl.py shutdown <PS5_IP>   # stop NeoHEN, kstuff stays
+python3 scripts/neohen_ctl.py menu     <PS5_IP>   # restart the home menu only
 ```
 
 Logs are in `/data/neohen/`: `NeoHEN.log`, `NeoHEN_crash.log`,
