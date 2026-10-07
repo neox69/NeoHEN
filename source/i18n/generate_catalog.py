@@ -33,9 +33,10 @@ REQUIRED_TOKENS = {
         "plugins.link.sub": ("Kstuff",),
     },
     "notifications": {
-        # The author toast credits the author. The thanks toast names the
-        # contributor.
-        "notify.boot.made_by": ("0xp0co",),
+        # NeoHEN signs its start-up toast itself; upstream's authors are
+        # credited in the Toolbox's About page and in the README. The thanks
+        # text is kept, unused at start-up, with its names.
+        "notify.boot.made_by": ("NeoX",),
         "notify.boot.thanks": ("kvnhrt", "Modmycon"),
         "notify.kstuff.loading": ("Kstuff",),
         "notify.kstuff.load_failed": ("Kstuff",),

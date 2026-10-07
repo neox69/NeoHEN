@@ -15,6 +15,9 @@ along with this program; see the file COPYING. If not, see
 <http://www.gnu.org/licenses/>.  */
 
 // Include files
+#include <arpa/inet.h>
+#include <ifaddrs.h>
+#include <netinet/in.h>
 #include <onion/brand.h>
 #include <cstdint>
 #include <onion/ucred.h>
@@ -338,7 +341,21 @@ int main() {
           onion::debug_settings_route::UriKind::Simple));
   onion_notify_try_rich(welcome_toast_json.c_str(), "notify.boot.welcome");
   if (boot_settings.show_boot_thanks) {
-    onion_notify_debug(/*show_watermark=*/1, "notify.boot.thanks");
+    /* NeoHEN: the second toast says where NeoWEB answers. */
+    char ip[INET_ADDRSTRLEN] = "";
+    struct ifaddrs *list = nullptr;
+    if (getifaddrs(&list) == 0) {
+      for (struct ifaddrs *it = list; it && !ip[0]; it = it->ifa_next) {
+        if (!it->ifa_addr || it->ifa_addr->sa_family != AF_INET)
+          continue;
+        const auto *in = reinterpret_cast<const sockaddr_in *>(it->ifa_addr);
+        if (ntohl(in->sin_addr.s_addr) >> 24 != 127)
+          inet_ntop(AF_INET, &in->sin_addr, ip, sizeof(ip));
+      }
+      freeifaddrs(list);
+    }
+    if (ip[0])
+      onion_notify(true, "notify.boot.neoweb", ip);
   }
   LOG_INFO("StartUp thread created!! - welcome to OnionHEN");
 
