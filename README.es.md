@@ -33,7 +33,7 @@ GPLv3.
 | Reposo | La Toolbox vuelve sola cuando el menú lleva 30 s estable. El original la reinyecta a los 10 s de despertar, y en 13.42 eso reiniciaba el menú y lo dejaba bloqueado cerca de un minuto. Tres modos: `stable` (por defecto), `manual` y `original`. |
 | Un solo fichero | `NeoHEN.elf` lleva dentro kstuff-lite, ShadowMount+, ftpsrv, nanoDNS y NeoWEB. En el primer arranque los escribe en `/data/neohen/payloads` y los lanza en orden; en los siguientes, solo los lanza. No hay que descargar, copiar ni renombrar nada. |
 | Tú decides | Un payload que sustituyas o borres se queda como lo dejaste. Un `kstuff.elf` en `/data/neohen/` sustituye al que va dentro, y si ya hay un kstuff en marcha no se toca. |
-| ShadowMount+ | Se usa el payload de su autor sin modificar, con un vigilante que comprueba su hook tras el reposo y cada 5 minutos, y puede relanzarlo. |
+| ShadowMount+ | Se usa el payload de su autor sin modificar, con un vigilante que comprueba su hook tras el reposo y cada minuto, y puede relanzarlo. |
 | NeoWEB | Página web y servicio HTTP en la consola (puerto 8686), sin necesidad de app en el PC. Pestaña Consola: temperaturas, discos y juego abierto. Biblioteca: carátulas, lanzar y cerrar. Payloads: enviar, arrancar, parar, borrar y autoarranque. Ver [web/README.md](web/README.md). |
 | Privacidad | Los logs nunca llevan el nombre ni el identificador de la cuenta, y las IP y MAC se sustituyen. Los del original escriben nombre e identificador cada vez que se abre un menú. |
 | Partición del sistema | El icono de la Toolbox vive en memoria volátil en vez de escribirse en `/system_ex`. |
@@ -50,7 +50,7 @@ de Uso a distancia, atajos y opciones de juego. Su documentación está en
 ## Qué se ha probado
 
 En una PS5 CFI-7021, firmware 13.42, con kstuff-lite 1.11 y ShadowMount+
-1.7beta2.
+1.7beta2 y, desde el 2026-10-07, 1.7beta4.
 
 | | Resultado |
 |---|---|
@@ -135,7 +135,7 @@ Dentro de `NeoHEN.elf`, sin modificar:
 
 | Payload | Versión | Licencia |
 |---|---|---|
-| [ShadowMount+](https://github.com/drakmor/ShadowMountPlus) | 1.7beta2 | GPL-3.0 |
+| [ShadowMount+](https://github.com/drakmor/ShadowMountPlus) | 1.7beta4 | GPL-3.0 |
 | [ftpsrv](https://github.com/ps5-payload-dev/ftpsrv) | v0.21.1 | GPL-3.0 |
 | [nanoDNS](https://github.com/drakmor/nanoDNS) | 0.4 | GPL-3.0 |
 | [kstuff-lite](https://github.com/EchoStretch/kstuff-lite) | v1.11 | sin declarar |
@@ -165,7 +165,7 @@ stable_seconds=30
 
 [shadowmount]
 watchdog=notify               ; off, notify, relaunch
-watchdog_interval_seconds=300
+watchdog_interval_seconds=60
 
 [shellui]
 wait_for_tracer=true

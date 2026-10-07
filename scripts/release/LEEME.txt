@@ -79,7 +79,7 @@ Otros modos en /data/neohen/config.ini, sección [rest_mode]:
 
 Los cambios en config.ini se aplican sin reiniciar NeoHEN.
 
-ShadowMount+: NeoHEN comprueba tras el reposo y cada 5 minutos que sigue
+ShadowMount+: NeoHEN comprueba tras el reposo y cada minuto que sigue
 vivo y que su log no indica que perdió el hook ([shadowmount]
 watchdog=notify, avisa). Con watchdog=relaunch lo relanza solo (máximo 3
 veces por arranque).
