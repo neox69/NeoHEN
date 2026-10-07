@@ -1,13 +1,19 @@
 /* NeoHEN themes service.
  *
  * Keeps the theme named in /data/neohen/themes/active.txt shown on top of
- * the menu's view of /system_ex/vsh_asset (home music, backgrounds), with a
- * READ-ONLY unionfs mount, the mechanism ShadowMount+ uses for its backport
- * overlays. An empty or missing active.txt means the stock look.
+ * the menu's view of /system_ex/vsh_asset (home music, backgrounds). An
+ * empty or missing active.txt means the stock look.
+ *
+ * How: the folder themes/.current is put over the menu's assets once, with
+ * a READ-ONLY unionfs mount (the mechanism ShadowMount+ uses for its
+ * backport overlays), and it is never taken off: the menu keeps files of it
+ * open, and an unmount fails while it does. Changing theme only changes
+ * what is inside .current, which holds hard links to the active theme's
+ * files; empty, the menu sees the stock files.
  *
  * SceShellUI (NPXS40087) reads its assets through its own sandbox, a nullfs
- * view of /system_ex made when it starts, so the theme goes on that path and
- * is put again whenever the menu restarts (Rest Mode, a NeoHEN reload).
+ * view of /system_ex made when it starts, so the mount goes on that path and
+ * is made again whenever the menu restarts (Rest Mode, a NeoHEN reload).
  *
  * The one rule: nothing here writes below /system or /system_ex. A mount
  * lives in the kernel's mount table, so a reboot always brings the stock
@@ -35,6 +41,7 @@
 #define THEMES   "/data/neohen/themes"
 #define ACTIVE   THEMES "/active.txt"
 #define STATE    THEMES "/state.txt"
+#define CURRENT  THEMES "/.current"
 #define SANDBOX  "/mnt/sandbox"
 #define MENU     "NPXS40087_"
 #define ASSETS   "/system_ex/vsh_asset"
@@ -131,9 +138,9 @@ read_active(char *path, size_t size, char *name, size_t name_size) {
   }
 }
 
-/* Is a theme of ours on this folder? If so, which one (its source path). */
+/* Is .current already on this folder? */
 static int
-mounted(const char *target, char *source, size_t size) {
+mounted(const char *target) {
   struct statfs sfs;
 
   if(statfs(target, &sfs) || strcmp(sfs.f_fstypename, "unionfs") ||
@@ -144,39 +151,24 @@ mounted(const char *target, char *source, size_t size) {
   if(!strncmp(from, "<above>:", 8)) {
     from += 8;
   }
-  snprintf(source, size, "%s", from);
-  return 1;
+  return !strcmp(from, CURRENT);
 }
 
 #define IOV(s) {(void *)(s), (s) ? strlen(s) + 1 : 0}
 
+/* Puts .current over the assets of every live menu. Returns how many menus
+ * have it, -1 if one could not get it. */
 static int
-put(const char *theme, const char *target) {
-  struct iovec iov[] = {
-      IOV("fstype"),   IOV("unionfs"),
-      IOV("from"),     IOV(theme),
-      IOV("fspath"),   IOV(target),
-      IOV("copymode"), IOV("transparent"),
-      IOV("noatime"),  IOV(NULL),
-      IOV("fnodup"),   IOV(NULL),
-  };
-  /* MNT_RDONLY: nothing can be written through the mount, in either layer */
-  return nmount(iov, sizeof(iov) / sizeof(iov[0]), MNT_RDONLY);
-}
-
-/* Brings every live menu sandbox to the wanted theme ("" = none).
- * Returns the number of sandboxes that are as wanted, -1 if one is not yet. */
-static int
-reconcile(const char *theme) {
+cover_menus(void) {
   struct dirent *e;
-  int ok = 0, pending = 0;
+  int ok = 0, failed = 0;
   DIR *dir = opendir(SANDBOX);
 
   if(!dir) {
     return -1;
   }
   while((e = readdir(dir))) {
-    char target[512], current[512];
+    char target[512];
     struct stat st;
 
     if(strncmp(e->d_name, MENU, strlen(MENU))) {
@@ -186,52 +178,144 @@ reconcile(const char *theme) {
     if(stat(target, &st)) {
       continue; /* the sandbox of a menu that is gone */
     }
-    int on = mounted(target, current, sizeof(current));
-    if(on && !strcmp(current, theme)) {
+    if(mounted(target)) {
       ok++;
       continue;
     }
-    /* Never forced: if the menu has a file of the old theme open (the music
-     * that is playing), this is tried again on the next round. */
-    if(on && unmount(target, 0)) {
-      pending++;
-      continue;
-    }
-    if(!theme[0] || !put(theme, target)) {
-      ok++;
+    struct iovec iov[] = {
+        IOV("fstype"),   IOV("unionfs"),
+        IOV("from"),     IOV(CURRENT),
+        IOV("fspath"),   IOV(target),
+        IOV("copymode"), IOV("transparent"),
+        IOV("noatime"),  IOV(NULL),
+        IOV("fnodup"),   IOV(NULL),
+    };
+    /* MNT_RDONLY: nothing can be written through the mount, in either layer */
+    if(nmount(iov, sizeof(iov) / sizeof(iov[0]), MNT_RDONLY)) {
+      failed++;
     } else {
-      pending++;
+      ok++;
     }
   }
   closedir(dir);
-  return pending ? -1 : ok;
+  return failed ? -1 : ok;
+}
+
+/* A theme's own files that are not for the console. */
+static int
+skipped(const char *name) {
+  return name[0] == '.' || !strcmp(name, "preview.jpg") || !strcmp(name, "theme.json");
+}
+
+static int
+copy_file(const char *from, const char *to) {
+  char buf[65536];
+  size_t n;
+  int ok = 1;
+  FILE *in = fopen(from, "rb"), *out = in ? fopen(to, "wb") : NULL;
+
+  if(!out) {
+    if(in) {
+      fclose(in);
+    }
+    return -1;
+  }
+  while((n = fread(buf, 1, sizeof(buf), in)) > 0) {
+    if(fwrite(buf, 1, n, out) != n) {
+      ok = 0;
+      break;
+    }
+  }
+  fclose(in);
+  return fclose(out) || !ok ? -1 : 0;
+}
+
+/* Makes .current hold exactly the files of the theme ("" = none). Files are
+ * hard links, so nothing is copied and a theme takes no extra space. */
+static int
+fill_current(const char *theme) {
+  char a[768], b[768];
+  struct dirent *e;
+  int failed = 0;
+  DIR *dir;
+
+  mkdir(CURRENT, 0777);
+  if((dir = opendir(CURRENT))) {
+    while((e = readdir(dir))) {
+      if(strcmp(e->d_name, ".") && strcmp(e->d_name, "..")) {
+        snprintf(a, sizeof(a), CURRENT "/%s", e->d_name);
+        unlink(a);
+      }
+    }
+    closedir(dir);
+  }
+  if(!theme[0]) {
+    return 0;
+  }
+  if(!(dir = opendir(theme))) {
+    return -1;
+  }
+  while((e = readdir(dir))) {
+    struct stat st;
+    if(skipped(e->d_name)) {
+      continue;
+    }
+    snprintf(a, sizeof(a), "%s/%s", theme, e->d_name);
+    snprintf(b, sizeof(b), CURRENT "/%s", e->d_name);
+    if(stat(a, &st) || !S_ISREG(st.st_mode)) {
+      continue;
+    }
+    if(link(a, b) && copy_file(a, b)) {
+      failed++;
+    }
+  }
+  closedir(dir);
+  return failed ? -1 : 0;
+}
+
+/* Changes when the theme, or what is inside its folder, changes. */
+static void
+signature(const char *theme, char *out, size_t size) {
+  struct stat st;
+
+  if(!theme[0] || stat(theme, &st)) {
+    snprintf(out, size, "-");
+  } else {
+    snprintf(out, size, "%s|%ld|%ld", theme, (long)st.st_mtime, (long)st.st_nlink);
+  }
 }
 
 int
 main(void) {
-  char shown[512] = "\x01"; /* nothing reported yet */
+  char shown[640] = ""; /* signature of what .current holds */
+  int said = 0;
 
   kill_previous();
   syscall(SYS_thr_set_name, -1, SELF);
   mkdir(THEMES, 0777);
+  mkdir(CURRENT, 0777);
 
   for(;;) {
-    char theme[512], name[128];
+    char theme[512], name[128], sig[640];
 
     read_active(theme, sizeof(theme), name, sizeof(name));
-    int r = reconcile(theme);
-    if(r >= 0 && strcmp(shown, theme)) {
-      /* said once per change, and only when it is really in place */
-      if(theme[0]) {
-        say("NeoHEN: tema \"%s\" aplicado", name);
-      } else if(shown[0] != 1) {
-        say("NeoHEN: aspecto de fabrica");
+    signature(theme, sig, sizeof(sig));
+    if(strcmp(sig, shown)) {
+      if(fill_current(theme)) {
+        write_state(name, "error");
+      } else {
+        /* said once per change; nothing is said for the stock look at start */
+        if(theme[0]) {
+          say("NeoHEN: tema \"%s\" aplicado", name);
+        } else if(said) {
+          say("NeoHEN: aspecto de fabrica");
+        }
+        said = 1;
+        snprintf(shown, sizeof(shown), "%s", sig);
+        write_state(name, "ok");
       }
-      snprintf(shown, sizeof(shown), "%s", theme);
-      write_state(name, "ok");
-    } else if(r < 0 && strcmp(shown, theme)) {
-      write_state(name, "pending");
     }
+    cover_menus();
     sleep(POLL_SECONDS);
   }
   return 0;
