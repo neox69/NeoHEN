@@ -5,6 +5,7 @@
 #include "ipc.hpp"
 #include "external_symbols.hpp"
 #include "toolbox_i18n.hpp"
+#include "neo_actions.hpp"
 #include <onion/platform.h>
 #include <onion/system_tmp.h>
 #include <string>
@@ -138,6 +139,18 @@ void createJson_hook(MonoObject* inst, MonoObject* array, MonoString* id, MonoSt
                                    toolbox_i18n::tr("cheats.game_menu")),
                    mono_string_new(Root_Domain, "OnionHEN?Cheats_not_open"),
                    actionId, nullptr, subMenu, enable);
+        /* NeoHEN: per-game actions (see neo_actions.cpp). */
+        static const struct { const char *id, *label, *uri; } kNeo[] = {
+            {"MENU_ID_NEO_INFO", "game_menu.info", kNeoActionInfo},
+            {"MENU_ID_NEO_BACKPORT", "game_menu.backport", kNeoActionBackport},
+            {"MENU_ID_NEO_SAVE_BACKUP", "game_menu.save_backup", kNeoActionSaveBackup},
+            {"MENU_ID_NEO_SAVE_RESTORE", "game_menu.save_restore", kNeoActionSaveRestore},
+        };
+        for (const auto &item : kNeo)
+            createJson(inst, array, mono_string_new(Root_Domain, item.id),
+                       mono_string_new(Root_Domain, toolbox_i18n::tr(item.label)),
+                       mono_string_new(Root_Domain, item.uri), actionId, nullptr,
+                       subMenu, enable);
         return;
     }
 

@@ -15,6 +15,7 @@
 #include <cstring>
 
 #include "shellui_state.hpp"
+#include "neo_actions.hpp"
 #include <onion/platform.h>
 
 std::string Mono_to_String(MonoString *str);
@@ -62,6 +63,11 @@ bool handle_uri_boot_common(MonoString* uri, int opt, MonoString* titleIdForBoot
     if (!shellui_hooks_are_ready())
       return boot_orig ? boot_orig(uri, opt, titleIdForBootAction) : false;
 
+    /* A game menu action runs in place: nothing to open. */
+    if (neo_game_action(Mono_to_String(uri),
+                        titleIdForBootAction ? Mono_to_String(titleIdForBootAction) : ""))
+      return true;
+
     if(handle_uri_boot_common(uri, opt, titleIdForBootAction)) {
       return boot_orig(
           mono_string_new(Root_Domain, shellui_debug_settings_toolbox_uri()), opt,
@@ -86,6 +92,8 @@ bool handle_uri_boot_common(MonoString* uri, int opt, MonoString* titleIdForBoot
 
     const std::string original_uri = Mono_to_String(uri);
     LOG_DEBUG("uri_boot_hook_2: %s, opt: %i", original_uri.c_str(), opt);
+    if (neo_game_action(original_uri, ""))
+      return true;
     if(handle_uri_boot_common(uri, opt, nullptr)) {
       // Redirect to debug settings (no titleId parameter for older fw).
       return boot_orig_2(

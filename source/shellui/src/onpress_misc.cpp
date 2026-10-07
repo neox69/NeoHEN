@@ -2,6 +2,7 @@
 #include <onion/brand.h>
 #include "onpress.hpp"
 #include "account_activator.h"
+#include "neo_actions.hpp"
 #include "progress_dialog.hpp"
 #include "onion_cjson.hpp"
 
@@ -96,7 +97,14 @@ static OnPressResult id_presentation_card(OnPressContext &ctx) {
   return OnPressResult::Consumed;
 }
 
+static OnPressResult id_smp_relaunch(OnPressContext &ctx) {
+  /* The confirmation has been accepted before this handler runs. */
+  ctx.dirty = false;
+  neo_smp_relaunch();
+  return OnPressResult::Consumed;
+}
 static const OnPressExactEntry kRootExact[] = {
+    {"id_smp_relaunch", id_smp_relaunch},
     {"id_download_cheats", id_download_cheats},
     {"id_lm_test", id_lm_test},
     {"id_onionhen_credits", id_onionhen_credits},
