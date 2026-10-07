@@ -14,8 +14,9 @@
  *
  * <place> is NeoHEN/saves/users on a USB drive, /data/neohen/saves/users on
  * the console, or the root of a ZIP sent to the browser (there without the
- * date-time folder: the ZIP itself is the copy). The files are the console's
- * own, encrypted for it: a copy goes back to the console it came from.
+ * date-time folder: the ZIP itself is the copy; uploaded again, it is
+ * unpacked into the console's copies). The files are the console's own,
+ * encrypted for it: a copy goes back to the console it came from.
  *
  * SPDX-License-Identifier: GPL-3.0-or-later */
 #include "api.h"
@@ -1142,6 +1143,282 @@ api_saves_restore(http_req_t *req) {
 
   snprintf(title, sizeof(title), "Restore save %s (%s)", a->item.title, a->item.user);
   int id = job_start("saves", title, restore_job, a, free);
+  if(id < 0) {
+    http_send_error(req, 503, "too many jobs");
+    return;
+  }
+  api_begin(&w);
+  jw_kint(&w, "job", id);
+  api_finish(req, &w);
+}
+
+/* -------------------------------------------------- a ZIP coming back
+ * A ZIP made by /api/saves/zip, uploaded to the console, is unpacked into
+ * the copies kept on the console's disk; from there it is restored like
+ * any other. Only what such a ZIP holds is taken: stored (not compressed)
+ * files named <Name> (<user>)/<TITLE>/<save folder>/..., each checked
+ * against its checksum. */
+
+static uint16_t
+get16(const unsigned char *p) {
+  return (uint16_t)(p[0] | (p[1] << 8));
+}
+
+static uint32_t
+get32(const unsigned char *p) {
+  return (uint32_t)get16(p) | ((uint32_t)get16(p + 2) << 16);
+}
+
+static uint64_t
+get64(const unsigned char *p) {
+  return (uint64_t)get32(p) | ((uint64_t)get32(p + 4) << 32);
+}
+
+static int
+read_at(FILE *f, uint64_t off, void *buf, size_t n) {
+  return fseeko(f, (off_t)off, SEEK_SET) || fread(buf, 1, n, f) != n ? -1 : 0;
+}
+
+/* Where the index of the archive is, and how many files it lists. */
+static int
+zip_index(FILE *f, uint64_t *dir_off, uint64_t *count) {
+  static unsigned char tail[65536 + 22];
+  unsigned char loc[20], end64[56];
+  uint64_t size;
+  size_t n;
+
+  if(fseeko(f, 0, SEEK_END)) {
+    return -1;
+  }
+  size = (uint64_t)ftello(f);
+  n = size < sizeof(tail) ? (size_t)size : sizeof(tail);
+  if(n < 22 || read_at(f, size - n, tail, n)) {
+    return -1;
+  }
+  for(size_t i = n - 22;; i--) {
+    if(get32(tail + i) == 0x06054b50) {
+      uint64_t at = size - n + i;
+      *count = get16(tail + i + 10);
+      *dir_off = get32(tail + i + 16);
+      if(at >= 20 && !read_at(f, at - 20, loc, 20) && get32(loc) == 0x07064b50) {
+        if(read_at(f, get64(loc + 8), end64, sizeof(end64)) || get32(end64) != 0x06064b50) {
+          return -1;
+        }
+        *count = get64(end64 + 32);
+        *dir_off = get64(end64 + 48);
+      }
+      return 0;
+    }
+    if(!i) {
+      break;
+    }
+  }
+  return -1;
+}
+
+typedef struct import_arg {
+  char zip[PATH_MAX]; /* console path */
+} import_arg_t;
+
+/* <Name> (<user>)/<TITLE>/<save folder or info.json>[/...] -> where it goes
+ * below <base>/<Name> (<user>)/<TITLE>/<stamp>/. 0 if the name is one of ours. */
+static int
+import_target(const char *name, const char *base, const char *stamp, char *out, size_t size) {
+  char folder[80], title[16], user[16];
+  const char *a = strchr(name, '/'), *b = a ? strchr(a + 1, '/') : NULL, *rest;
+  int ok = 0;
+
+  if(!a || !b || (size_t)(a - name) >= sizeof(folder) || b - a - 1 != 9 || strstr(name, "..") ||
+     strchr(name, '\\') || name[strlen(name) - 1] == '/') {
+    return -1;
+  }
+  snprintf(folder, sizeof(folder), "%.*s", (int)(a - name), name);
+  snprintf(title, sizeof(title), "%.9s", a + 1);
+  rest = b + 1;
+  if(folder_user(folder, user, sizeof(user)) || !plain_name(folder) || !is_title_id(title)) {
+    return -1;
+  }
+  if(!strcmp(rest, "info.json")) {
+    ok = 1;
+  }
+  for(int k = 0; k < NKINDS && !ok; k++) {
+    size_t d = strlen(KINDS[k].data), m = strlen(KINDS[k].meta);
+    ok = (!strncmp(rest, KINDS[k].data, d) && rest[d] == '/') ||
+         (!strncmp(rest, KINDS[k].meta, m) && rest[m] == '/');
+  }
+  if(!ok) {
+    return -1;
+  }
+  snprintf(out, size, "%s/%s/%s/%s/%s", base, folder, title, stamp, rest);
+  return 0;
+}
+
+static int
+import_job(job_t *job, void *p) {
+  static unsigned char buf[256 * 1024];
+  static pthread_mutex_t one = PTHREAD_MUTEX_INITIALIZER; /* buf and the tail */
+  import_arg_t *a = p;
+  char local[PATH_MAX], stamp[40] = "";
+  unsigned char *dir = NULL;
+  uint64_t dir_off = 0, count = 0, dir_len = 0, total = 0, at;
+  size_t taken = 0;
+  int r = 0;
+  FILE *f;
+
+  plat_path(a->zip, local, sizeof(local));
+  if(!(f = fopen(local, "rb"))) {
+    return job_fail(job, "cannot open the ZIP: %s", strerror(errno));
+  }
+  pthread_mutex_lock(&one);
+  if(zip_index(f, &dir_off, &count) || fseeko(f, 0, SEEK_END) ||
+     dir_off >= (uint64_t)ftello(f)) {
+    r = job_fail(job, "this is not a ZIP of saves");
+  }
+  if(!r) {
+    dir_len = (uint64_t)ftello(f) - dir_off;
+    if(dir_len > (64u << 20) || !(dir = malloc((size_t)dir_len)) ||
+       read_at(f, dir_off, dir, (size_t)dir_len)) {
+      r = job_fail(job, "the index of the ZIP cannot be read");
+    }
+  }
+
+  /* first pass: what there is, how much, and when the copy was made (the
+   * time kept with its info.json) */
+  at = 0;
+  for(uint64_t i = 0; !r && i < count && at + 46 <= dir_len && get32(dir + at) == 0x02014b50; i++) {
+    uint16_t nlen = get16(dir + at + 28), xlen = get16(dir + at + 30), clen = get16(dir + at + 32);
+    uint64_t usize = get32(dir + at + 24);
+    char name[PATH_MAX], target[PATH_MAX];
+
+    snprintf(name, sizeof(name), "%.*s", (int)nlen, dir + at + 46);
+    if(usize == BIG && xlen >= 12) {
+      usize = get64(dir + at + 46 + nlen + 4);
+    }
+    if(!import_target(name, "", "x", target, sizeof(target))) {
+      if(get16(dir + at + 10) != 0) {
+        r = job_fail(job, "the ZIP is compressed: use it as NeoWEB made it");
+        break;
+      }
+      total += usize;
+      if(!stamp[0] && strlen(name) > 9 && !strcmp(name + strlen(name) - 9, "info.json")) {
+        uint16_t t = get16(dir + at + 12), d = get16(dir + at + 14);
+        snprintf(stamp, sizeof(stamp), "%04d%02d%02d-%02d%02d%02d-pc", 1980 + (d >> 9),
+                 (d >> 5) & 15, d & 31, t >> 11, (t >> 5) & 63, (t & 31) * 2);
+      }
+    }
+    at += 46u + nlen + xlen + clen;
+  }
+  if(!r && !total) {
+    r = job_fail(job, "there are no saves in this ZIP");
+  }
+  if(!r && !stamp[0]) {
+    stamp_now(stamp, sizeof(stamp) - 4);
+    strcat(stamp, "-pc");
+  }
+  job->bytes_total = total;
+  if(!r && total + (16u << 20) > free_bytes(CONSOLE_DIR)) {
+    r = job_fail(job, "not enough free space on the console");
+  }
+
+  at = 0;
+  for(uint64_t i = 0; !r && i < count && at + 46 <= dir_len && get32(dir + at) == 0x02014b50; i++) {
+    uint16_t nlen = get16(dir + at + 28), xlen = get16(dir + at + 30), clen = get16(dir + at + 32);
+    uint32_t crc = get32(dir + at + 16), sum = 0;
+    uint64_t usize = get32(dir + at + 24), off = get32(dir + at + 42);
+    const unsigned char *x = dir + at + 46 + nlen;
+    char name[PATH_MAX], target[PATH_MAX], out_local[PATH_MAX];
+    unsigned char lh[30];
+    FILE *out;
+
+    snprintf(name, sizeof(name), "%.*s", (int)nlen, dir + at + 46);
+    /* ZIP64: the real numbers follow, in this order, for each that is all ones */
+    if(xlen >= 4 && get16(x) == 1) {
+      const unsigned char *v = x + 4;
+      if(get32(dir + at + 24) == BIG) {
+        usize = get64(v);
+        v += 8;
+      }
+      if(get32(dir + at + 20) == BIG) {
+        v += 8;
+      }
+      if(get32(dir + at + 42) == BIG) {
+        off = get64(v);
+      }
+    }
+    at += 46u + nlen + xlen + clen;
+    if(import_target(name, CONSOLE_DIR, stamp, target, sizeof(target))) {
+      continue; /* not one of ours: left alone */
+    }
+    if(job->cancel) {
+      r = -1;
+      break;
+    }
+    plat_path(target, out_local, sizeof(out_local));
+    job_set_current(job, "%s", name);
+    errno = 0;
+    if(read_at(f, off, lh, sizeof(lh)) || get32(lh) != 0x04034b50 ||
+       fseeko(f, (off_t)(off + 30 + get16(lh + 26) + get16(lh + 28)), SEEK_SET) ||
+       fs_mkparents(out_local) || !(out = fopen(out_local, "wb"))) {
+      r = job_fail(job, "%s: %s", name, errno ? strerror(errno) : "bad entry");
+      break;
+    }
+    for(uint64_t left = usize; left && !r;) {
+      size_t want = left < sizeof(buf) ? (size_t)left : sizeof(buf);
+      if(fread(buf, 1, want, f) != want || fwrite(buf, 1, want, out) != want) {
+        r = job_fail(job, "%s: the ZIP is cut short, or the disk is full", name);
+        break;
+      }
+      sum = crc32_update(sum, buf, want);
+      left -= want;
+      job->bytes_done += want;
+    }
+    if(fclose(out) && !r) {
+      r = job_fail(job, "%s: %s", name, strerror(errno));
+    }
+    if(!r && sum != crc) {
+      r = job_fail(job, "%s: damaged (checksum does not match)", name);
+    }
+    if(!r) {
+      taken++;
+      job->files_done++;
+    }
+  }
+  pthread_mutex_unlock(&one);
+  free(dir);
+  fclose(f);
+  if(r) {
+    return -1;
+  }
+  unlink(local); /* it is unpacked: the upload is not needed any more */
+  job->current[0] = 0;
+  job_set_result(job, "%zu files unpacked as %s", taken, stamp);
+  return 0;
+}
+
+/* POST /api/saves/import {path}: a ZIP already uploaded to the console. */
+void
+api_saves_import(http_req_t *req) {
+  import_arg_t *a;
+  char local[PATH_MAX];
+  jval_t *b;
+  jw_t w;
+
+  if(!(b = api_body(req))) {
+    return;
+  }
+  if(!(a = calloc(1, sizeof(*a)))) {
+    json_free(b);
+    http_send_error(req, 500, "out of memory");
+    return;
+  }
+  if(api_body_path(req, b, "path", local, sizeof(local))) {
+    json_free(b);
+    free(a);
+    return;
+  }
+  snprintf(a->zip, sizeof(a->zip), "%s", json_get_str(b, "path", ""));
+  json_free(b);
+  int id = job_start("saves", "Unpack a ZIP of saves", import_job, a, free);
   if(id < 0) {
     http_send_error(req, 503, "too many jobs");
     return;

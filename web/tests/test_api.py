@@ -320,6 +320,40 @@ class PayloadTest(unittest.TestCase):
         with open(f"{self.save}/sdimg_SAVEDATA0", "rb") as f:
             original = f.read()
         self.assertEqual(z.read("NeoX_ESP (1d31cd9c)/PPSA01234/savedata_prospero/sdimg_SAVEDATA0"), original)
+        # the ZIP comes back: it is unpacked into the console's copies
+        st, _, _ = self.api.req("PUT", "/fs/put?path=/data/neohen/saves/incoming/a.zip", raw=body)
+        self.assertEqual(st, 200)
+        _, r = self.api.post("/api/saves/import", {"path": "/data/neohen/saves/incoming/a.zip"})
+        job = self.api.wait_job(r["job"])
+        self.assertEqual(job["state"], "done", job)
+        self.assertFalse(os.path.exists(f"{self.root}/data/neohen/saves/incoming/a.zip"))
+        _, b = self.api.get("/api/saves/backups")
+        got = sorted((x["dest"], x["user"], x["titleId"], x["kind"]) for x in b["backups"])
+        self.assertEqual(got, [("console", "1d31cd9c", "PPSA01234", "ps5"),
+                               ("console", "1d31cda3", "CUSA00001", "ps4")])
+        stamp = b["backups"][0]["stamp"]
+        self.assertTrue(stamp.endswith("-pc"), stamp)
+        base = f"{self.root}/data/neohen/saves/users/NeoX_ESP (1d31cd9c)/PPSA01234/{stamp}"
+        with open(f"{base}/savedata_prospero/sdimg_SAVEDATA0", "rb") as f:
+            self.assertEqual(f.read(), original)
+        self.assertTrue(os.path.exists(f"{base}/savedata_prospero_meta/s_icon0.png"))
+        # a damaged one is refused, and so is one that is not ours
+        bad = bytearray(body)
+        bad[len(bad) // 3] ^= 0xFF
+        self.api.req("PUT", "/fs/put?path=/data/neohen/saves/incoming/b.zip", raw=bytes(bad))
+        _, r = self.api.post("/api/saves/import", {"path": "/data/neohen/saves/incoming/b.zip"})
+        self.assertEqual(self.api.wait_job(r["job"])["state"], "failed")
+        evil = io.BytesIO()
+        with zipfile.ZipFile(evil, "w") as zz:
+            zz.writestr("../../etc/passwd", "x")
+            zz.writestr("NeoX_ESP (1d31cd9c)/PPSA01234/elsewhere/x", "x")
+        self.api.req("PUT", "/fs/put?path=/data/neohen/saves/incoming/c.zip", raw=evil.getvalue())
+        _, r = self.api.post("/api/saves/import", {"path": "/data/neohen/saves/incoming/c.zip"})
+        job = self.api.wait_job(r["job"])
+        self.assertEqual(job["state"], "failed", job)
+        self.assertFalse(os.path.exists(f"{self.root}/etc/passwd"))
+        shutil.rmtree(f"{self.root}/data/neohen/saves/users")
+
         st, body, _ = self.api.req("GET", "/api/saves/zip?items=1d31cda3:ps4:CUSA00001")
         self.assertEqual(len(zipfile.ZipFile(io.BytesIO(body)).namelist()), 2)
         st, body, _ = self.api.req("GET", "/api/saves/zip?items=../x:ps4:CUSA00001")
