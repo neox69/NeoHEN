@@ -218,6 +218,19 @@ h3.h .sp{flex:1}
 .places button{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:11px;border:1px solid var(--line);background:rgba(132,153,204,.05);font-weight:620;color:var(--dim)}
 .places button:hover{border-color:var(--blue);color:var(--text)}
 .places button small{font:500 11px var(--mono);color:var(--faint)}
+.cpg{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px}
+.cpc{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.cpc.on{border-color:var(--blue);box-shadow:0 0 0 1px var(--blue)}
+.cpc .pv{position:relative;aspect-ratio:16/9;background:rgba(9,13,24,.7)}
+.cpc .pv img{width:100%;height:100%;object-fit:cover;display:block}
+.cpc .pv .ph{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;color:var(--faint);font:700 10.5px var(--mono);letter-spacing:.14em;text-decoration:none}
+.cpc .pv .ph svg{width:30px;height:30px}
+.cpc .pv a.ph:hover{color:var(--blue)}
+.cpc .ck{position:absolute;top:8px;left:8px;padding:5px;border-radius:8px;background:rgba(6,10,20,.72);display:flex}
+.cpc .bd{display:grid;grid-template-columns:1fr auto;gap:2px 10px;align-items:center;padding:11px 13px}
+.cpc .bd b{font-size:13.5px}.cpc .bd small{grid-row:2;font:500 11px var(--mono);color:var(--faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cpc .bd .btn{grid-row:1/3;grid-column:2;text-decoration:none}
+.svbar select.in{min-width:170px}
 .svbar{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;padding:16px 18px;margin-bottom:16px}
 .svbar label{display:block;font:700 10.5px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--faint);margin-bottom:7px}
 .svbar .sp,.svh .sp{flex:1}
@@ -368,6 +381,7 @@ dialog textarea{width:100%;height:min(60vh,560px);resize:vertical;font:500 12.5p
       <section id="v-payloads" hidden></section>
       <section id="v-themes" hidden></section>
       <section id="v-saves" hidden></section>
+      <section id="v-captures" hidden></section>
       <section id="v-transfers" hidden></section>
       <section id="v-procs" hidden></section>
       <section id="v-system" hidden></section>
@@ -432,6 +446,7 @@ var P={
  dots:"M5 12h.01M12 12h.01M19 12h.01",
  scale:"M4 20h16M6 20V10M12 20V4M18 20v-7",
  saves:"M5 4h11l3 3v13H5zM8 4v5h7V4M8 20v-6h8v6",
+ captures:"M4 7h3l2-2h6l2 2h3v12H4zM12 10a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7z",
  themes:"M12 3a9 9 0 1 0 0 18c1.2 0 2-.9 2-2 0-1.3 1-2 2.2-2H18a3 3 0 0 0 3-3c0-5-4-9-9-9zM7.5 12h.01M9.5 8h.01M14.5 8h.01"
 };
 function ic(n,cls){return '<svg class="i'+(cls?" "+cls:"")+'" viewBox="0 0 24 24"><path d="'+P[n]+'"/></svg>'}
@@ -478,6 +493,7 @@ var VIEWS=[
  ["payloads","Payloads",L("Lo que NeoHEN arranca y lo que puedes lanzar","What NeoHEN starts and what you can launch")],
  ["themes",L("Temas","Themes"),L("Fondo y música del menú de la PS5","Background and music of the PS5 menu"),1],
  ["saves",L("Partidas","Saves"),L("Copias de seguridad de las partidas, por usuario","Backups of save data, by user"),1],
+ ["captures",L("Capturas","Captures"),L("Capturas de pantalla y vídeos de la consola","Screenshots and clips on the console"),1],
  ["transfers",L("Transferencias","Transfers"),L("Subidas y tareas de la consola","Uploads and console jobs"),1],
  ["procs",L("Procesos","Processes"),L("Lo que está en ejecución ahora","What is running right now"),1],
  ["system",L("Sistema","System"),L("Información, almacenamiento y registro","Information, storage and log")]];
@@ -501,7 +517,7 @@ function show(v,push){
   $("vt").textContent=def[1];$("vs").textContent=def[2];
   if(push)history.replaceState(null,"","#"+v);
   $("side").className="side";paintNav();render();$("view").scrollTop=0;
-  if(v==="files")loadDir(S.cwd);if(v==="procs")loadProcs();if(v==="system")loadLog();if(v==="transfers")loadJobs();if(v==="payloads")loadPay();if(v==="themes")loadThemes();if(v==="saves")loadSaves();
+  if(v==="files")loadDir(S.cwd);if(v==="procs")loadProcs();if(v==="system")loadLog();if(v==="transfers")loadJobs();if(v==="payloads")loadPay();if(v==="themes")loadThemes();if(v==="saves")loadSaves();if(v==="captures")loadCaps();
 }
 $("nav").onclick=function(e){var b=e.target.closest("button[data-v]");if(b)show(b.getAttribute("data-v"),true)};
 window.addEventListener("hashchange",function(){var h=location.hash.slice(1);if(h!==S.view)show(h)});
@@ -509,7 +525,7 @@ $("burger").innerHTML=ic("menu");$("reload").innerHTML=ic("refresh");
 $("burger").onclick=function(){$("side").className="side open"};
 $("view").addEventListener("click",function(){$("side").className="side"});
 $("reload").onclick=function(){fast();slow();show(S.view);toast(L("Actualizado","Refreshed"))};
-function render(){({panel:paintPanel,library:paintLib,files:paintFiles,payloads:paintPay,themes:paintThemes,saves:paintSaves,transfers:paintTr,procs:paintProcs,system:paintSys})[S.view]()}
+function render(){({panel:paintPanel,library:paintLib,files:paintFiles,payloads:paintPay,themes:paintThemes,saves:paintSaves,captures:paintCaps,transfers:paintTr,procs:paintProcs,system:paintSys})[S.view]()}
 
 /* ------------------------------------------------------------ dashboard */
 function tcol(v){return v>=88?"var(--bad)":v>=78?"var(--warn)":"var(--ok)"}
@@ -977,6 +993,60 @@ $("v-saves").addEventListener("change",function(e){
   var sv=S.sv,t=e.target,v;
   if((v=t.getAttribute("data-k"))){if(t.checked)sv.sel[v]=1;else delete sv.sel[v];paintSaves()}
   else if((v=t.getAttribute("data-allu"))){sv.users.forEach(function(u){if(u.id===v)u.saves.forEach(function(s){if(t.checked)sv.sel[svKey(u,s)]=1;else delete sv.sel[svKey(u,s)]})});paintSaves()}});
+
+/* ------------------------------------------------------------ captures */
+S.cp={items:[],users:{},kind:"",user:"",game:"",sel:{},loaded:false};
+function cpDate(id){var m=/^(\d{4})(\d\d)(\d\d)_(\d\d)(\d\d)/.exec(id);return m?m[3]+"/"+m[2]+"/"+m[1]+" "+m[4]+":"+m[5]:id}
+function cpGame(c){return c.title||title(c.titleId)||c.titleId}
+function loadCaps(){
+  if(!S.full)return Promise.resolve();
+  return api("/api/captures/list").then(function(j){var cp=S.cp;cp.items=(j.items||[]).sort(function(a,b){return a.id<b.id?1:-1});cp.users=j.users||{};cp.loaded=true;
+    if(S.view==="captures")paintCaps()}).catch(fail);
+}
+function cpShown(){var cp=S.cp;return cp.items.filter(function(c){return(!cp.kind||c.kind===cp.kind)&&(!cp.user||c.user===cp.user)&&(!cp.game||c.titleId===cp.game)})}
+function paintCaps(){
+  var cp=S.cp;
+  if(!cp.loaded){$("v-captures").innerHTML='<div class="empty">'+L("Leyendo las capturas de la consola…","Reading the console captures…")+'</div>';return}
+  var list=cpShown(),nsel=Object.keys(cp.sel).length,bytes=list.reduce(function(n,c){return n+c.size},0);
+  var games={};cp.items.forEach(function(c){if((!cp.kind||c.kind===cp.kind)&&(!cp.user||c.user===cp.user)){var g=games[c.titleId]=games[c.titleId]||{id:c.titleId,name:cpGame(c),n:0};g.n++}});
+  var gl=Object.keys(games).map(function(k){return games[k]}).sort(function(a,b){return a.name.toLowerCase()<b.name.toLowerCase()?-1:1});
+  function seg(v,t){return '<button data-kind="'+v+'" class="'+(cp.kind===v?"on":"")+'">'+t+'</button>'}
+  var h='<div class="card svbar"><div><label>'+L("Mostrar","Show")+'</label><div class="seg">'+seg("",L("Todo","All"))+seg("photo",L("Capturas","Screenshots"))+seg("video",L("Vídeos","Clips"))+'</div></div>'+
+    '<div><label>'+L("Usuario","User")+'</label><select class="in" id="cp-user"><option value="">'+L("Todos","All")+'</option>'+Object.keys(cp.users).map(function(u){return '<option value="'+u+'"'+(cp.user===u?" selected":"")+'>'+esc(cp.users[u])+'</option>'}).join("")+'</select></div>'+
+    '<div><label>'+L("Juego","Game")+'</label><select class="in" id="cp-game"><option value="">'+L("Todos","All")+" ("+gl.length+')</option>'+gl.map(function(g){return '<option value="'+g.id+'"'+(cp.game===g.id?" selected":"")+'>'+esc(g.name)+" ("+g.n+')</option>'}).join("")+'</select></div><span class="sp"></span>'+
+    '<button class="btn" id="cp-sel"'+(nsel?"":" disabled")+'>'+L("Descargar seleccionadas","Download selected")+(nsel?" ("+nsel+")":"")+'</button>'+
+    '<button class="btn pri" id="cp-all"'+(list.length?"":" disabled")+'>'+ic("captures")+L("Descargar lo que se ve","Download what is shown")+" · "+size(bytes)+'</button></div>'+
+    '<div class="note" style="border-color:rgba(77,163,255,.4);background:rgba(77,163,255,.08);color:#CFE4FF">'+L("Las capturas en HDR se guardan en formato JXR, que los navegadores no saben mostrar: aquí salen sin vista previa, pero se descargan igual y Windows las abre con Fotos. Los vídeos (WebM) y las capturas en JPG sí se ven.","HDR screenshots are kept as JXR, which browsers cannot show: here they have no preview, but they download all the same and Windows opens them with Photos. Clips (WebM) and JPG screenshots do show.")+'</div>';
+  if(!list.length)h+='<div class="card"><div class="empty">'+L("No hay capturas ni vídeos que coincidan.","No screenshots or clips match.")+'</div></div>';
+  var last="";
+  list.slice(0,cp.max||240).forEach(function(c){
+    if(c.titleId!==last){if(last)h+='</div>';last=c.titleId;var n=list.filter(function(x){return x.titleId===c.titleId}).length;
+      h+='<h3 class="h" style="margin-top:22px">'+esc(cpGame(c))+' <em>'+c.titleId+" · "+n+'</em></h3><div class="cpg">'}
+    var url="/fs/get?path="+enc(c.path),see=c.ext==="jpg"||c.ext==="jpeg"||c.ext==="png";
+    h+='<div class="cpc'+(cp.sel[c.id]?" on":"")+'"><div class="pv">'+(see?'<a href="'+url+'" target="_blank" rel="noopener"><img loading="lazy" alt="" src="'+url+'"></a>'
+        :c.kind==="video"?'<a href="'+url+'" target="_blank" rel="noopener" class="ph">'+ic("play")+'<span>'+L("Vídeo","Clip")+'</span></a>':'<div class="ph">'+ic("captures")+'<span>HDR · JXR</span></div>')+
+      '<label class="ck"><input type="checkbox" data-id="'+c.id+'"'+(cp.sel[c.id]?" checked":"")+'></label></div>'+
+      '<div class="bd"><b>'+cpDate(c.id)+'</b><small>'+size(c.size)+" · "+esc(cp.users[c.user]||c.user||"")+'</small><a class="btn sm" href="'+url+'&download=1" download>'+L("Descargar","Download")+'</a></div></div>'});
+  if(last)h+='</div>';
+  if(list.length>(cp.max||240))h+='<div class="row" style="justify-content:center;margin-top:18px"><button class="btn" id="cp-more">'+L("Mostrar más","Show more")+" ("+(list.length-(cp.max||240))+')</button></div>';
+  $("v-captures").innerHTML=h;
+}
+function cpZip(q){toast(L("Preparando el ZIP… la descarga empieza en unos segundos","Preparing the ZIP… the download starts in a few seconds"));
+  var a=document.createElement("a");a.href="/api/captures/zip"+q;a.download="";document.body.appendChild(a);a.click();a.remove()}
+$("v-captures").addEventListener("click",function(e){
+  var cp=S.cp,b=e.target.closest("button"),v;if(!b)return;
+  if((v=b.getAttribute("data-kind"))!=null){cp.kind=v;cp.game="";cp.max=240;paintCaps()}
+  else if(b.id==="cp-more"){cp.max=(cp.max||240)+480;paintCaps()}
+  else if(b.id==="cp-all"){var q=[];if(cp.kind)q.push("kind="+cp.kind);if(cp.user)q.push("user="+cp.user);if(cp.game)q.push("title="+cp.game);cpZip(q.length?"?"+q.join("&"):"")}
+  else if(b.id==="cp-sel"){var ids=Object.keys(cp.sel);
+    if(ids.join(",").length>7000){toast(L("Demasiadas sueltas para una descarga: filtra por juego y descarga lo que se ve.","Too many single ones for one download: filter by game and download what is shown."),true);return}
+    cpZip("?ids="+ids.join(","))}});
+$("v-captures").addEventListener("change",function(e){
+  var cp=S.cp,t=e.target,v;
+  if(t.id==="cp-user"){cp.user=t.value;cp.game="";cp.max=240;paintCaps()}
+  else if(t.id==="cp-game"){cp.game=t.value;cp.max=240;paintCaps()}
+  else if((v=t.getAttribute("data-id"))){if(t.checked)cp.sel[v]=1;else delete cp.sel[v];
+    var c=t.closest(".cpc");if(c)c.className="cpc"+(t.checked?" on":"");var n=Object.keys(cp.sel).length,bs=$("cp-sel");bs.disabled=!n;bs.textContent=L("Descargar seleccionadas","Download selected")+(n?" ("+n+")":"")}});
 
 /* ------------------------------------------------------------ themes */
 var TDIR="/data/neohen/themes";
