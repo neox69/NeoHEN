@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #include <sys/types.h>
 
 #include "fsutil.h"
@@ -278,11 +279,11 @@ api_jobs_clear(http_req_t *req) {
 /* ------------------------------------------------------------ routing */
 
 /*
- * The default build is the "safe" set: it reads the console's state, can
+ * A SAFE=1 build is the restricted set: it reads the console's state, can
  * launch or close a game, and manages the payloads in NeoHEN's own payloads
  * folder (upload, start, stop, delete, auto-start), by bare file name only.
  * The file manager, installer, memory tools, dumper and power routes are
- * only compiled into a NEOWEB_FULL build (make FULL=1).
+ * compiled into the default build (NEOWEB_FULL), not into that one.
  */
 static const api_route_t g_routes[] = {
   {"GET",  "/api/ping",             api_ping},
@@ -428,6 +429,17 @@ api_dispatch(http_req_t *req) {
     if(r->method && strcmp(r->method, req->method) &&
        !(!strcmp(req->method, "HEAD") && !strcmp(r->method, "GET"))) {
       continue;
+    }
+    /* One switch for the whole service: with the marker file present,
+     * nothing that changes the console is served. */
+    if(strcmp(req->method, "GET") && strcmp(req->method, "HEAD")) {
+      char marker[1024];
+      plat_path(PS5AIO_DATA_DIR "/readonly", marker, sizeof(marker));
+      if(!access(marker, F_OK)) {
+        http_send_error(req, 403, "NeoWEB is read-only (%s exists)",
+                        PS5AIO_DATA_DIR "/readonly");
+        return;
+      }
     }
     r->fn(req);
     return;

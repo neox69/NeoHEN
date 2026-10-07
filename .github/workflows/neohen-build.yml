@@ -111,10 +111,10 @@ jobs:
       - name: NeoWEB tests (host emulator)
         run: |
           set -euo pipefail
-          make -C web host
+          make -C web host SAFE=1
           python3 web/tests/test_safe.py
           rm -rf web/build
-          make -C web host FULL=1
+          make -C web host
           python3 web/tests/test_api.py
           rm -rf web/build
 

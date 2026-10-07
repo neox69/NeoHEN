@@ -16,9 +16,10 @@ HOST_BIN := build/neoweb-host
 COMMON_SRCS := src/main.c src/http.c src/json.c src/log.c src/jobs.c \
                src/fsutil.c src/sha256.c src/sfo.c src/api.c src/api_fs.c src/api_apps.c \
                src/api_payloads.c src/webui.c src/plat_common.c
-# FULL=1 adds the file manager, memory tools, dumper, installer and power
-# routes. The default build only reads state and launches or closes games.
-ifdef FULL
+# The default build has every route: file manager, memory tools, dumper,
+# installer and power. SAFE=1 builds the restricted variant, which only reads
+# state, launches or closes games and manages NeoHEN's own payloads.
+ifndef SAFE
 COMMON_SRCS += src/api_mem.c src/api_dump.c src/discovery.c
 FULLDEF     := -DNEOWEB_FULL
 else

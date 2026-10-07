@@ -5,12 +5,12 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0B0F1A">
 <title>NeoWEB</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%234DA3FF'/%3E%3Cstop offset='1' stop-color='%238E7BFF'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='%230B0F1A'/%3E%3Cpath d='M18 46V18h7l14 18V18h7v28h-7L25 28v18z' fill='url(%23g)'/%3E%3C/svg%3E">
+<link rel="icon" id="fav" href="data:image/png;base64,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">
 <style>
 :root{
-  --bg:#0B0F1A; --panel:rgba(22,29,48,.72); --line:rgba(132,153,204,.16);
+  --bg:#07091A; --panel:rgba(22,29,48,.72); --line:rgba(132,153,204,.16);
   --line2:rgba(132,153,204,.28); --text:#EAF0FF; --dim:#8D9ABC; --faint:#5B6788;
-  --blue:#4DA3FF; --violet:#8E7BFF; --ok:#34D399; --warn:#FBBF24; --bad:#F87171;
+  --blue:#52C8FA; --violet:#B258F8; --ok:#34D399; --warn:#FBBF24; --bad:#F87171;
   --r:14px; --mono:ui-monospace,"SFMono-Regular","Cascadia Mono",Consolas,monospace;
 }
 *{box-sizing:border-box}
@@ -21,8 +21,8 @@ body{
   font:15px/1.45 Inter,"Segoe UI",system-ui,-apple-system,Roboto,sans-serif;
   -webkit-font-smoothing:antialiased;
   background-image:
-    radial-gradient(900px 520px at 12% -8%,rgba(77,163,255,.17),transparent 60%),
-    radial-gradient(820px 520px at 96% 4%,rgba(142,123,255,.15),transparent 62%),
+    radial-gradient(900px 520px at 12% -8%,rgba(82,200,250,.17),transparent 60%),
+    radial-gradient(820px 520px at 96% 4%,rgba(178,88,248,.15),transparent 62%),
     linear-gradient(rgba(132,153,204,.035) 1px,transparent 1px),
     linear-gradient(90deg,rgba(132,153,204,.035) 1px,transparent 1px);
   background-size:auto,auto,44px 44px,44px 44px; background-attachment:fixed;
@@ -32,10 +32,9 @@ button,input{font:inherit;color:inherit}
 .grad{background:linear-gradient(100deg,var(--blue),var(--violet));-webkit-background-clip:text;background-clip:text;color:transparent}
 
 header.top{display:flex;align-items:center;gap:12px;margin-bottom:16px}
-.logo{width:38px;height:38px;border-radius:11px;flex:none;display:grid;place-items:center;
-  background:linear-gradient(140deg,rgba(77,163,255,.2),rgba(142,123,255,.2));border:1px solid var(--line2)}
-.logo svg{width:22px;height:22px}
-.brand{font-size:20px;font-weight:750;letter-spacing:-.02em}
+.logo{width:46px;height:46px;flex:none;object-fit:contain;filter:drop-shadow(0 0 10px rgba(100,140,248,.45))}
+.brand{font-size:21px;font-weight:300;letter-spacing:.01em;color:#fff}
+.brand b{font-weight:850}
 .brand small{display:block;font:500 11px var(--mono);letter-spacing:.14em;color:var(--faint);text-transform:uppercase;margin-top:1px}
 .top .sp{flex:1}
 .chip{display:inline-flex;align-items:center;gap:8px;padding:7px 13px;border-radius:999px;
@@ -52,15 +51,15 @@ nav.tabs button svg{width:18px;height:18px;flex:none}
 nav.tabs button span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 nav.tabs button em{font:700 11px var(--mono);font-style:normal;padding:2px 7px;border-radius:999px;background:rgba(132,153,204,.14);color:var(--dim)}
 nav.tabs button:hover{color:var(--text);background:rgba(132,153,204,.08)}
-nav.tabs button.on{color:var(--text);background:linear-gradient(100deg,rgba(77,163,255,.22),rgba(142,123,255,.22));box-shadow:inset 0 0 0 1px rgba(77,163,255,.35)}
-nav.tabs button.on em{background:rgba(77,163,255,.25);color:var(--text)}
+nav.tabs button.on{color:var(--text);background:linear-gradient(100deg,rgba(82,200,250,.22),rgba(178,88,248,.22));box-shadow:inset 0 0 0 1px rgba(82,200,250,.35)}
+nav.tabs button.on em{background:rgba(82,200,250,.25);color:var(--text)}
 
 .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);
   backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
-.hero{padding:20px;position:relative;overflow:hidden;border-color:rgba(77,163,255,.3)}
+.hero{padding:20px;position:relative;overflow:hidden;border-color:rgba(82,200,250,.3)}
 .hero::before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.55;
-  background:radial-gradient(520px 220px at 0 0,rgba(77,163,255,.2),transparent 70%),
-             radial-gradient(520px 240px at 100% 100%,rgba(142,123,255,.18),transparent 70%)}
+  background:radial-gradient(520px 220px at 0 0,rgba(82,200,250,.2),transparent 70%),
+             radial-gradient(520px 240px at 100% 100%,rgba(178,88,248,.18),transparent 70%)}
 .hero>*{position:relative}
 .hero-bg{position:absolute;inset:-30px;background-size:cover;background-position:center;
   filter:blur(34px) saturate(1.3);opacity:0;transition:opacity .5s}
@@ -78,7 +77,7 @@ nav.tabs button.on em{background:rgba(77,163,255,.25);color:var(--text)}
 .now span{font:500 12.5px var(--mono);color:var(--dim)}
 .btn{border:1px solid var(--line2);background:rgba(15,21,37,.75);border-radius:10px;padding:10px 16px;
   font-weight:650;cursor:pointer;transition:transform .12s,border-color .15s,background .15s;white-space:nowrap}
-.btn:hover{border-color:var(--blue);background:rgba(77,163,255,.12)}
+.btn:hover{border-color:var(--blue);background:rgba(82,200,250,.12)}
 .btn:active{transform:scale(.97)}
 .btn.sm{padding:7px 12px;font-size:13.5px}
 .btn.pri{border:0;color:#06101F;background:linear-gradient(100deg,var(--blue),var(--violet))}
@@ -123,7 +122,7 @@ h3.h em{font-style:normal;color:var(--faint)}
 .in:focus{border-color:var(--blue)}
 .seg{display:inline-flex;border:1px solid var(--line2);border-radius:10px;overflow:hidden}
 .seg button{border:0;background:transparent;padding:9px 13px;cursor:pointer;font-weight:620;color:var(--dim)}
-.seg button.on{background:rgba(77,163,255,.16);color:var(--text)}
+.seg button.on{background:rgba(82,200,250,.16);color:var(--text)}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:16px 14px}
 .game{min-width:0}
 .cover{position:relative;aspect-ratio:1;border-radius:12px;overflow:hidden;background:#070A12;border:1px solid var(--line);
@@ -132,7 +131,7 @@ h3.h em{font-style:normal;color:var(--faint)}
 .cover .ph{position:absolute;inset:0;display:grid;place-items:center;font:700 13px var(--mono);color:var(--faint);letter-spacing:.06em}
 .cover .go{position:absolute;inset:auto 0 0 0;padding:26px 10px 10px;display:flex;justify-content:center;
   background:linear-gradient(transparent,rgba(5,8,15,.92));opacity:0;transform:translateY(8px);transition:.18s}
-.game:hover .cover,.game:focus-within .cover{transform:translateY(-3px);border-color:rgba(77,163,255,.6);box-shadow:0 14px 34px -14px rgba(77,163,255,.55)}
+.game:hover .cover,.game:focus-within .cover{transform:translateY(-3px);border-color:rgba(82,200,250,.6);box-shadow:0 14px 34px -14px rgba(82,200,250,.55)}
 .game:hover .go,.game:focus-within .go{opacity:1;transform:none}
 .game.run .cover{border-color:var(--ok);box-shadow:0 0 0 1px var(--ok),0 12px 34px -12px rgba(52,211,153,.6)}
 .tag{position:absolute;left:8px;bottom:8px;padding:4px 9px;border-radius:7px;background:var(--ok);color:#04130D;font:800 10.5px var(--mono);letter-spacing:.1em}
@@ -142,9 +141,9 @@ h3.h em{font-style:normal;color:var(--faint)}
 
 .drop{display:flex;align-items:center;gap:16px;padding:18px 20px;border:1.5px dashed var(--line2);border-radius:var(--r);
   background:rgba(15,21,37,.5);transition:border-color .15s,background .15s;margin-bottom:14px}
-.drop.over{border-color:var(--blue);background:rgba(77,163,255,.1)}
+.drop.over{border-color:var(--blue);background:rgba(82,200,250,.1)}
 .drop .ic{width:46px;height:46px;border-radius:12px;display:grid;place-items:center;flex:none;color:var(--blue);
-  background:linear-gradient(140deg,rgba(77,163,255,.18),rgba(142,123,255,.18));border:1px solid var(--line2)}
+  background:linear-gradient(140deg,rgba(82,200,250,.18),rgba(178,88,248,.18));border:1px solid var(--line2)}
 .drop .tx{flex:1;min-width:0}
 .drop .tx b{display:block;font-weight:700}
 .drop .tx span{font-size:13.5px;color:var(--dim)}
@@ -199,8 +198,8 @@ dialog .row{display:flex;gap:10px;justify-content:flex-end}
 <body>
 <div class="wrap">
   <header class="top">
-    <div class="logo"><svg viewBox="0 0 32 32"><defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4DA3FF"/><stop offset="1" stop-color="#8E7BFF"/></linearGradient></defs><path d="M6 26V6h5l10 13V6h5v20h-5L11 13v13z" fill="url(#lg)"/></svg></div>
-    <div class="brand"><span class="grad">Neo</span>WEB<small id="ver">NeoHEN</small></div>
+    <img class="logo" id="logo" alt="">
+    <div class="brand">Neo<b>WEB</b><small id="ver">NeoHEN</small></div>
     <div class="sp"></div>
     <div class="chip" id="chip"><i></i><span id="chipt">…</span></div>
   </header>
@@ -278,6 +277,7 @@ dialog .row{display:flex;gap:10px;justify-content:flex-end}
 <dialog id="dlg"><h4 id="dh"></h4><p id="dp"></p><div class="row"><button class="btn" id="dno"></button><button class="btn pri" id="dyes"></button></div></dialog>
 
 <script>
+document.getElementById("logo").src=document.getElementById("fav").href;
 (function(){
 "use strict";
 var ES=/^es\b/i.test(navigator.language||"");
@@ -368,10 +368,10 @@ function spark(){
   if(hi<lo)return;var a=lo-3,b=hi+3;
   function line(i){return hist.map(function(h,x){return (x/(n-1)*600).toFixed(1)+","+(70-(h[i]-a)/(b-a)*66).toFixed(1)}).join(" ")}
   var c=line(0);
-  s.innerHTML='<defs><linearGradient id="sg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4DA3FF" stop-opacity=".28"/><stop offset="1" stop-color="#4DA3FF" stop-opacity="0"/></linearGradient></defs>'+
+  s.innerHTML='<defs><linearGradient id="sg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#52C8FA" stop-opacity=".28"/><stop offset="1" stop-color="#52C8FA" stop-opacity="0"/></linearGradient></defs>'+
     '<polygon fill="url(#sg)" points="0,74 '+c+' 600,74"/>'+
-    '<polyline fill="none" stroke="#8E7BFF" stroke-width="1.6" stroke-dasharray="3 4" vector-effect="non-scaling-stroke" points="'+line(1)+'"/>'+
-    '<polyline fill="none" stroke="#4DA3FF" stroke-width="2" vector-effect="non-scaling-stroke" points="'+c+'"/>';
+    '<polyline fill="none" stroke="#B258F8" stroke-width="1.6" stroke-dasharray="3 4" vector-effect="non-scaling-stroke" points="'+line(1)+'"/>'+
+    '<polyline fill="none" stroke="#52C8FA" stroke-width="2" vector-effect="non-scaling-stroke" points="'+c+'"/>';
   $("sp-r").textContent=lo+"–"+hi+" °C"}
 function paintNow(){
   var img=$("nowimg"),ph=$("nowph");
