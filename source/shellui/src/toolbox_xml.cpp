@@ -15,6 +15,7 @@
 #include "ps5_settings_ui.hpp"
 #include "settings_page_refresh.hpp"
 #include "toolbox_i18n.hpp"
+#include "neo_actions.hpp"
 #include "toolbox_values.hpp"
 #include "dynamic_ui_runtime.hpp"
 #include "external_plugin_ui.hpp"
@@ -689,7 +690,11 @@ void append_toolbox_payloads_group(ps5ui::Group& g) {
   g.link("id_payloads", toolbox_i18n::tr("payloads.link"), "payloads.xml",
          toolbox_i18n::tr("payloads.link.sub"), kIconPlugins)
       .link("id_plugins", toolbox_i18n::tr("plugins.link"), "plugins.xml",
-            toolbox_i18n::tr("plugins.link.sub"), kIconPlugins);
+            toolbox_i18n::tr("plugins.link.sub"), kIconPlugins)
+      .button("id_smp_relaunch", toolbox_i18n::tr("smp.relaunch"),
+              neo_smp_status(), std::nullopt, kIconPlugins, ps5ui::Style::None,
+              toolbox_i18n::tr("smp.relaunch.confirm"),
+              toolbox_i18n::tr("cheats.repo.download.confirm_phrase"));
   /* SPRX catalog UI is untested; restore id_sprx -> sprx.xml when it is. */
 }
 
