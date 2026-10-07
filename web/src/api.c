@@ -4,6 +4,8 @@
 
 #include <ctype.h>
 #include <errno.h>
+#include <time.h>
+#include <sys/stat.h>
 #include <limits.h>
 #include <signal.h>
 #include <stdint.h>
@@ -20,6 +22,7 @@
 #include "jobs.h"
 #include "log.h"
 #include "plat.h"
+#include "zipstream.h"
 
 static char g_token[128]; /* optional shared secret */
 
@@ -445,6 +448,78 @@ api_sys_log(http_req_t *req) {
   api_finish(req, &w);
 }
 
+#ifdef NEOWEB_FULL
+/* ---------------------------------------------------------------- report
+ * Everything someone helping with a problem asks for, in one ZIP: NeoHEN's
+ * logs and configuration, the themes service's diary, this service's own
+ * log, and what the console is (model, firmware, sensors, volumes,
+ * processes). No save data, no user names, nothing from the games. */
+static void
+report_text(zlist_t *z, const char *name, jw_t *w) {
+  if(!w->oom && w->data) {
+    char *text = strndup(w->data, w->len);
+    if(text) {
+      zlist_add(z, name, NULL, text, strlen(text), time(NULL));
+      free(text);
+    }
+  }
+  jw_free(w);
+}
+
+static void
+api_sys_report(http_req_t *req) {
+  static const char *files[][2] = {
+    {"/data/neohen/NeoHEN.log", "NeoHEN.log"},
+    {"/data/neohen/NeoHEN.log.1", "NeoHEN.log.1"},
+    {"/data/neohen/NeoHEN_util_daemon.log", "NeoHEN_util_daemon.log"},
+    {"/data/neohen/NeoHEN_crash.log", "NeoHEN_crash.log"},
+    {"/data/neohen/config.ini", "config.ini"},
+    {"/data/neohen/themes/neotheme.log", "themes/neotheme.log"},
+    {"/data/neohen/themes/state.txt", "themes/state.txt"},
+    {"/data/neohen/themes/active.txt", "themes/active.txt"},
+    {"/data/neohen/themes/default.txt", "themes/default.txt"},
+  };
+  char name[64], local[PATH_MAX];
+  zlist_t z = {0};
+  time_t now = time(NULL);
+  struct tm tm;
+  jw_t w;
+
+  for(size_t i = 0; i < sizeof(files) / sizeof(files[0]); i++) {
+    struct stat st;
+    plat_path(files[i][0], local, sizeof(local));
+    if(!stat(local, &st) && S_ISREG(st.st_mode) && st.st_size > 0) {
+      zlist_add(&z, files[i][1], local, NULL, (uint64_t)st.st_size, st.st_mtime);
+    }
+  }
+  jw_init(&w);
+  jw_obj(&w);
+  jw_kstr(&w, "neoweb", PS5AIO_VERSION);
+  jw_kint(&w, "made", (int64_t)now);
+  plat_sysinfo(&w);
+  jw_key(&w, "mounts");
+  plat_mounts(&w);
+  jw_key(&w, "procs");
+  plat_procs(&w);
+  jw_obj_end(&w);
+  report_text(&z, "console.json", &w);
+
+  jw_init(&w);
+  log_dump_json(&w, 0);
+  report_text(&z, "neoweb-log.json", &w);
+
+  if(!z.n) {
+    zlist_free(&z);
+    http_send_error(req, 500, "out of memory");
+    return;
+  }
+  localtime_r(&now, &tm);
+  strftime(name, sizeof(name), "NeoHEN-report-%Y%m%d-%H%M%S.zip", &tm);
+  zip_send(req, &z, name);
+  zlist_free(&z);
+}
+#endif /* NEOWEB_FULL */
+
 /* ------------------------------------------------------------ jobs */
 
 static void
@@ -522,6 +597,7 @@ static const api_route_t g_routes[] = {
 #ifdef NEOWEB_FULL
   {"POST", "/api/sys/kill",         api_sys_kill},
   {"POST", "/api/sys/power",        api_sys_power},
+  {"GET",  "/api/sys/report",       api_sys_report},
   {"POST", "/api/sys/eject",        api_sys_eject},
   {"GET",  "/api/sys/fan",          api_sys_fan_get},
   {"POST", "/api/sys/fan",          api_sys_fan_set},

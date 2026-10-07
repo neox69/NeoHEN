@@ -308,6 +308,28 @@ class PayloadTest(unittest.TestCase):
                                    raw=b"x")
         self.assertEqual(st, 409, body)
 
+    def test_report(self):
+        import io
+        import zipfile
+        os.makedirs(f"{self.root}/data/neohen/themes", exist_ok=True)
+        with open(f"{self.root}/data/neohen/NeoHEN.log", "w") as f:
+            f.write("[1.0] [NeoHEN] info: hello\n")
+        with open(f"{self.root}/data/neohen/themes/neotheme.log", "w") as f:
+            f.write("1 menu seen\n")
+        st, body, hdrs = self.api.req("GET", "/api/sys/report")
+        self.assertEqual(st, 200)
+        self.assertIn("NeoHEN-report-", hdrs["Content-Disposition"])
+        z = zipfile.ZipFile(io.BytesIO(body))
+        self.assertIsNone(z.testzip())
+        names = z.namelist()
+        for want in ("NeoHEN.log", "themes/neotheme.log", "console.json", "neoweb-log.json"):
+            self.assertIn(want, names)
+        self.assertEqual(z.read("NeoHEN.log"), b"[1.0] [NeoHEN] info: hello\n")
+        info = json.loads(z.read("console.json"))
+        self.assertIn("mounts", info)
+        self.assertIn("procs", info)
+        self.assertIsInstance(json.loads(z.read("neoweb-log.json")), list)
+
     def test_pkg_and_eject(self):
         os.makedirs(f"{self.root}/data/pkg", exist_ok=True)
         with open(f"{self.root}/data/pkg/My Game.pkg", "wb") as f:
