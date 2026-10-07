@@ -13,6 +13,8 @@
  *   My theme/bgm_home.at9
  *   My theme/bg_hub_default.dds.zst
  *   My theme/system_ex/app/NPXS40074/sce_sys/icon0.png
+ *   My theme/background.dds.zst      one image for every background
+ *   My theme/sounds/snd_enter.vag    a menu sound, by its name
  *
  * (what is given for system_ex/rnps/ also goes over /mnt/rnps/, where the
  * console keeps the updated copy of the menu's own apps)
@@ -32,6 +34,13 @@
  * full"). A new menu is looked for forty times a second, to be there before
  * it reads anything: its sounds and icons are read once, as it starts.
  *
+ * Menu sounds live inside one of the console's .rco bundles, which only
+ * fits its firmware: a theme brings the sounds alone and the bundle is made
+ * here, from the console's own, with the new sounds added at its end.
+ *
+ * The themes that come with NeoHEN are packed inside this program and are
+ * written to the themes folder the first time, if they are not there.
+ *
  * Two rules. Nothing here writes below /system or /system_ex: a mount lives
  * in the kernel's mount table, so a reboot always brings the stock files
  * back, untouched. And a theme that makes the menu die twice in a row right
@@ -43,6 +52,7 @@
 #include <errno.h>
 #include <signal.h>
 #include <stdarg.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -71,6 +81,24 @@
 #define RNPS_STOCK "system_ex/rnps/"
 #define RNPS_LIVE  "mnt/rnps/"
 #define SELF     "neotheme.elf"
+#define BUNDLED  THEMES "/.bundled"
+#define ONE_BG   "background.dds.zst"
+#define SOUNDS   "sounds"
+#define UI_RCO   "Sce.PlayStation.PUI_UI3.rco"
+#define MAX_SOUNDS 48
+
+/* every background the menu has; a theme's background.dds.zst is all of them */
+static const char *const BG_NAMES[] = {
+  "bg_hub_default", "Library_BG_blue_Low_Angle_001", "bg_NPXS40037", "bg_NPXS40047",
+  "bg_NPXS40053", "bg_NPXS40054", "bg_NPXS40056", "bg_NPXS40063", "bg_NPXS40071",
+  "bg_NPXS40075", "bg_NPXS40080", "bg_NPXS40110", "bg_NPXS40139", "bg_NPXS40144",
+  "bg_NPXS40154",
+};
+#define NBG ((int)(sizeof(BG_NAMES) / sizeof(BG_NAMES[0])))
+
+/* the themes packed into this program (themes/tools/pack_themes.py) */
+extern const unsigned char theme_pack[];
+extern const unsigned char theme_pack_end[];
 
 #define TICK_MS        25 /* how often a new menu is looked for */
 #define TICKS_PER_PASS 80 /* the theme itself is looked at every 2 s */
@@ -594,6 +622,23 @@ walk(const char *dir_path, const char *rel, int depth, int fill, tally_t *t) {
       t->failed++;
       continue;
     }
+    if(!rel[0] && !strcmp(e->d_name, ONE_BG)) {
+      /* under every background's name the theme has no file of its own for */
+      for(int i = 0; i < NBG; i++) {
+        char own[768], as[768];
+        struct stat have;
+        snprintf(own, sizeof(own), "%s/%s.dds.zst", dir_path, BG_NAMES[i]);
+        if(!stat(own, &have)) {
+          continue;
+        }
+        snprintf(as, sizeof(as), "%s/%s.dds.zst", layer->store, BG_NAMES[i]);
+        unlink(as);
+        if(link(path, as) && copy_file(path, as)) {
+          t->failed++;
+        }
+      }
+      continue;
+    }
     size_t len = strlen(e->d_name);
     if(len > 4 && !strcmp(e->d_name + len - 4, ".rco") && !strcmp(layer->rel, ASSETS) &&
        !rco_fits(path, e->d_name)) {
@@ -610,6 +655,266 @@ walk(const char *dir_path, const char *rel, int depth, int fill, tally_t *t) {
   closedir(dir);
 }
 
+/* ---------------------------------------------------------------- sounds
+ * An .rco is a tree of elements, each with attributes, and a table of
+ * files at its end. A sound is an element <sounddata id="snd_enter"
+ * src=(offset, size)>. The copy made here is the console's bundle with each
+ * new sound added after the last file and that one (offset, size) changed:
+ * nothing else moves. */
+
+static uint32_t
+rd32(const unsigned char *p) {
+  return (uint32_t)p[0] | ((uint32_t)p[1] << 8) | ((uint32_t)p[2] << 16) | ((uint32_t)p[3] << 24);
+}
+
+static void
+wr32(unsigned char *p, uint32_t v) {
+  p[0] = (unsigned char)v;
+  p[1] = (unsigned char)(v >> 8);
+  p[2] = (unsigned char)(v >> 16);
+  p[3] = (unsigned char)(v >> 24);
+}
+
+typedef struct rco {
+  unsigned char *head; /* the bundle up to its table of files */
+  uint32_t head_size;
+  uint32_t tree_off, tree_size, id_off, id_size, str_off, str_size;
+} rco_t;
+
+static const char *
+rco_text(const rco_t *r, uint32_t table, uint32_t table_size, uint32_t off) {
+  if(off >= table_size || !memchr(r->head + table + off, 0, table_size - off)) {
+    return "";
+  }
+  return (const char *)r->head + table + off;
+}
+
+/* Where the (offset, size) of the file of the element called `ident` is
+ * kept, as a position in the bundle; 0 if there is no such element. */
+static uint32_t
+rco_find(const rco_t *r, const char *ident, uint32_t off, int depth) {
+  while(off != 0xffffffffu && depth < 32) {
+    uint32_t base = r->tree_off + off, nattr, next, first, src = 0;
+    int mine = 0;
+
+    if(off + 28 > r->tree_size) {
+      return 0;
+    }
+    nattr = rd32(r->head + base + 4);
+    next = rd32(r->head + base + 16);
+    first = rd32(r->head + base + 20);
+    if(nattr > 64 || off + 28 + nattr * 16 > r->tree_size) {
+      return 0;
+    }
+    for(uint32_t i = 0; i < nattr; i++) {
+      const unsigned char *a = r->head + base + 28 + i * 16;
+      const char *name = rco_text(r, r->str_off, r->str_size, rd32(a));
+      uint32_t type = rd32(a + 4), v1 = rd32(a + 8);
+
+      if(type == 8 && !strcmp(name, "src")) {
+        src = base + 28 + i * 16 + 8;
+      } else if((type == 9 || type == 10) && !strcmp(name, "id")) {
+        mine = !strcmp(rco_text(r, r->id_off, r->id_size, v1 + 4), ident);
+      }
+    }
+    if(mine && src) {
+      return src;
+    }
+    if(first != 0xffffffffu) {
+      uint32_t deeper = rco_find(r, ident, first, depth + 1);
+      if(deeper) {
+        return deeper;
+      }
+    }
+    off = next;
+  }
+  return 0;
+}
+
+/* The theme's sounds, as "snd_enter" names (no folder, no .vag). */
+static int
+list_sounds(const char *theme, char names[][64], int max, tally_t *t) {
+  char dir_path[768];
+  struct dirent *e;
+  int n = 0;
+  DIR *dir;
+
+  snprintf(dir_path, sizeof(dir_path), "%s/" SOUNDS, theme);
+  if(!(dir = opendir(dir_path))) {
+    return 0;
+  }
+  while((e = readdir(dir)) && n < max) {
+    char path[1024];
+    struct stat st;
+    size_t len = strlen(e->d_name);
+
+    if(len < 5 || len >= 64 || strcmp(e->d_name + len - 4, ".vag")) {
+      continue;
+    }
+    snprintf(path, sizeof(path), "%s/%s", dir_path, e->d_name);
+    if(stat(path, &st) || !S_ISREG(st.st_mode) || st.st_size < 64 || st.st_size > (4 << 20)) {
+      continue;
+    }
+    if(t) {
+      t->files++;
+      t->bytes += (unsigned long long)st.st_size;
+      if((long)st.st_mtime > t->newest) {
+        t->newest = (long)st.st_mtime;
+      }
+    }
+    snprintf(names[n], 64, "%.*s", (int)(len - 4), e->d_name);
+    n++;
+  }
+  closedir(dir);
+  return n;
+}
+
+/* Adds one sound to the copy being written and points the element at it. */
+static int
+rco_put(rco_t *r, FILE *out, uint32_t file_off, const char *ident, const char *vag_path) {
+  static const unsigned char zeros[16];
+  unsigned char buf[65536];
+  uint32_t src = rco_find(r, ident, 0, 0);
+  long at;
+  size_t n, total = 0;
+  FILE *in;
+
+  if(!src) {
+    return 1; /* this firmware has no such sound: not an error */
+  }
+  if(!(in = fopen(vag_path, "rb"))) {
+    return -1;
+  }
+  if(fread(buf, 1, 4, in) != 4 || memcmp(buf, "VAGp", 4)) {
+    fclose(in);
+    return 1; /* not a sound of the kind the menu plays */
+  }
+  rewind(in);
+  fseek(out, 0, SEEK_END);
+  at = ftell(out);
+  if(at % 16) {
+    fwrite(zeros, 1, (size_t)(16 - at % 16), out);
+    at += 16 - at % 16;
+  }
+  while((n = fread(buf, 1, sizeof(buf), in)) > 0) {
+    if(fwrite(buf, 1, n, out) != n) {
+      fclose(in);
+      return -1;
+    }
+    total += n;
+  }
+  fclose(in);
+  wr32(r->head + src, (uint32_t)at - file_off);
+  wr32(r->head + src + 4, (uint32_t)total);
+  return 0;
+}
+
+/* Makes the assets store's copy of the menu's bundle with the theme's
+ * sounds in it. 0 if it is there (or the theme has none), -1 if not. */
+static int
+build_sounds(const char *theme) {
+  static const char *const ALSO[] = {"snd_focus_move", "snd_enter", "snd_cancel"};
+  char names[MAX_SOUNDS][64], tmp[512], final[512], vag[1024];
+  unsigned char hdr[80];
+  rco_t r = {0};
+  uint32_t file_off, file_size;
+  int count = list_sounds(theme, names, MAX_SOUNDS, NULL), put = 0, bad = 0;
+  struct stat st;
+  long end;
+  FILE *in, *out;
+
+  snprintf(final, sizeof(final), CURRENT "/" UI_RCO);
+  if(!count || !stat(final, &st)) {
+    return 0; /* no sounds, or the theme brings a whole bundle of its own */
+  }
+  if(!(in = fopen("/" ASSETS "/" UI_RCO, "rb"))) {
+    return -1;
+  }
+  if(fread(hdr, 1, sizeof(hdr), in) != sizeof(hdr) || memcmp(hdr, "RCOF", 4) || fstat(fileno(in), &st)) {
+    fclose(in);
+    return -1;
+  }
+  r.tree_off = rd32(hdr + 8);
+  r.tree_size = rd32(hdr + 12);
+  r.id_off = rd32(hdr + 16);
+  r.id_size = rd32(hdr + 20);
+  r.str_off = rd32(hdr + 32);
+  r.str_size = rd32(hdr + 36);
+  file_off = rd32(hdr + 72);
+  file_size = rd32(hdr + 76);
+  /* the layout this was written for: the files last, everything else before */
+  if((uint64_t)file_off + file_size != (uint64_t)st.st_size || file_off > (8u << 20) ||
+     (uint64_t)r.tree_off + r.tree_size > file_off || (uint64_t)r.id_off + r.id_size > file_off ||
+     (uint64_t)r.str_off + r.str_size > file_off || !(r.head = malloc(file_off))) {
+    fclose(in);
+    return -1;
+  }
+  r.head_size = file_off;
+  rewind(in);
+  snprintf(tmp, sizeof(tmp), CURRENT "/." UI_RCO ".new");
+  if(fread(r.head, 1, file_off, in) != file_off || !(out = fopen(tmp, "w+b"))) {
+    free(r.head);
+    fclose(in);
+    return -1;
+  }
+  /* the whole original first */
+  rewind(in);
+  {
+    static unsigned char buf[1 << 20];
+    size_t n;
+    while((n = fread(buf, 1, sizeof(buf), in)) > 0) {
+      if(fwrite(buf, 1, n, out) != n) {
+        bad = 1;
+        break;
+      }
+    }
+  }
+  fclose(in);
+
+  for(int i = 0; i < count && !bad; i++) {
+    int got;
+    snprintf(vag, sizeof(vag), "%s/" SOUNDS "/%s.vag", theme, names[i]);
+    got = rco_put(&r, out, file_off, names[i], vag);
+    bad = got < 0;
+    put += got == 0;
+    /* the console keeps other sets of these three (snd_1_enter...): they get
+     * the same sound unless the theme gives one for them */
+    for(size_t k = 0; k < sizeof(ALSO) / sizeof(ALSO[0]) && !bad; k++) {
+      if(strcmp(names[i], ALSO[k])) {
+        continue;
+      }
+      for(int set = 1; set <= 4 && !bad; set++) {
+        char alt[80], own[1024];
+        struct stat have;
+        snprintf(alt, sizeof(alt), "snd_%d_%s", set, ALSO[k] + 4);
+        snprintf(own, sizeof(own), "%s/" SOUNDS "/%s.vag", theme, alt);
+        if(stat(own, &have)) {
+          bad = rco_put(&r, out, file_off, alt, vag) < 0;
+        }
+      }
+    }
+  }
+  if(!bad) {
+    static const unsigned char zeros[16];
+    fseek(out, 0, SEEK_END);
+    end = ftell(out);
+    if(end % 16) {
+      fwrite(zeros, 1, (size_t)(16 - end % 16), out);
+      end += 16 - end % 16;
+    }
+    wr32(r.head + 76, (uint32_t)end - file_off);
+    rewind(out);
+    bad = fwrite(r.head, 1, file_off, out) != file_off;
+  }
+  free(r.head);
+  if(fclose(out) || bad || !put || rename(tmp, final)) {
+    unlink(tmp);
+    return put || bad ? -1 : 0;
+  }
+  note("sounds: %d of the theme's %d put into the menu's bundle", put, count);
+  return 0;
+}
+
 /* Makes the stores hold exactly the files of the theme ("" = none). Files
  * are hard links, so nothing is copied and a theme takes no extra space. */
 static int
@@ -621,6 +926,9 @@ fill_stores(const char *theme) {
   }
   if(theme[0]) {
     walk(theme, "", 0, 1, &t);
+    if(build_sounds(theme)) {
+      note("sounds: the menu's bundle could not be made; the menu keeps its own");
+    }
   }
   return t.failed ? -1 : 0;
 }
@@ -636,7 +944,105 @@ signature(const char *theme, char *out, size_t size) {
     return;
   }
   walk(theme, "", 0, 0, &t);
+  {
+    char names[MAX_SOUNDS][64];
+    list_sounds(theme, names, MAX_SOUNDS, &t);
+  }
   snprintf(out, size, "%s|%d|%llu|%ld", theme, t.files, t.bytes, t.newest);
+}
+
+/* ------------------------------------------------- the themes that come
+ * Packed as: "NTPK", a number that changes with the pack, then for each
+ * file its path's length (2 bytes), its size (4), the path ("Theme/...")
+ * and the bytes; a zero length ends it. A theme is written only if its
+ * folder is not there, and only once per pack: one the user deletes stays
+ * deleted. */
+static void
+mkparents(char *path) {
+  for(char *p = path + 1; *p; p++) {
+    if(*p == '/') {
+      *p = 0;
+      mkdir(path, 0777);
+      *p = '/';
+    }
+  }
+}
+
+static void
+unpack_themes(void) {
+  const unsigned char *p = theme_pack, *end = theme_pack_end;
+  char id[16], had[16] = "", skip[16][64], take[16][64];
+  int nskip = 0, ntake = 0, files = 0;
+  FILE *f;
+
+  if(end - p < 10 || memcmp(p, "NTPK", 4)) {
+    return;
+  }
+  snprintf(id, sizeof(id), "%08x", rd32(p + 4));
+  if((f = fopen(BUNDLED, "r"))) {
+    if(!fgets(had, sizeof(had), f)) {
+      had[0] = 0;
+    }
+    fclose(f);
+    had[strcspn(had, "\r\n")] = 0;
+  }
+  if(!strcmp(had, id)) {
+    return;
+  }
+  for(p += 8; end - p >= 2;) {
+    uint32_t plen = (uint32_t)p[0] | ((uint32_t)p[1] << 8), size;
+    char rel[400], path[768], name[64];
+    const char *slash;
+    int known = 0, wanted = 0;
+
+    if(!plen || plen >= sizeof(rel) || end - p < 6 + (long)plen) {
+      break;
+    }
+    size = rd32(p + 2);
+    memcpy(rel, p + 6, plen);
+    rel[plen] = 0;
+    p += 6 + plen;
+    if((uint64_t)(end - p) < size) {
+      break;
+    }
+    slash = strchr(rel, '/');
+    if(!slash || slash - rel >= (long)sizeof(name) || strstr(rel, "..") || rel[0] == '.') {
+      p += size;
+      continue;
+    }
+    snprintf(name, sizeof(name), "%.*s", (int)(slash - rel), rel);
+    for(int i = 0; i < ntake && !known; i++) {
+      known = wanted = !strcmp(take[i], name);
+    }
+    for(int i = 0; i < nskip && !known; i++) {
+      known = !strcmp(skip[i], name);
+    }
+    if(!known) {
+      struct stat st;
+      snprintf(path, sizeof(path), THEMES "/%s", name);
+      wanted = stat(path, &st) != 0;
+      if(wanted && ntake < 16) {
+        snprintf(take[ntake++], 64, "%s", name);
+      } else if(!wanted && nskip < 16) {
+        snprintf(skip[nskip++], 64, "%s", name);
+      }
+    }
+    if(wanted) {
+      snprintf(path, sizeof(path), THEMES "/%s", rel);
+      mkparents(path);
+      if((f = fopen(path, "wb"))) {
+        fwrite(p, 1, size, f);
+        fclose(f);
+        files++;
+      }
+    }
+    p += size;
+  }
+  if((f = fopen(BUNDLED, "w"))) {
+    fprintf(f, "%s\n", id);
+    fclose(f);
+  }
+  note("themes that come with NeoHEN: %d written (%d files), %d already there", ntake, files, nskip);
 }
 
 int
@@ -654,6 +1060,7 @@ main(void) {
   mkdir(THEMES, 0777);
   mkdir(CURRENT, 0777);
   unlink(LOGFILE);
+  unpack_themes();
   load_layers();
 
   /* themes/default.txt names the theme every start begins with, whatever
