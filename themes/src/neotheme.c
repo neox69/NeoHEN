@@ -38,11 +38,6 @@
  * fits its firmware: a theme brings the sounds alone and the bundle is made
  * here, from the console's own, with the new sounds added at its end.
  *
- * The menu reads its sounds and icons once, as it starts, and NeoHEN is
- * loaded into a menu that is already running. So when this starts and the
- * theme has sounds or icons the running menu was not born with, NeoHEN is
- * asked to restart the menu, once (it refuses while a game is open).
- *
  * The themes that come with NeoHEN are packed inside this program and are
  * written to the themes folder the first time, if they are not there.
  *
@@ -62,9 +57,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/mount.h>
-#include <netinet/in.h>
 #include <sys/param.h>
-#include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/syscall.h>
 #include <sys/sysctl.h>
@@ -89,8 +82,6 @@
 #define RNPS_LIVE  "mnt/rnps/"
 #define SELF     "neotheme.elf"
 #define BUNDLED  THEMES "/.bundled"
-#define APPLIED  THEMES "/.applied"
-#define START_SETTLE_TICKS (6000 / TICK_MS) /* let NeoHEN finish loading first */
 #define ONE_BG   "background.dds.zst"
 #define SOUNDS   "sounds"
 #define UI_RCO   "Sce.PlayStation.PUI_UI3.rco"
@@ -1054,78 +1045,6 @@ unpack_themes(void) {
   note("themes that come with NeoHEN: %d written (%d files), %d already there", ntake, files, nskip);
 }
 
-/* ----------------------------------------------- the menu, born with it
- * .applied names the menu that started with a theme already over it, and
- * that theme: that menu has read everything. */
-static void
-write_applied(const char *menu, const char *sig) {
-  FILE *f = fopen(APPLIED, "w");
-  if(f) {
-    fprintf(f, "%s\n%s\n", menu, sig);
-    fclose(f);
-  }
-}
-
-static int
-is_applied(const char *menu, const char *sig) {
-  char a[64] = "", b[640] = "";
-  FILE *f = fopen(APPLIED, "r");
-
-  if(!f) {
-    return 0;
-  }
-  if(!fgets(a, sizeof(a), f) || !fgets(b, sizeof(b), f)) {
-    a[0] = 0;
-  }
-  fclose(f);
-  a[strcspn(a, "\r\n")] = 0;
-  b[strcspn(b, "\r\n")] = 0;
-  return a[0] && !strcmp(a, menu) && !strcmp(b, sig);
-}
-
-/* Has the theme anything the menu only reads as it starts? */
-static int
-needs_fresh_menu(void) {
-  struct stat st;
-
-  if(!stat(CURRENT "/" UI_RCO, &st)) {
-    return 1; /* sounds */
-  }
-  for(int i = 1; i < g_nlayers; i++) {
-    if(!store_empty(g_layers[i].store)) {
-      return 1; /* icons */
-    }
-  }
-  return 0;
-}
-
-/* Asks NeoHEN, on its control port, to restart the menu. 0 if it will. */
-static int
-ask_menu_restart(void) {
-  const uint32_t frame[2] = {0x4F4E494Fu, 3};
-  struct sockaddr_in addr;
-  struct timeval tv = {3, 0};
-  unsigned char reply = 0xff;
-  int s = socket(AF_INET, SOCK_STREAM, 0);
-
-  if(s < 0) {
-    return -1;
-  }
-  memset(&addr, 0, sizeof(addr));
-  addr.sin_family = AF_INET;
-  addr.sin_port = htons(9048);
-  addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-  setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
-  setsockopt(s, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
-  if(connect(s, (struct sockaddr *)&addr, sizeof(addr)) ||
-     send(s, frame, sizeof(frame), 0) != (ssize_t)sizeof(frame) || recv(s, &reply, 1, 0) != 1) {
-    close(s);
-    return -1;
-  }
-  close(s);
-  return reply ? (int)reply : 0;
-}
-
 int
 main(void) {
   char shown[640] = "";  /* signature of what the stores hold */
@@ -1134,8 +1053,6 @@ main(void) {
   int short_lived = 0;   /* menus in a row that died right after starting */
   int uncovered = 0;     /* the live menu has not got the stores yet */
   int settle = 0;        /* ticks left of covering a new menu at every tick */
-  int born_covered = 0;  /* the live menu got its stores as it started */
-  int start_checked = 0; /* the one look, at start, at whether to restart it */
   int said = 0;
 
   kill_previous();
@@ -1196,13 +1113,8 @@ main(void) {
     if(uncovered || settle > 0) {
       cover_menus();
       if(uncovered && assets_covered(menu)) {
-        long age = menu_age_ms();
         uncovered = 0;
-        born_covered = age < 1500; /* -1: its process is not even there yet */
-        note("menu %s covered, its process is %ld ms old", menu, age);
-        if(born_covered && shown[0]) {
-          write_applied(menu, shown);
-        }
+        note("menu %s covered, its process is %ld ms old", menu, menu_age_ms());
       }
       if(settle > 0) {
         settle--;
@@ -1230,16 +1142,6 @@ main(void) {
         }
       }
       cover_menus();
-    }
-    /* once, a few seconds after starting: a menu that was already running
-     * has not read the theme's sounds and icons */
-    if(!start_checked && tick >= START_SETTLE_TICKS && shown[0] && menu[0] && !uncovered) {
-      start_checked = 1;
-      if(strcmp(shown, "-") && needs_fresh_menu() && !born_covered && !is_applied(menu, shown)) {
-        int r = ask_menu_restart();
-        note("start: the menu was running before the theme; restart asked -> %s",
-             r == 0 ? "yes" : r == 2 ? "no, a game is open" : "NeoHEN did not answer");
-      }
     }
     usleep(TICK_MS * 1000);
   }
