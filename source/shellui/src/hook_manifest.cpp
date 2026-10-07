@@ -1,5 +1,6 @@
 /* Copyright (C) 2025 OnionHEN / LightningMods — P0 split. */
 
+#include "neo_actions.hpp"
 #include "hooked_funcs.hpp"
 #include "ipc.hpp"
 #include "external_symbols.hpp"
@@ -119,6 +120,11 @@ uint64_t GetManifestResourceStream_Hook(uint64_t inst, MonoString *FileName) {
   if (!dynamic_page) {
     switch (route.page) {
   case toolbox::Page::DebugSettings:
+    if (neo_saves_page_pending()) {
+      /* Asked for from a game's options menu (see neo_actions.cpp). */
+      neo_generate_saves_xml(new_xml_string);
+      break;
+    }
     LoadSettings();
     generate_toolbox_xml(new_xml_string);
     break;

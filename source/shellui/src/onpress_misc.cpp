@@ -103,8 +103,28 @@ static OnPressResult id_smp_relaunch(OnPressContext &ctx) {
   neo_smp_relaunch();
   return OnPressResult::Consumed;
 }
+static OnPressResult id_save_backup(OnPressContext &ctx) {
+  ctx.dirty = false;
+  neo_saves_backup_now();
+  return OnPressResult::Consumed;
+}
+static OnPressResult id_save_restore(OnPressContext &ctx) {
+  /* id_save_restore_<n>; the confirmation has already been accepted. */
+  ctx.dirty = false;
+  neo_saves_restore(ctx.id.back() - '0');
+  return OnPressResult::Consumed;
+}
 static const OnPressExactEntry kRootExact[] = {
     {"id_smp_relaunch", id_smp_relaunch},
+    {"id_save_backup", id_save_backup},
+    {"id_save_restore_0", id_save_restore},
+    {"id_save_restore_1", id_save_restore},
+    {"id_save_restore_2", id_save_restore},
+    {"id_save_restore_3", id_save_restore},
+    {"id_save_restore_4", id_save_restore},
+    {"id_save_restore_5", id_save_restore},
+    {"id_save_restore_6", id_save_restore},
+    {"id_save_restore_7", id_save_restore},
     {"id_download_cheats", id_download_cheats},
     {"id_lm_test", id_lm_test},
     {"id_onionhen_credits", id_onionhen_credits},
