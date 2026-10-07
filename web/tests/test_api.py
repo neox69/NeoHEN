@@ -308,6 +308,28 @@ class PayloadTest(unittest.TestCase):
                                    raw=b"x")
         self.assertEqual(st, 409, body)
 
+    def test_search(self):
+        os.makedirs(f"{self.root}/data/find/deep/Inner Folder", exist_ok=True)
+        os.makedirs(f"{self.root}/mnt/sandbox/copy", exist_ok=True)
+        for p in ("data/find/Save_GAME.bin", "data/find/deep/Inner Folder/gameplay.txt",
+                  "data/find/deep/other.txt", "mnt/sandbox/copy/game.bin"):
+            with open(f"{self.root}/{p}", "w") as f:
+                f.write("x")
+        _, j = self.api.get("/api/fs/search?path=/data/find&q=GaMe")
+        self.assertEqual(sorted(e["path"] for e in j["entries"]),
+                         ["/data/find/Save_GAME.bin", "/data/find/deep/Inner Folder/gameplay.txt"])
+        self.assertFalse(j["truncated"])
+        _, j = self.api.get("/api/fs/search?path=/data/find&q=inner")
+        self.assertEqual([(e["path"], e["type"]) for e in j["entries"]],
+                         [("/data/find/deep/Inner Folder", "dir")])
+        _, j = self.api.get("/api/fs/search?path=/&q=game.bin")
+        self.assertNotIn("/mnt/sandbox/copy/game.bin", [e["path"] for e in j["entries"]])
+        _, j = self.api.get("/api/fs/search?path=/data/find&q=t&max=1")
+        st, body, _ = self.api.req("GET", "/api/fs/search?path=/data/find&q=x")
+        self.assertEqual(st, 400, body)
+        _, j = self.api.get("/api/fs/search?path=/data/find&q=txt&max=1")
+        self.assertEqual((len(j["entries"]), j["truncated"]), (1, True))
+
     def test_fan_and_power(self):
         cfg = f"{self.root}/data/neohen/config.ini"
         text = ("# NeoHEN\r\n[general]\r\nlanguage=system\r\n\r\n[cooling]\r\n# a comment\r\n"

@@ -534,6 +534,7 @@ static const api_route_t g_routes[] = {
   {"GET",  "/api/fs/list",          api_fs_list},
   {"GET",  "/api/fs/stat",          api_fs_stat},
   {"GET",  "/api/fs/walk",          api_fs_walk},
+  {"GET",  "/api/fs/search",        api_fs_search},
   {"GET",  "/api/fs/size",          api_fs_size},
   {"GET",  "/api/fs/text",          api_fs_read_text},
   {"POST", "/api/fs/text",          api_fs_write_text},
