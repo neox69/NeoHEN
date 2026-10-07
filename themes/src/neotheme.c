@@ -1242,8 +1242,8 @@ main(void) {
         int r;
         /* said first: the screen goes black for a moment. One notice; a
          * notice cannot be changed once it is up, so there is no counting */
-        say("NeoHEN: el menú se reinicia en 5 segundos para cargar el tema \"%s\"", shown_name);
-        sleep(5);
+        say("NeoHEN: el menú se reinicia en 3 segundos para cargar el tema \"%s\"", shown_name);
+        sleep(3);
         r = ask_menu_restart();
         note("start: the menu was running before the theme; restart asked -> %s",
              r == 0 ? "yes" : r == 2 ? "no, a game is open" : "NeoHEN did not answer");
