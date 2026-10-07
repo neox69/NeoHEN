@@ -14,7 +14,7 @@ ELF      := neoweb.elf
 HOST_BIN := build/neoweb-host
 
 COMMON_SRCS := src/main.c src/http.c src/json.c src/log.c src/jobs.c \
-               src/fsutil.c src/sfo.c src/api.c src/api_fs.c src/api_apps.c \
+               src/fsutil.c src/sha256.c src/sfo.c src/api.c src/api_fs.c src/api_apps.c \
                src/api_payloads.c src/webui.c src/plat_common.c
 # FULL=1 adds the file manager, memory tools, dumper, installer and power
 # routes. The default build only reads state and launches or closes games.
