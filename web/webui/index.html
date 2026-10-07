@@ -382,6 +382,7 @@ dialog textarea{width:100%;height:min(60vh,560px);resize:vertical;font:500 12.5p
       <section id="v-themes" hidden></section>
       <section id="v-saves" hidden></section>
       <section id="v-captures" hidden></section>
+      <section id="v-cheats" hidden></section>
       <section id="v-transfers" hidden></section>
       <section id="v-procs" hidden></section>
       <section id="v-system" hidden></section>
@@ -398,6 +399,7 @@ dialog textarea{width:100%;height:min(60vh,560px);resize:vertical;font:500 12.5p
 <input type="file" id="pick-ti" accept="image/*" hidden>
 <input type="file" id="pick-tm" accept=".at9" hidden>
 <input type="file" id="pick-sz" accept=".zip" hidden>
+<input type="file" id="pick-ch" accept=".json,.shn,.mc4" multiple hidden>
 <div class="toast" id="toast" role="status"></div>
 <dialog id="dlg"><h4 id="dh"></h4><p id="dp"></p><input class="in" id="di" hidden>
   <div class="row"><button class="btn" id="dno"></button><button class="btn pri" id="dyes"></button></div></dialog>
@@ -446,6 +448,7 @@ var P={
  dots:"M5 12h.01M12 12h.01M19 12h.01",
  scale:"M4 20h16M6 20V10M12 20V4M18 20v-7",
  saves:"M5 4h11l3 3v13H5zM8 4v5h7V4M8 20v-6h8v6",
+ cheats:"M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6-5.3-3-5.3 3 1.2-6L3.4 9.3l6-.7z",
  captures:"M4 7h3l2-2h6l2 2h3v12H4zM12 10a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7z",
  themes:"M12 3a9 9 0 1 0 0 18c1.2 0 2-.9 2-2 0-1.3 1-2 2.2-2H18a3 3 0 0 0 3-3c0-5-4-9-9-9zM7.5 12h.01M9.5 8h.01M14.5 8h.01"
 };
@@ -494,6 +497,7 @@ var VIEWS=[
  ["themes",L("Temas","Themes"),L("Fondo y música del menú de la PS5","Background and music of the PS5 menu"),1],
  ["saves",L("Partidas","Saves"),L("Copias de seguridad de las partidas, por usuario","Backups of save data, by user"),1],
  ["captures",L("Capturas","Captures"),L("Capturas de pantalla y vídeos de la consola","Screenshots and clips on the console"),1],
+ ["cheats",L("Trucos","Cheats"),L("Ficheros de trucos para tus juegos","Cheat files for your games"),1],
  ["transfers",L("Transferencias","Transfers"),L("Subidas y tareas de la consola","Uploads and console jobs"),1],
  ["procs",L("Procesos","Processes"),L("Lo que está en ejecución ahora","What is running right now"),1],
  ["system",L("Sistema","System"),L("Información, almacenamiento y registro","Information, storage and log")]];
@@ -517,7 +521,7 @@ function show(v,push){
   $("vt").textContent=def[1];$("vs").textContent=def[2];
   if(push)history.replaceState(null,"","#"+v);
   $("side").className="side";paintNav();render();$("view").scrollTop=0;
-  if(v==="files")loadDir(S.cwd);if(v==="procs")loadProcs();if(v==="system"){loadLog();S.fanEdit=null;loadFan()}if(v==="transfers")loadJobs();if(v==="payloads")loadPay();if(v==="themes")loadThemes();if(v==="saves")loadSaves();if(v==="captures")loadCaps();
+  if(v==="files")loadDir(S.cwd);if(v==="procs")loadProcs();if(v==="system"){loadLog();S.fanEdit=null;loadFan()}if(v==="transfers")loadJobs();if(v==="payloads")loadPay();if(v==="themes")loadThemes();if(v==="saves")loadSaves();if(v==="captures")loadCaps();if(v==="cheats")loadCheats();
 }
 $("nav").onclick=function(e){var b=e.target.closest("button[data-v]");if(b)show(b.getAttribute("data-v"),true)};
 window.addEventListener("hashchange",function(){var h=location.hash.slice(1);if(h!==S.view)show(h)});
@@ -525,7 +529,7 @@ $("burger").innerHTML=ic("menu");$("reload").innerHTML=ic("refresh");
 $("burger").onclick=function(){$("side").className="side open"};
 $("view").addEventListener("click",function(){$("side").className="side"});
 $("reload").onclick=function(){fast();slow();show(S.view);toast(L("Actualizado","Refreshed"))};
-function render(){({panel:paintPanel,library:paintLib,files:paintFiles,payloads:paintPay,themes:paintThemes,saves:paintSaves,captures:paintCaps,transfers:paintTr,procs:paintProcs,system:paintSys})[S.view]()}
+function render(){({panel:paintPanel,library:paintLib,files:paintFiles,payloads:paintPay,themes:paintThemes,saves:paintSaves,captures:paintCaps,cheats:paintCheats,transfers:paintTr,procs:paintProcs,system:paintSys})[S.view]()}
 
 /* ------------------------------------------------------------ dashboard */
 function tcol(v){return v>=88?"var(--bad)":v>=78?"var(--warn)":"var(--ok)"}
@@ -1063,6 +1067,64 @@ $("v-captures").addEventListener("change",function(e){
   else if(t.id==="cp-game"){cp.game=t.value;cp.max=240;paintCaps()}
   else if((v=t.getAttribute("data-id"))){if(t.checked)cp.sel[v]=1;else delete cp.sel[v];
     var c=t.closest(".cpc");if(c)c.className="cpc"+(t.checked?" on":"");var n=Object.keys(cp.sel).length,bs=$("cp-sel");bs.disabled=!n;bs.textContent=L("Descargar seleccionadas","Download selected")+(n?" ("+n+")":"")}});
+
+/* ------------------------------------------------------------ cheats */
+var CDIR="/data/neohen/cheats";
+S.ch={files:[],by:{},loaded:false,open:{},info:{},q:""};
+function loadCheats(){
+  if(!S.full)return Promise.resolve();
+  return api("/api/fs/list?path="+enc(CDIR)).then(function(j){var ch=S.ch;ch.files=(j.entries||[]).filter(function(e){return e.type==="file"&&/^[A-Z]{4}\d{5}_.*\.(json|shn|mc4)$/i.test(e.name)});
+    ch.by={};ch.files.forEach(function(e){var id=e.name.slice(0,9);(ch.by[id]=ch.by[id]||[]).push(e)});ch.loaded=true;if(S.view==="cheats")paintCheats()},
+    function(){S.ch.files=[];S.ch.by={};S.ch.loaded=true;if(S.view==="cheats")paintCheats()});
+}
+function chParts(n){var m=/^([A-Z]{4}\d{5})_([0-9.]+)_(.*)\.(json|shn|mc4)$/i.exec(n)||[];return{id:m[1]||"",ver:m[2]||"",ext:(m[4]||"").toLowerCase()}}
+function chRead(name){
+  var ch=S.ch;if(ch.info[name])return;ch.info[name]={busy:true};
+  fetch("/fs/get?path="+enc(CDIR+"/"+name)).then(function(r){return r.text()}).then(function(t){var o={game:"",by:"",list:[]};
+    try{if(/\.json$/i.test(name)){var j=JSON.parse(t);o.game=j.name||"";o.by=(j.credits||[]).join(", ");o.list=(j.mods||[]).map(function(m){return m.name})}
+      else{var x=new DOMParser().parseFromString(t,"text/xml"),r=x.documentElement;o.game=r.getAttribute("Game")||"";o.by=r.getAttribute("Moder")||"";
+        o.list=[].map.call(x.getElementsByTagName("Cheat"),function(c){return c.getAttribute("Text")||""})}}catch(e){o.bad=true}
+    ch.info[name]=o;if(S.view==="cheats")paintCheats()}).catch(function(){ch.info[name]={bad:true,list:[]};if(S.view==="cheats")paintCheats()});
+}
+function chGroup(id,inst){
+  var ch=S.ch,fs=(ch.by[id]||[]).slice().sort(function(a,b){return a.name<b.name?1:-1}),open=!!ch.open[id],a=app(id);
+  var nm=a&&a.title&&a.title!==id?a.title:"";if(!nm)fs.some(function(f){var i=ch.info[f.name];if(i&&i.game){nm=i.game;return true}});
+  var h='<div class="card svu"><div class="svh" data-ch="'+id+'">'+(a&&a.hasIcon?'<img class="svi" style="width:38px;height:38px" alt="" src="/apps/icon?id='+id+'">':'<div class="av">'+id.slice(0,1)+'</div>')+
+    '<div><b>'+esc(nm||id)+'</b><small>'+id+" · "+fs.length+" "+L("ficheros de trucos","cheat files")+(inst?"":" · "+L("no instalado","not installed"))+'</small></div><span class="sp"></span><span class="chev">'+(open?"▾":"▸")+'</span></div>';
+  if(open){h+='<table class="t"><thead><tr><th>'+L("Versión del juego","Game version")+'</th><th>'+L("Formato","Format")+'</th><th>'+L("Trucos que trae","Cheats inside")+'</th><th></th></tr></thead><tbody>'+
+    fs.map(function(f){var p=chParts(f.name),i=ch.info[f.name],url="/fs/get?path="+enc(CDIR+"/"+f.name);
+      if(p.ext!=="mc4"&&!i)chRead(f.name);
+      var what=p.ext==="mc4"?'<span style="color:var(--faint)">'+L("cifrado: los nombres se ven en la consola","encrypted: the names show on the console")+'</span>':!i||i.busy?"…":i.bad?L("no se pudo leer","could not be read")
+        :'<span title="'+esc(i.list.join("\n"))+'">'+esc(i.list.slice(0,6).join(" · "))+(i.list.length>6?" · +"+(i.list.length-6):"")+'</span>'+(i.by?' <small>'+esc(i.by)+'</small>':"");
+      return '<tr><td>'+esc(p.ver)+'</td><td><span class="chip">'+p.ext.toUpperCase()+'</span></td><td class="n" style="white-space:normal">'+what+'</td>'+
+        '<td><a class="btn sm ghost" href="'+url+'&download=1" download>'+L("Bajar","Get")+'</a> <button class="btn sm danger" data-chdel="'+esc(f.name)+'">'+L("Borrar","Delete")+'</button></td></tr>'}).join("")+'</tbody></table>'}
+  return h+'</div>';
+}
+function paintCheats(){
+  var ch=S.ch;
+  if(!ch.loaded){$("v-cheats").innerHTML='<div class="empty">'+L("Leyendo los trucos de la consola…","Reading the console cheats…")+'</div>';return}
+  var ids=Object.keys(ch.by),mine=ids.filter(function(id){return app(id)}).sort(function(a,b){return title(a).toLowerCase()<title(b).toLowerCase()?-1:1});
+  var q=ch.q.trim().toUpperCase(),other=q.length>=4?ids.filter(function(id){return !app(id)&&id.indexOf(q)>=0}).sort().slice(0,20):[];
+  var keep=document.activeElement&&document.activeElement.id==="ch-q";
+  $("v-cheats").innerHTML='<div class="card svbar"><div style="flex:1;min-width:240px"><label>'+L("Trucos en la consola","Cheats on the console")+'</label><b style="font-size:17px">'+ch.files.length+'</b> <span style="color:var(--dim)">'+L("ficheros para","files for")+" "+ids.length+" "+L("juegos","games")+" · "+mine.length+" "+L("de ellos instalados","of them installed")+'</span></div>'+
+    '<button class="btn" id="ch-re">'+ic("refresh")+L("Releer","Read again")+'</button><button class="btn pri" id="ch-up"'+(S.ro?" disabled":"")+'>'+ic("upload")+L("Subir ficheros de trucos","Upload cheat files")+'</button></div>'+
+    '<div class="note" style="border-color:rgba(77,163,255,.4);background:rgba(77,163,255,.08);color:#CFE4FF">'+L("Aquí se ven, se suben y se borran los ficheros de trucos. Activarlos se hace en la consola, con el juego abierto: botón Opciones sobre el juego, «Trucos». Un fichero solo sirve para la versión del juego que indica.","Cheat files are seen, uploaded and deleted here. Turning them on is done on the console, with the game open: Options button on the game, \u201cCheats\u201d. A file only works for the game version it names.")+'</div>'+
+    '<h3 class="h">'+L("Para tus juegos","For your games")+' <em>'+mine.length+'</em></h3>'+(mine.length?mine.map(function(id){return chGroup(id,true)}).join(""):'<div class="card"><div class="empty">'+L("Ninguno de los juegos instalados tiene trucos en la consola.","None of the installed games has cheats on the console.")+'</div></div>')+
+    '<h3 class="h" style="margin-top:26px">'+L("De otros juegos","For other games")+' <em>'+(ids.length-mine.length)+'</em></h3><div class="card svbar"><div style="flex:1"><label>'+L("Buscar por identificador","Look up by title ID")+'</label><input class="in" id="ch-q" style="width:100%;max-width:340px" maxlength="9" placeholder="CUSA03173, PPSA…" value="'+esc(ch.q)+'"></div></div>'+
+    (q.length>=4?(other.length?other.map(function(id){return chGroup(id,false)}).join(""):'<div class="card"><div class="empty">'+L("No hay trucos para ese identificador.","No cheats for that title ID.")+'</div></div>'):"");
+  $("ch-q").oninput=function(){ch.q=this.value;paintCheats()};
+  if(keep){var e=$("ch-q");e.focus();e.setSelectionRange(e.value.length,e.value.length)}
+  $("ch-re").onclick=function(){ch.info={};loadCheats().then(function(){toast(L("Actualizado","Refreshed"))})};
+  $("ch-up").onclick=function(){$("pick-ch").click()};
+}
+$("pick-ch").onchange=function(){var l=[].map.call(this.files,function(f){return{file:f,rel:f.name}}).filter(function(x){return /^[A-Z]{4}\d{5}_.*\.(json|shn|mc4)$/i.test(x.rel)}),n=this.files.length;this.value="";
+  if(l.length<n)toast(L("Solo valen ficheros con nombre de truco: CUSA12345_01.00_xxxx.json, .shn o .mc4","Only files named like a cheat are taken: CUSA12345_01.00_xxxx.json, .shn or .mc4"),true);
+  if(l.length){enqueue(l,CDIR);setTimeout(loadCheats,2500)}};
+$("v-cheats").addEventListener("click",function(e){
+  var ch=S.ch,b=e.target.closest("button"),hd=e.target.closest("[data-ch]"),v;
+  if(b&&(v=b.getAttribute("data-chdel"))){ask(L("Borrar este fichero de trucos","Delete this cheat file"),v,L("Borrar","Delete"),true).then(function(ok){
+    if(ok)api("/api/fs/delete",{path:CDIR+"/"+v}).then(loadCheats).catch(fail)});return}
+  if(hd&&!b&&!e.target.closest("a")){v=hd.getAttribute("data-ch");ch.open[v]=!ch.open[v];paintCheats()}});
 
 /* ------------------------------------------------------------ themes */
 var TDIR="/data/neohen/themes";
