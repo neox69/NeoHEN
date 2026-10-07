@@ -400,6 +400,7 @@ dialog textarea{width:100%;height:min(60vh,560px);resize:vertical;font:500 12.5p
 <input type="file" id="pick-tm" accept=".at9" hidden>
 <input type="file" id="pick-sz" accept=".zip" hidden>
 <input type="file" id="pick-ch" accept=".json,.shn,.mc4" multiple hidden>
+<input type="file" id="pick-pkg" accept=".pkg" hidden>
 <div class="toast" id="toast" role="status"></div>
 <dialog id="dlg"><h4 id="dh"></h4><p id="dp"></p><input class="in" id="di" hidden>
   <div class="row"><button class="btn" id="dno"></button><button class="btn pri" id="dyes"></button></div></dialog>
@@ -611,17 +612,38 @@ function launch(id){var n=title(id);
     .then(function(ok){if(ok)act("/api/apps/launch",{titleId:id},L("Lanzando ","Launching ")+n+"…")})}
 
 /* ------------------------------------------------------------ library */
+var PKGDIR="/data/pkg";
+function installPkg(src,name){
+  return ask(L("Instalar este PKG","Install this PKG"),src+"\n\n"+L("La consola lo instala como una descarga más: el progreso se ve en Descargas, en la propia PS5. Función experimental, aún sin probar en consola.","The console installs it like any download: progress shows under Downloads, on the PS5 itself. Experimental, not yet tested on a console."),L("Instalar","Install")).then(function(ok){
+    if(!ok)return;
+    return api("/api/apps/install-pkg",{url:src,name:name||base(src).replace(/\.pkg$/i,"")}).then(function(j){toast(L("Instalación pedida a la consola","Install requested from the console")+(j.contentId?" · "+j.contentId:""))},
+      function(e){toast(L("La consola no aceptó el PKG: ","The console did not take the PKG: ")+e.message,true)})})}
+function paintPkg(){
+  var b=$("pkgbox");if(!b)return;if(!S.pkgOpen){b.innerHTML="";return}
+  b.innerHTML='<div class="card pad" style="margin-bottom:16px"><h3 class="h">'+L("Instalar un PKG","Install a PKG")+' <em>'+L("experimental","experimental")+'</em></h3>'+
+    '<p style="margin:0 0 14px;color:var(--dim)">'+L("Vale para PKG de PS4 y fake PKG de PS5 (juego, actualización o DLC). Si lo subes desde el PC se guarda antes en ","For PS4 PKGs and PS5 fake PKGs (game, update or DLC). Uploaded from the PC, it is first kept in ")+PKGDIR+L(" de la consola; al terminar puedes borrarlo de ahí."," on the console; you can delete it from there afterwards.")+'</p>'+
+    '<div class="row" style="margin-bottom:12px"><button class="btn pri" id="pkg-up">'+ic("upload")+L("Subir un .pkg de este PC e instalarlo","Upload a .pkg from this PC and install it")+'</button></div>'+
+    '<div style="display:flex;gap:10px;flex-wrap:wrap"><input class="in" id="pkg-src" style="flex:1;min-width:260px" placeholder="'+L("/mnt/usb0/juego.pkg  o  http://192.168.1.10/juego.pkg","/mnt/usb0/game.pkg  or  http://192.168.1.10/game.pkg")+'"><button class="btn" id="pkg-go">'+L("Instalar desde esa ruta o dirección","Install from that path or address")+'</button></div></div>';
+  $("pkg-up").onclick=function(){$("pick-pkg").click()};
+  $("pkg-go").onclick=function(){var v=$("pkg-src").value.trim();if(!v){toast(L("Escribe la ruta del .pkg o su dirección web","Type the path of the .pkg or its web address"),true);return}installPkg(v)};
+}
+$("pick-pkg").onchange=function(){var f=this.files[0];this.value="";if(!f)return;
+  var dest=pj(PKGDIR,f.name.replace(/[^A-Za-z0-9._ -]/g,"_"));
+  S.ups.push({f:f,name:f.name,dest:dest,size:f.size,done:0,cur:0,base:0,st:"wait",after:function(){installPkg(dest,f.name.replace(/\.pkg$/i,""))}});
+  toast(L("Subiendo el PKG; al terminar te pregunto para instalarlo. Progreso en Transferencias.","Uploading the PKG; when it is done you are asked to install it. Progress under Transfers."));paintNav();pump()};
 function paintLib(){
   if(!$("lib-q")){
     $("v-library").innerHTML='<div class="tools"><div class="srch">'+ic("search")+'<input class="in" id="lib-q" type="search" placeholder="'+L("Buscar juego o ID…","Search title or ID…")+'"></div>'+
       '<div class="seg" id="lib-f"><button data-f="games" class="on">'+L("Juegos","Games")+'</button><button data-f="all">'+L("Todo","All")+'</button></div>'+
-      '<div class="seg" id="lib-s"><button data-s="name" class="on">A–Z</button><button data-s="id">ID</button></div><span class="sp"></span><span class="chip" id="lib-n"></span></div><div class="grid" id="grid"></div>';
+      '<div class="seg" id="lib-s"><button data-s="name" class="on">A–Z</button><button data-s="id">ID</button></div><span class="sp"></span><span class="chip" id="lib-n"></span>'+(S.full?'<button class="btn" id="lib-pkg">'+ic("download")+L("Instalar PKG","Install PKG")+'</button>':"")+'</div><div id="pkgbox"></div><div class="grid" id="grid"></div>';
+    if($("lib-pkg"))$("lib-pkg").onclick=function(){S.pkgOpen=!S.pkgOpen;paintPkg()};
     $("lib-q").oninput=function(){S.q=this.value.trim().toLowerCase();paintGrid()};
     $("lib-f").onclick=function(e){var b=e.target.closest("button");if(!b)return;S.filter=b.getAttribute("data-f");seg(this,b);paintGrid()};
     $("lib-s").onclick=function(e){var b=e.target.closest("button");if(!b)return;S.sort=b.getAttribute("data-s");seg(this,b);paintGrid()};
     $("grid").onclick=function(e){var b=e.target.closest("button[data-id]"),g=e.target.closest(".game");
       if(b){e.stopPropagation();launch(b.getAttribute("data-id"))}else if(g)detail(g.getAttribute("data-id"))};
   }
+  paintPkg();
   paintGrid();
 }
 function seg(box,b){[].forEach.call(box.children,function(x){x.className=x===b?"on":""})}
@@ -735,6 +757,7 @@ function fileMenu(btn){
   var items=[];
   if(dir)items.push(["open","files",L("Abrir","Open")],["size","scale",L("Calcular tamaño","Folder size")]);
   else items.push(["dl","download",L("Descargar","Download")],["edit","edit",L("Abrir como texto","Open as text")],["hash","hash","SHA-256"]);
+  if(!dir&&/\.pkg$/i.test(p))items.unshift(["inst","download",L("Instalar PKG","Install PKG")]);
   items.push(["ren","edit",L("Renombrar","Rename")],["copy","copy",L("Copiar a…","Copy to…")],["move","move",L("Mover a…","Move to…")],["path","copy",L("Copiar ruta","Copy path")],null,["del","trash",L("Borrar","Delete"),1]);
   m.innerHTML=items.map(function(i){return i?'<button data-k="'+i[0]+'" class="'+(i[3]?"danger":"")+'">'+ic(i[1])+i[2]+'</button>':"<hr>"}).join("");
   m.hidden=false;var r=btn.getBoundingClientRect();
@@ -742,6 +765,7 @@ function fileMenu(btn){
   m.style.top=Math.max(8,Math.min(innerHeight-m.offsetHeight-8,r.bottom+4))+"px";
   m.onclick=function(e){var b=e.target.closest("button");if(!b)return;m.hidden=true;var k=b.getAttribute("data-k");
     if(k==="open")loadDir(p);
+    else if(k==="inst")installPkg(p);
     else if(k==="dl")location.href="/fs/get?path="+enc(p)+"&download=1";
     else if(k==="edit")editFile(p);
     else if(k==="path")(navigator.clipboard?navigator.clipboard.writeText(p):Promise.reject()).then(function(){toast(L("Copiado","Copied"))},function(){toast(p)});
@@ -788,7 +812,7 @@ function runUp(u){
     if(s.exists&&s.type==="file"&&s.size>0&&s.size<u.size){u.done=u.base=s.size;u.resumed=true;return true}
     if(s.exists)return ask(L("Ya existe ","Already there: ")+u.name,L("¿Sustituirlo por el que estás subiendo?","Replace it with the one you are uploading?"),L("Sustituir","Replace"),true);
     return true},function(){return true})
-  .then(function(go){if(!go){u.st="skip";return}u.t0=Date.now();return loop(u,0).then(function(){if(u.st==="run")u.st="ok"})})
+  .then(function(go){if(!go){u.st="skip";return}u.t0=Date.now();return loop(u,0).then(function(){if(u.st==="run"){u.st="ok";if(u.after)u.after()}})})
   .catch(function(e){u.st="err";u.err=e.message});
 }
 function loop(u,tries){
@@ -1329,7 +1353,7 @@ function paintSys(){
     '<div style="display:flex;gap:10px"><input class="in" id="nt" style="flex:1" maxlength="200" placeholder="'+L("Texto del aviso…","Notification text…")+'"><button class="btn pri" id="nb">'+ic("bell")+L("Enviar","Send")+'</button></div></div></div>'+
     (S.full?'<div class="g2"><div class="card pad"><h3 class="h">'+L("Ventilador","Fan")+' <em>'+(i.fanDuty!=null?L("girando al ","spinning at ")+i.fanDuty+"%":"")+'</em></h3>'+fanHtml()+'</div>'+
       '<div class="card pad"><h3 class="h">'+L("Energía","Power")+'</h3><p style="margin:0 0 12px;color:var(--dim)">'+L("El reposo conserva NeoHEN. Reiniciar o apagar no: la consola vuelve de fábrica y hay que lanzar el exploit otra vez.","Rest Mode keeps NeoHEN. A restart or a power off does not: the console comes back stock and the exploit has to be run again.")+'</p>'+
-      '<div class="row"><button class="btn pri" data-pw="rest">'+L("Poner en reposo","Rest Mode")+'</button><button class="btn danger" data-pw="reboot">'+L("Reiniciar","Restart")+'</button><button class="btn danger" data-pw="poweroff">'+L("Apagar","Power off")+'</button></div>'+
+      '<div class="row"><button class="btn pri" data-pw="rest">'+L("Poner en reposo","Rest Mode")+'</button><button class="btn danger" data-pw="reboot">'+L("Reiniciar","Restart")+'</button><button class="btn danger" data-pw="poweroff">'+L("Apagar","Power off")+'</button><span class="sp"></span><button class="btn" id="ej">'+L("Expulsar disco","Eject disc")+'</button></div>'+
       (i.socSensors&&i.socSensors.length?'<p style="margin:14px 0 0;font:500 11.5px var(--mono);color:var(--faint)">'+L("Sensores del SoC: ","SoC sensors: ")+i.socSensors.join(" · ")+' °C</p>':"")+'</div></div>':"")+
     '<h3 class="h" style="margin-top:24px">'+L("Volúmenes montados","Mounted volumes")+' <em>'+mounts.length+'</em></h3><div class="card tw" style="max-height:340px"><table class="t"><thead><tr><th>'+L("Ruta","Path")+'</th><th class="hide-m">'+L("Tipo","Type")+'</th><th class="r">'+L("Tamaño","Size")+'</th><th class="r">'+L("Libre","Free")+'</th><th>'+L("Uso","Used")+'</th></tr></thead><tbody>'+
     mounts.map(function(m){var pct=Math.round((m.total-m.free)/m.total*100);
@@ -1338,6 +1362,8 @@ function paintSys(){
     '<h3 class="h" style="margin-top:24px">'+L("Registro de NeoWEB","NeoWEB log")+' <em>'+S.log.length+'</em><span class="sp"></span><button class="btn sm ghost" id="lr">'+ic("refresh")+'</button></h3><div class="card log">'+
     (S.log.length?S.log.slice().reverse().map(function(e){return '<div class="'+esc(e.level)+'"><time>'+new Date(e.ts*1000).toLocaleTimeString()+'</time>'+esc(e.msg)+'</div>'}).join(""):'<div style="color:var(--faint)">–</div>')+'</div>';
   fanWire();
+  if($("ej"))$("ej").onclick=function(){ask(L("Expulsar el disco","Eject the disc"),L("Si hay un juego en marcha desde el disco, ciérralo antes.","If a game is running from the disc, close it first."),L("Expulsar","Eject")).then(function(ok){
+    if(ok)api("/api/sys/eject",{}).then(function(){toast(L("Orden de expulsar enviada","Eject order sent"))},function(e){toast(L("La consola no expulsó el disco: ","The console did not eject the disc: ")+e.message,true)})})};
   $("nb").onclick=function(){var t=$("nt").value.trim();if(t)api("/api/sys/notify",{text:t}).then(function(){toast(L("Enviado","Sent"));$("nt").value=""}).catch(fail)};
   $("nt").onkeydown=function(e){if(e.key==="Enter")$("nb").click()};
   $("lr").onclick=loadLog;

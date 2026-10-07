@@ -84,6 +84,7 @@ int  sceKernelGetSocSensorTemperature(int, int *);
 int  sceKernelGetCurrentFanDuty(uint16_t *, uint64_t *);
 /* the console's own way of going to Rest Mode, restarting and turning off:
  * it closes what is open and flushes the disks first */
+int  sceShellCoreUtilRequestEjectDevice(const char *);
 int  sceSystemStateMgrEnterStandby(int);
 int  sceSystemStateMgrReboot(void);
 int  sceSystemStateMgrTurnOff(void);
@@ -784,6 +785,18 @@ plat_app_uninstall(const char *title_id) {
 }
 
 /* ------------------------------------------------------------ power */
+
+/* The disc drive is /dev/cd0; the system is asked to let go of it, as it
+ * does when the eject button is pressed. */
+int
+plat_eject_disc(void) {
+  int r = sceShellCoreUtilRequestEjectDevice("/dev/cd0");
+  if(r) {
+    plat_set_error("the console refused to eject the disc (0x%x)", r);
+    return -1;
+  }
+  return 0;
+}
 
 int
 plat_power(const char *action) {

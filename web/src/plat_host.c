@@ -479,6 +479,12 @@ plat_app_uninstall(const char *title_id) {
 }
 
 int
+plat_eject_disc(void) {
+  LOG_INFO("[emu] eject disc");
+  return 0;
+}
+
+int
 plat_power(const char *action) {
   LOG_INFO("[emu] power action: %s", action);
   if(strcmp(action, "rest") && strcmp(action, "reboot") && strcmp(action, "poweroff")) {

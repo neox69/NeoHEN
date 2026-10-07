@@ -308,6 +308,20 @@ class PayloadTest(unittest.TestCase):
                                    raw=b"x")
         self.assertEqual(st, 409, body)
 
+    def test_pkg_and_eject(self):
+        os.makedirs(f"{self.root}/data/pkg", exist_ok=True)
+        with open(f"{self.root}/data/pkg/My Game.pkg", "wb") as f:
+            f.write(b"\x7fCNT" + b"\0" * 64)
+        st, j = self.api.post("/api/apps/install-pkg", {"url": "/data/pkg/My Game.pkg", "name": "My Game"})
+        self.assertEqual(st, 200, j)
+        self.assertTrue(j["contentId"])
+        for bad, code in (("/data/pkg/nope.pkg", 404), ("/data/pkg/../pkg/My Game.pkg", 404),
+                          ("/data/cfg.json", 404), ("ftp://x/y.pkg", 400), ("", 400)):
+            st, body, _ = self.api.req("POST", "/api/apps/install-pkg", body={"url": bad})
+            self.assertEqual(st, code, (bad, body))
+        st, body, _ = self.api.req("POST", "/api/sys/eject", body={})
+        self.assertEqual(st, 200, body)
+
     def test_search(self):
         os.makedirs(f"{self.root}/data/find/deep/Inner Folder", exist_ok=True)
         os.makedirs(f"{self.root}/mnt/sandbox/copy", exist_ok=True)
