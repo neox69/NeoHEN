@@ -1136,6 +1136,8 @@ main(void) {
   int settle = 0;        /* ticks left of covering a new menu at every tick */
   int born_covered = 0;  /* the live menu got its stores as it started */
   int start_checked = 0; /* the one look, at start, at whether to restart it */
+  int ready_in = 0;      /* ticks until "all ready" is said, after that restart */
+  char shown_name[128] = "";
   int said = 0;
 
   kill_previous();
@@ -1226,6 +1228,7 @@ main(void) {
           }
           said = 1;
           snprintf(shown, sizeof(shown), "%s", sig);
+          snprintf(shown_name, sizeof(shown_name), "%s", name);
           write_state(name, "ok");
         }
       }
@@ -1236,10 +1239,25 @@ main(void) {
     if(!start_checked && tick >= START_SETTLE_TICKS && shown[0] && menu[0] && !uncovered) {
       start_checked = 1;
       if(strcmp(shown, "-") && needs_fresh_menu() && !born_covered && !is_applied(menu, shown)) {
-        int r = ask_menu_restart();
+        int r;
+        /* said first, counted down: the screen goes black for a moment */
+        for(int n = 5; n >= 1; n--) {
+          say("NeoHEN: el menú se reinicia en %d… para cargar el tema \"%s\"", n, shown_name);
+          sleep(1);
+        }
+        r = ask_menu_restart();
         note("start: the menu was running before the theme; restart asked -> %s",
              r == 0 ? "yes" : r == 2 ? "no, a game is open" : "NeoHEN did not answer");
+        if(r == 0) {
+          ready_in = 9000 / TICK_MS; /* the new menu needs a moment to show anything */
+        } else if(r == 2) {
+          say("NeoHEN: hay un juego abierto. Los iconos y sonidos del tema se cargarán "
+              "al pulsar «Aplicar del todo»");
+        }
       }
+    }
+    if(ready_in > 0 && --ready_in == 0) {
+      say("NeoHEN listo · tema \"%s\" cargado\nTu consola, tus reglas. A jugar.", shown_name);
     }
     usleep(TICK_MS * 1000);
   }
