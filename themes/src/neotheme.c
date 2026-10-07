@@ -1,6 +1,7 @@
 /* NeoHEN themes service.
  *
- * Keeps the theme named in /data/neohen/themes/active.txt shown on top of
+ * Keeps the theme named in /data/neohen/themes/active.txt (at start, the one
+ * in default.txt if that file exists) shown on top of
  * the menu's view of /system_ex/vsh_asset (home music, backgrounds). An
  * empty or missing active.txt means the stock look.
  *
@@ -41,6 +42,7 @@
 #define THEMES   "/data/neohen/themes"
 #define ACTIVE   THEMES "/active.txt"
 #define STATE    THEMES "/state.txt"
+#define DEFAULT  THEMES "/default.txt"
 #define CURRENT  THEMES "/.current"
 #define SANDBOX  "/mnt/sandbox"
 #define MENU     "NPXS40087_"
@@ -315,6 +317,21 @@ main(void) {
   syscall(SYS_thr_set_name, -1, SELF);
   mkdir(THEMES, 0777);
   mkdir(CURRENT, 0777);
+
+  /* themes/default.txt names the theme every start begins with, whatever
+   * was in use before; without it the last choice stays. */
+  FILE *def = fopen(DEFAULT, "r");
+  if(def) {
+    char line[128] = "";
+    if(fgets(line, sizeof(line), def)) {
+      FILE *act = fopen(ACTIVE, "w");
+      if(act) {
+        fputs(line, act);
+        fclose(act);
+      }
+    }
+    fclose(def);
+  }
 
   for(;;) {
     char theme[512], name[128], sig[640];

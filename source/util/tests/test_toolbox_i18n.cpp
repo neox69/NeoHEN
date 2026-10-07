@@ -58,7 +58,7 @@ static int test_default_zh(void) {
                   "%s 与 %s 冲突（%s）于 0x%s") == 0);
   TEST_ASSERT_TRUE(
       std::strcmp(onion_notify_tr("notify.boot.made_by"),
-                  "%s · 作者：麒麟/0xp0co") == 0);
+                  "%s · by NeoX") == 0);
   TEST_ASSERT_TRUE(
       std::strcmp(onion_notify_tr("notify.boot.thanks"),
                   "特别感谢：kvnhrt, Modmycon") == 0);
@@ -127,7 +127,7 @@ static int test_en(void) {
                   "%s conflicts with %s (%s) at 0x%s") == 0);
   TEST_ASSERT_TRUE(
       std::strcmp(onion_notify_tr("notify.boot.made_by"),
-                  "%s made by Kylin/0xp0co") == 0);
+                  "%s · by NeoX") == 0);
   TEST_ASSERT_TRUE(
       std::strcmp(onion_notify_tr("notify.boot.thanks"),
                   "Special Thanks to: kvnhrt, Modmycon") == 0);
