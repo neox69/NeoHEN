@@ -39,7 +39,8 @@
  * here, from the console's own, with the new sounds added at its end.
  *
  * The themes that come with NeoHEN are packed inside this program and are
- * written to the themes folder the first time, if they are not there.
+ * written to the themes folder the first time, if they are not there; on a
+ * console with no theme chosen yet, the first of them is put on.
  *
  * Two rules. Nothing here writes below /system or /system_ex: a mount lives
  * in the kernel's mount table, so a reboot always brings the stock files
@@ -1043,6 +1044,15 @@ unpack_themes(void) {
     fclose(f);
   }
   note("themes that come with NeoHEN: %d written (%d files), %d already there", ntake, files, nskip);
+  /* on a console that had no theme chosen, the first one that came is it */
+  if(ntake) {
+    struct stat st;
+    int chosen = (!stat(ACTIVE, &st) && st.st_size > 1) || !stat(DEFAULT, &st);
+    if(!chosen && (f = fopen(ACTIVE, "w"))) {
+      fprintf(f, "%s\n", take[0]);
+      fclose(f);
+    }
+  }
 }
 
 int
@@ -1131,7 +1141,12 @@ main(void) {
           write_state(name, "error");
         } else {
           /* said once per change; nothing is said for the stock look at start */
-          if(theme[0]) {
+          if(theme[0] && !said) {
+            /* the first one, as NeoHEN starts: the home screen is told to
+             * load it and blinks */
+            say("NeoHEN: tema \"%s\" aplicado. Si el menú parpadea, es normal.\n"
+                "Tu consola, tus reglas. A jugar.", name);
+          } else if(theme[0]) {
             say("NeoHEN: tema \"%s\" aplicado", name);
           } else if(said) {
             say("NeoHEN: aspecto de fabrica");
