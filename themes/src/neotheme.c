@@ -14,6 +14,9 @@
  *   My theme/bg_hub_default.dds.zst
  *   My theme/system_ex/app/NPXS40074/sce_sys/icon0.png
  *
+ * (what is given for system_ex/rnps/ also goes over /mnt/rnps/, where the
+ * console keeps the updated copy of the menu's own apps)
+ *
  * How: each of those folders has a store here (themes/.current for the
  * assets, themes/.overlay/<path> for the others) that is put over the
  * menu's folder once, with a READ-ONLY unionfs mount (the mechanism
@@ -63,6 +66,8 @@
 #define MENU     "NPXS40087_"
 #define ASSETS   "system_ex/vsh_asset"
 #define TREE     "system_ex"
+#define RNPS_STOCK "system_ex/rnps/"
+#define RNPS_LIVE  "mnt/rnps/"
 #define SELF     "neotheme.elf"
 
 #define TICK_MS        100 /* how often a new menu is looked for */
@@ -368,24 +373,36 @@ cover_menus(void) {
     }
     alive = menu_alive(e->d_name);
     for(int i = 0; i < g_nlayers; i++) {
-      char target[768];
-      struct stat st;
+      /* the menu's own apps are read from /mnt/rnps when the console has a
+       * newer copy of them there, so that folder gets the same store */
+      const char *rel = g_layers[i].rel;
+      int twice = !strncmp(rel, RNPS_STOCK, strlen(RNPS_STOCK));
 
-      snprintf(target, sizeof(target), SANDBOX "/%s/%s", e->d_name, g_layers[i].rel);
-      if(stat(target, &st)) {
-        continue;
-      }
-      if(mounted(target, g_layers[i].store)) {
-        if(!alive) {
-          unmount(target, 0); /* not forced: it stays if something uses it */
+      for(int k = 0; k <= twice; k++) {
+        char target[768];
+        struct stat st;
+
+        if(k) {
+          snprintf(target, sizeof(target), SANDBOX "/%s/" RNPS_LIVE "%s", e->d_name,
+                   rel + strlen(RNPS_STOCK));
+        } else {
+          snprintf(target, sizeof(target), SANDBOX "/%s/%s", e->d_name, rel);
         }
-        continue;
-      }
-      /* the assets are always covered, so a theme can come later without a
-       * menu restart; the rest only when the theme has files for them */
-      if(alive && (i == 0 || !store_empty(g_layers[i].store)) &&
-         cover(target, g_layers[i].store)) {
-        failed++;
+        if(stat(target, &st)) {
+          continue;
+        }
+        if(mounted(target, g_layers[i].store)) {
+          if(!alive) {
+            unmount(target, 0); /* not forced: it stays if something uses it */
+          }
+          continue;
+        }
+        /* the assets are always covered, so a theme can come later without
+         * a menu restart; the rest only when the theme has files for them */
+        if(alive && (i == 0 || !store_empty(g_layers[i].store)) &&
+           cover(target, g_layers[i].store)) {
+          failed++;
+        }
       }
     }
   }
