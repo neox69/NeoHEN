@@ -1113,3 +1113,216 @@ api_saves_import(http_req_t *req) {
   jw_kint(&w, "job", id);
   api_finish(req, &w);
 }
+
+/* ------------------------------------------------- a copy by itself
+ * When a game is closed, its saves (of every user that has any) are copied
+ * to the USB drive, if the user has turned this on and a drive is in. With
+ * no drive nothing is copied: a copy on the console's own disk would not
+ * survive what it is meant for. Automatic copies are named <date-time>-auto
+ * and only the newest few of each game are kept. */
+#define AUTO_FILE PS5AIO_DATA_DIR "/autosave.json"
+#define AUTO_KEEP_DEFAULT 5
+
+typedef struct auto_cfg {
+  int enabled;
+  int keep;
+} auto_cfg_t;
+
+static void
+auto_read(auto_cfg_t *c) {
+  char local[PATH_MAX];
+  char *text = NULL;
+  size_t len = 0;
+  jval_t *root;
+
+  c->enabled = 0;
+  c->keep = AUTO_KEEP_DEFAULT;
+  plat_path(AUTO_FILE, local, sizeof(local));
+  if(fs_read_file(local, &text, &len, 4096)) {
+    return;
+  }
+  if((root = json_parse(text, len))) {
+    c->enabled = json_get_bool(root, "enabled", 0);
+    c->keep = (int)json_get_int(root, "keep", AUTO_KEEP_DEFAULT);
+    json_free(root);
+  }
+  free(text);
+  if(c->keep < 1 || c->keep > 50) {
+    c->keep = AUTO_KEEP_DEFAULT;
+  }
+}
+
+/* The first USB drive there is: its copies folder, or -1. */
+static int
+first_usb(char *base, size_t size) {
+  for(int i = 0; i < MAX_USB; i++) {
+    char dest[16];
+    snprintf(dest, sizeof(dest), "usb%d", i);
+    if(!dest_base(dest, base, size)) {
+      return 0;
+    }
+  }
+  return -1;
+}
+
+static int
+by_name(const void *a, const void *b) {
+  return strcmp((const char *)a, (const char *)b);
+}
+
+/* Leaves the newest `keep` automatic copies of one save. */
+static void
+prune_auto(const char *base, const item_t *it, int keep) {
+  char folder[64], dir[PATH_MAX], local[PATH_MAX];
+  char (*names)[48] = NULL;
+  size_t n = 0, cap = 0;
+  struct dirent *e;
+  DIR *d;
+
+  user_folder(it->user, folder, sizeof(folder));
+  snprintf(dir, sizeof(dir), "%s/%s/%s", base, folder, it->title);
+  plat_path(dir, local, sizeof(local));
+  if(!(d = opendir(local))) {
+    return;
+  }
+  while((e = readdir(d))) {
+    size_t len = strlen(e->d_name);
+    if(len < 6 || len >= 48 || strcmp(e->d_name + len - 5, "-auto")) {
+      continue;
+    }
+    if(n == cap) {
+      void *v = realloc(names, (cap = cap ? cap * 2 : 16) * 48);
+      if(!v) {
+        break;
+      }
+      names = v;
+    }
+    snprintf(names[n++], 48, "%s", e->d_name);
+  }
+  closedir(d);
+  qsort(names, n, 48, by_name);
+  for(size_t i = 0; i + (size_t)keep < n; i++) {
+    char old[PATH_MAX];
+    snprintf(old, sizeof(old), "%s/%s", local, names[i]);
+    fs_remove_tree(old, NULL);
+  }
+  free(names);
+}
+
+typedef struct auto_arg {
+  backup_arg_t b; /* first: backup_job takes it as its own */
+  int keep;
+} auto_arg_t;
+
+static void
+auto_free(void *p) {
+  auto_arg_t *a = p;
+  free(a->b.items.v);
+  free(a);
+}
+
+static int
+auto_job(job_t *job, void *p) {
+  auto_arg_t *a = p;
+  const char *env = getenv("NEOWEB_AUTOSAVE_DELAY_MS"); /* the tests do not wait */
+  long wait_ms = env ? atol(env) : 15000;
+
+  /* the console writes the save out as the game goes away: give it a moment */
+  job_set_current(job, "waiting for the console to finish writing the save...");
+  for(long t = 0; t < wait_ms && !job->cancel; t += 100) {
+    usleep(100 * 1000);
+  }
+  if(job->cancel || backup_job(job, &a->b)) {
+    return -1;
+  }
+  for(size_t i = 0; i < a->b.items.n; i++) {
+    prune_auto(a->b.base, &a->b.items.v[i], a->keep);
+  }
+  return 0;
+}
+
+/* Called when the game that was open is not open any more. */
+void
+saves_on_game_closed(const char *title) {
+  auto_cfg_t cfg;
+  auto_arg_t *a;
+  item_list_t all = {0};
+  char name[300];
+
+  auto_read(&cfg);
+  if(!cfg.enabled || !is_title_id(title) || !(a = calloc(1, sizeof(*a)))) {
+    return;
+  }
+  if(first_usb(a->b.base, sizeof(a->b.base))) {
+    LOG_INFO("automatic save copy of %s: no USB drive, nothing copied", title);
+    free(a);
+    return;
+  }
+  list_all(&all, NULL);
+  for(size_t i = 0; i < all.n; i++) {
+    if(!strcmp(all.v[i].title, title)) {
+      list_add(&a->b.items, all.v[i].user, all.v[i].kind, all.v[i].title);
+    }
+  }
+  free(all.v);
+  if(!a->b.items.n) {
+    auto_free(a);
+    return; /* a game with no saves yet */
+  }
+  a->keep = cfg.keep;
+  stamp_now(a->b.stamp, sizeof(a->b.stamp) - 6);
+  strcat(a->b.stamp, "-auto");
+  snprintf(name, sizeof(name), "Automatic save copy: %s -> %s", title, a->b.base);
+  if(job_start("saves", name, auto_job, a, auto_free) < 0) {
+    auto_free(a);
+  }
+}
+
+/* GET /api/saves/auto */
+void
+api_saves_auto_get(http_req_t *req) {
+  char base[PATH_MAX];
+  auto_cfg_t cfg;
+  jw_t w;
+
+  auto_read(&cfg);
+  api_begin(&w);
+  jw_kbool(&w, "enabled", cfg.enabled);
+  jw_kint(&w, "keep", cfg.keep);
+  jw_kbool(&w, "usb", !first_usb(base, sizeof(base)));
+  api_finish(req, &w);
+}
+
+/* POST /api/saves/auto {"enabled":true,"keep":5} */
+void
+api_saves_auto_set(http_req_t *req) {
+  char local[PATH_MAX];
+  auto_cfg_t cfg;
+  jval_t *b = api_body(req);
+  jw_t w;
+
+  if(!b) {
+    return;
+  }
+  auto_read(&cfg);
+  cfg.enabled = json_get_bool(b, "enabled", cfg.enabled);
+  cfg.keep = (int)json_get_int(b, "keep", cfg.keep);
+  json_free(b);
+  if(cfg.keep < 1 || cfg.keep > 50) {
+    http_send_error(req, 400, "keep goes from 1 to 50");
+    return;
+  }
+  jw_init(&w);
+  jw_obj(&w);
+  jw_kbool(&w, "enabled", cfg.enabled);
+  jw_kint(&w, "keep", cfg.keep);
+  jw_obj_end(&w);
+  plat_path(AUTO_FILE, local, sizeof(local));
+  int bad = w.oom || fs_write_file(local, w.data, w.len);
+  jw_free(&w);
+  if(bad) {
+    http_send_error(req, 500, "the setting could not be written");
+    return;
+  }
+  http_send_ok(req);
+}
