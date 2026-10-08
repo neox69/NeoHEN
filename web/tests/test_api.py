@@ -373,6 +373,54 @@ class PayloadTest(unittest.TestCase):
         _, j = self.api.get("/api/saves/auto")
         self.assertEqual((j["enabled"], j["keep"]), (False, 2))
 
+    def test_trophies(self):
+        import sqlite3
+        d = f"{self.root}/user/home/1d31cd9c/trophy_ui"
+        os.makedirs(d, exist_ok=True)
+        if os.path.exists(f"{d}/trophy_tracker.db"):
+            os.unlink(f"{d}/trophy_tracker.db")
+        db = sqlite3.connect(f"{d}/trophy_tracker.db")
+        db.executescript("""
+            create table meta(key text, val_text text, val_int integer);
+            create table titles(titleid text primary key, platform_set integer, platinum_num integer,
+              gold_num integer, silver_num integer, bronze_num integer, has_group integer, name text, icon_uri text);
+            create table title_records(titleid text primary key, unlocked_platinum_num integer,
+              unlocked_gold_num integer, unlocked_silver_num integer, unlocked_bronze_num integer,
+              progress integer, time_last_update text);
+            create table trophy_trackings(id integer primary key autoincrement, titleid text, trophyid integer, unlocked integer);
+            create table id_bindings(nptitleid text, titleid text);
+        """)
+        long_icon = "https://example.invalid/" + "x" * 6000 + ".png"   # spills over to other pages
+        db.execute("insert into titles values(?,?,?,?,?,?,?,?,?)",
+                   ("20:NPWR00001_00", 8, 1, 4, 13, 59, 1, "Juego Uno ñ", long_icon))
+        db.execute("insert into title_records values(?,?,?,?,?,?,?)",
+                   ("20:NPWR00001_00", 1, 3, 10, 53, 83, "2022-01-29T10:31:40Z"))
+        db.execute("insert into id_bindings values(?,?)", ("PPSA01234_00", "20:NPWR00001_00"))
+        db.execute("insert into id_bindings values(?,?)", ("PPSA09999_00", "20:NPWR00001_00"))
+        for i in range(2, 400):   # enough rows for the table to need inner pages
+            db.execute("insert into titles values(?,?,?,?,?,?,?,?,?)",
+                       ("10:NPWR%05d_00" % i, 4, 1, 2, 3, i, 0, "Set %d" % i, "https://example.invalid/%d.png" % i))
+            if i % 2:
+                db.execute("insert into title_records values(?,?,?,?,?,?,?)",
+                           ("10:NPWR%05d_00" % i, 0, 1, 2, i - 1, i % 101, "2020-01-01T00:00:00Z"))
+        db.commit()
+        db.close()
+        _, j = self.api.get("/api/trophies")
+        me = [u for u in j["users"] if u["id"] == "1d31cd9c"][0]
+        self.assertEqual(me["name"], "NeoX ESP")
+        sets = {s["id"]: s for s in me["sets"]}
+        self.assertEqual(len(sets), 399)
+        one = sets["NPWR00001_00"]
+        self.assertEqual((one["platform"], one["name"], one["progress"], one["updated"]),
+                         ("ps5", "Juego Uno ñ", 83, "2022-01-29T10:31:40Z"))
+        self.assertEqual(one["icon"], long_icon[:319])
+        self.assertEqual(one["total"], {"platinum": 1, "gold": 4, "silver": 13, "bronze": 59})
+        self.assertEqual(one["got"], {"platinum": 1, "gold": 3, "silver": 10, "bronze": 53})
+        self.assertEqual(one["games"], "PPSA01234 PPSA09999")
+        s = sets["NPWR00399_00"]
+        self.assertEqual((s["platform"], s["total"]["bronze"], s["got"]["bronze"], s["progress"]), ("ps4", 399, 398, 399 % 101))
+        self.assertEqual(sets["NPWR00398_00"]["got"], {"platinum": 0, "gold": 0, "silver": 0, "bronze": 0})
+
     def test_report(self):
         import io
         import zipfile

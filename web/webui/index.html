@@ -244,6 +244,15 @@ html.plain body::before{display:none}
 .game .st{position:absolute;left:8px;bottom:8px;padding:3px 8px;border-radius:999px;font:700 9.5px var(--mono);letter-spacing:.1em;background:rgba(6,10,20,.82);border:1px solid var(--line2)}
 .game .st.playing{color:var(--blue);border-color:rgba(77,163,255,.6)}.game .st.done{color:var(--ok);border-color:rgba(52,211,153,.5)}
 .game .st.pending{color:var(--warn);border-color:rgba(251,191,36,.5)}.game .st.dropped{color:var(--faint)}
+.tro{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:14px}
+.trc{display:flex;gap:14px;padding:14px 16px;align-items:center}
+.trc img,.trc .ph{width:64px;height:64px;border-radius:12px;object-fit:cover;background:rgba(132,153,204,.12);flex:none}
+.trc .t{flex:1;min-width:0}.trc .t b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.trc .t small{display:block;font:500 11.5px var(--mono);color:var(--faint);margin:3px 0 8px}
+.trc .g{display:flex;gap:10px;margin-top:8px;font:700 11.5px var(--mono)}
+.trc .g span{display:inline-flex;align-items:center;gap:5px}.trc .g i{width:9px;height:9px;border-radius:50%;display:inline-block}
+.trc .pc{font:800 20px var(--sans,inherit);min-width:58px;text-align:right}
+.trc.full{border-color:rgba(52,211,153,.45)}
 .stg{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:18px}
 .stk{padding:16px 18px}.stk label{display:block;font:700 10.5px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--faint);margin-bottom:8px}
 .stk b{font:800 26px var(--sans,inherit);letter-spacing:-.01em}.stk small{display:block;margin-top:4px;color:var(--dim);font-size:12.5px}
@@ -408,6 +417,7 @@ dialog textarea{width:100%;height:min(60vh,560px);resize:vertical;font:500 12.5p
       <section id="v-captures" hidden></section>
       <section id="v-cheats" hidden></section>
       <section id="v-stats" hidden></section>
+      <section id="v-trophies" hidden></section>
       <section id="v-transfers" hidden></section>
       <section id="v-procs" hidden></section>
       <section id="v-system" hidden></section>
@@ -486,6 +496,7 @@ var P={
  scale:"M4 20h16M6 20V10M12 20V4M18 20v-7",
  saves:"M5 4h11l3 3v13H5zM8 4v5h7V4M8 20v-6h8v6",
  stats:"M4 20V10M10 20V4M16 20v-7M22 20H2",
+ trophies:"M7 4h10v5a5 5 0 0 1-10 0zM7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3M12 14v4M8 20h8",
  settings:"M4 7h10M18 7h2M4 12h4M12 12h8M4 17h12M20 17h0M14 5v4M8 10v4M16 15v4",
  cheats:"M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6-5.3-3-5.3 3 1.2-6L3.4 9.3l6-.7z",
  captures:"M4 7h3l2-2h6l2 2h3v12H4zM12 10a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7z",
@@ -532,6 +543,7 @@ var VIEWS=[
  ["panel",L("Panel","Dashboard"),L("Estado de la consola en directo","The console, live")],
  ["library",L("Biblioteca","Library"),L("Juegos y aplicaciones instalados","Installed games and apps")],
  ["stats",L("Estadísticas","Stats"),L("Cuánto y a qué has jugado","How much you have played, and what")],
+ ["trophies",L("Trofeos","Trophies"),L("Lo conseguido y lo que falta, por juego","What you have and what is left, by game"),1],
  ["files",L("Ficheros","Files"),L("Explora, sube, descarga y edita","Browse, upload, download and edit"),1],
  ["payloads","Payloads",L("Lo que NeoHEN arranca y lo que puedes lanzar","What NeoHEN starts and what you can launch")],
  ["themes",L("Temas","Themes"),L("Fondo y música del menú de la PS5","Background and music of the PS5 menu"),1],
@@ -562,7 +574,7 @@ function show(v,push){
   $("vt").textContent=def[1];$("vs").textContent=def[2];
   if(push)history.replaceState(null,"","#"+v);
   $("side").className="side";paintNav();render();$("view").scrollTop=0;
-  if(v==="files")loadDir(S.cwd);if(v==="procs")loadProcs();if(v==="system"){loadLog();S.fanEdit=null;loadFan()}if(v==="transfers")loadJobs();if(v==="payloads")loadPay();if(v==="themes")loadThemes();if(v==="saves")loadSaves();if(v==="captures")loadCaps();if(v==="cheats")loadCheats();if(v==="stats")loadStats();
+  if(v==="files")loadDir(S.cwd);if(v==="procs")loadProcs();if(v==="system"){loadLog();S.fanEdit=null;loadFan()}if(v==="transfers")loadJobs();if(v==="payloads")loadPay();if(v==="themes")loadThemes();if(v==="saves")loadSaves();if(v==="captures")loadCaps();if(v==="cheats")loadCheats();if(v==="stats")loadStats();if(v==="trophies")loadTrophies();
 }
 $("nav").onclick=function(e){var b=e.target.closest("button[data-v]");if(b)show(b.getAttribute("data-v"),true)};
 window.addEventListener("hashchange",function(){var h=location.hash.slice(1);if(h!==S.view)show(h)});
@@ -570,7 +582,7 @@ $("burger").innerHTML=ic("menu");$("reload").innerHTML=ic("refresh");
 $("burger").onclick=function(){$("side").className="side open"};
 $("view").addEventListener("click",function(){$("side").className="side"});
 $("reload").onclick=function(){fast();slow();show(S.view);toast(L("Actualizado","Refreshed"))};
-function render(){({panel:paintPanel,library:paintLib,files:paintFiles,payloads:paintPay,themes:paintThemes,saves:paintSaves,captures:paintCaps,cheats:paintCheats,stats:paintStats,transfers:paintTr,procs:paintProcs,system:paintSys,settings:paintCfg})[S.view]()}
+function render(){({panel:paintPanel,library:paintLib,files:paintFiles,payloads:paintPay,themes:paintThemes,saves:paintSaves,captures:paintCaps,cheats:paintCheats,stats:paintStats,trophies:paintTrophies,transfers:paintTr,procs:paintProcs,system:paintSys,settings:paintCfg})[S.view]()}
 
 /* ------------------------------------------------------------ dashboard */
 function tcol(v){return v>=88?"var(--bad)":v>=78?"var(--warn)":"var(--ok)"}
@@ -1323,6 +1335,52 @@ $("v-settings").addEventListener("change",function(e){
 $("pick-cfg").onchange=function(){var f=this.files[0];this.value="";if(!f)return;f.text().then(function(t){var o=JSON.parse(t);
   for(var k in CFG_DEF)if(o[k]!==undefined&&typeof o[k]===typeof CFG_DEF[k])CFG[k]=o[k];cfgSet("lang",CFG.lang,true)}).catch(function(){toast(L("Ese fichero no es de ajustes de NeoWEB","That file is not NeoWEB settings"),true)})};
 cfgApply();
+
+/* ------------------------------------------------------------ trophies */
+S.tr={users:[],user:"",show:"all",sort:"recent",q:"",loaded:false};
+var TG=[["platinum","#B9D4F0",L("Platino","Platinum")],["gold","#E8B84A",L("Oro","Gold")],["silver","#C0C6D2",L("Plata","Silver")],["bronze","#C98A5E",L("Bronce","Bronze")]];
+function loadTrophies(){
+  if(!S.full)return Promise.resolve();
+  return api("/api/trophies").then(function(j){var tr=S.tr;tr.users=(j.users||[]).filter(function(u){return u.sets.length}).sort(function(a,b){return b.sets.length-a.sets.length});
+    if(!tr.users.some(function(u){return u.id===tr.user}))tr.user=tr.users.length?tr.users[0].id:"";tr.loaded=true;if(S.view==="trophies")paintTrophies()}).catch(fail);
+}
+function paintTrophies(){
+  var tr=S.tr;
+  if(!tr.loaded){$("v-trophies").innerHTML='<div class="empty">'+L("Leyendo los trofeos de la consola…","Reading the console trophies…")+'</div>';return}
+  var u=tr.users.filter(function(x){return x.id===tr.user})[0];
+  if(!u){$("v-trophies").innerHTML='<div class="card"><div class="empty">'+ic("trophies")+'<div>'+L("La consola no tiene trofeos anotados para ningún usuario.","The console has no trophies recorded for any user.")+'</div></div></div>';return}
+  function sum(s,k){return TG.reduce(function(n,g){return n+(s[k][g[0]]||0)},0)}
+  var all=u.sets,tot={},got={};TG.forEach(function(g){tot[g[0]]=0;got[g[0]]=0});
+  all.forEach(function(s){TG.forEach(function(g){tot[g[0]]+=s.total[g[0]]||0;got[g[0]]+=s.got[g[0]]||0})});
+  var nT=TG.reduce(function(n,g){return n+tot[g[0]]},0),nG=TG.reduce(function(n,g){return n+got[g[0]]},0),done=all.filter(function(s){return s.progress>=100}).length;
+  var q=tr.q.trim().toLowerCase();
+  var list=all.filter(function(s){return (tr.show==="all"||(tr.show==="done"?s.progress>=100:tr.show==="started"?s.progress>0&&s.progress<100:s.progress===0))&&(!q||s.name.toLowerCase().indexOf(q)>=0||s.id.toLowerCase().indexOf(q)>=0)});
+  list.sort(tr.sort==="name"?function(a,b){return a.name.localeCompare(b.name)}:tr.sort==="progress"?function(a,b){return b.progress-a.progress||a.name.localeCompare(b.name)}
+    :tr.sort==="left"?function(a,b){return (sum(a,"total")-sum(a,"got"))-(sum(b,"total")-sum(b,"got"))||a.name.localeCompare(b.name)}:function(a,b){return a.updated<b.updated?1:a.updated>b.updated?-1:0});
+  function seg(k,v,t){return '<button data-tk="'+k+'" data-tv="'+v+'" class="'+(tr[k]===v?"on":"")+'">'+t+'</button>'}
+  function kpi(l,v,sub){return '<div class="card stk"><label>'+l+'</label><b>'+v+'</b><small>'+sub+'</small></div>'}
+  var keep=document.activeElement&&document.activeElement.id==="tr-q";
+  $("v-trophies").innerHTML='<div class="stg">'+
+    kpi(L("Trofeos","Trophies"),nG+" / "+nT,nT?Math.round(nG/nT*100)+"% "+L("de todos tus juegos","of all your games"):"")+
+    TG.map(function(g){return kpi(g[2],'<span style="color:'+g[1]+'">'+got[g[0]]+'</span>',L("de ","of ")+tot[g[0]])}).join("")+
+    kpi(L("Juegos al 100 %","Games at 100%"),done,L("de ","of ")+all.length)+'</div>'+
+    '<div class="card svbar">'+(tr.users.length>1?'<div><label>'+L("Usuario","User")+'</label><select class="in" id="tr-user">'+tr.users.map(function(x){return '<option value="'+x.id+'"'+(x.id===tr.user?" selected":"")+'>'+esc(x.name)+" ("+x.sets.length+')</option>'}).join("")+'</select></div>':"")+
+      '<div><label>'+L("Mostrar","Show")+'</label><div class="seg">'+seg("show","all",L("Todos","All"))+seg("show","started",L("Empezados","Started"))+seg("show","done","100%")+seg("show","none",L("Sin empezar","Not started"))+'</div></div>'+
+      '<div><label>'+L("Orden","Order")+'</label><div class="seg">'+seg("sort","recent",L("Reciente","Recent"))+seg("sort","progress","%")+seg("sort","left",L("Menos por sacar","Fewest left"))+seg("sort","name","A–Z")+'</div></div>'+
+      '<span class="sp"></span><div class="srch">'+ic("search")+'<input class="in" id="tr-q" type="search" style="width:190px" placeholder="'+L("Buscar juego…","Search game…")+'" value="'+esc(tr.q)+'"></div></div>'+
+    (list.length?'<div class="tro">'+list.map(function(s){var left=sum(s,"total")-sum(s,"got"),own=(s.games||"").split(" ").filter(function(g){return app(g)})[0];
+      return '<div class="card trc'+(s.progress>=100?" full":"")+'">'+(s.icon?'<img loading="lazy" referrerpolicy="no-referrer" alt="" src="'+esc(s.icon)+'" onerror="this.style.visibility=\'hidden\'">':'<div class="ph"></div>')+
+        '<div class="t"><b title="'+esc(s.name)+'">'+esc(s.name||s.id)+'</b><small>'+s.platform.toUpperCase()+(s.updated?" · "+new Date(s.updated).toLocaleDateString(undefined,{day:"2-digit",month:"short",year:"numeric"}):"")+(own?" · "+L("instalado","installed"):"")+" · "+(left?L("faltan ","left: ")+left:L("completo","complete"))+'</small>'+
+        '<div class="prog'+(s.progress>=100?" ok":"")+'"><i style="width:'+Math.max(1,s.progress)+'%"></i></div>'+
+        '<div class="g">'+TG.map(function(g){return s.total[g[0]]?'<span title="'+g[2]+'"><i style="background:'+g[1]+'"></i>'+(s.got[g[0]]||0)+"/"+s.total[g[0]]+'</span>':""}).join("")+'</div></div>'+
+        '<div class="pc">'+s.progress+'%</div></div>'}).join("")+'</div>'
+      :'<div class="card"><div class="empty">'+L("Ningún juego coincide.","No game matches.")+'</div></div>')+
+    '<p style="margin:14px 2px 0;font:500 11.5px var(--mono);color:var(--faint)">'+L("Son las cuentas que lleva la propia consola para cada usuario, y las pone al día cuando sincroniza con PlayStation Network: lo conseguido sin conexión no aparece hasta entonces. Los iconos se cargan de PlayStation Network; sin conexión no salen. El nombre de cada trofeo suelto todavía no se muestra.","These are the counts the console itself keeps for each user, brought up to date when it syncs with PlayStation Network: what is earned offline does not show until then. Icons load from PlayStation Network; offline they do not show. The name of each single trophy is not shown yet.")+'</p>';
+  $("tr-q").oninput=function(){tr.q=this.value;paintTrophies()};
+  if(keep){var e=$("tr-q");e.focus();e.setSelectionRange(e.value.length,e.value.length)}
+  if($("tr-user"))$("tr-user").onchange=function(){tr.user=this.value;paintTrophies()};
+}
+$("v-trophies").addEventListener("click",function(e){var b=e.target.closest("button[data-tk]");if(!b)return;S.tr[b.getAttribute("data-tk")]=b.getAttribute("data-tv");paintTrophies()});
 
 /* ------------------------------------------------------------ themes */
 var TDIR="/data/neohen/themes";
