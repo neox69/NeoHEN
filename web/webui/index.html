@@ -181,7 +181,17 @@ h3.h .sp{flex:1}
 .qa button b{font-weight:680} .qa button small{color:var(--faint);font-size:12px}
 
 /* ------------------------------------------------------------ library */
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(164px,1fr));gap:20px 16px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--cover,164px),1fr));gap:20px 16px}
+html.noanim *{transition:none!important;animation:none!important}
+html.plain body::before{display:none}
+.cfg{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:16px}
+.cfg .card{padding:18px 20px}
+.opt{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;padding:12px 0;border-top:1px solid var(--line)}
+.opt:first-of-type{border-top:0}
+.opt .t{flex:1 1 170px;min-width:0}.opt .t b{display:block;font-weight:650}.opt .t small{display:block;color:var(--dim);font-size:12.5px;margin-top:2px}
+.sws{display:flex;gap:8px}.sws button{width:30px;height:30px;border-radius:50%;border:2px solid transparent;padding:0;cursor:pointer}
+.sws button.on{border-color:var(--text);box-shadow:0 0 0 2px rgba(0,0,0,.5) inset}
+.hidel{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px 14px;margin-top:10px}
 .game{min-width:0;cursor:pointer}
 .cover{position:relative;aspect-ratio:1;border-radius:14px;overflow:hidden;background:#05080F;border:1px solid var(--line);transition:transform .2s,border-color .2s,box-shadow .2s}
 .cover img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .35s}
@@ -401,6 +411,7 @@ dialog textarea{width:100%;height:min(60vh,560px);resize:vertical;font:500 12.5p
       <section id="v-transfers" hidden></section>
       <section id="v-procs" hidden></section>
       <section id="v-system" hidden></section>
+      <section id="v-settings" hidden></section>
     </div>
   </div>
 </div>
@@ -417,6 +428,7 @@ dialog textarea{width:100%;height:min(60vh,560px);resize:vertical;font:500 12.5p
 <input type="file" id="pick-sz" accept=".zip" hidden>
 <input type="file" id="pick-ch" accept=".json,.shn,.mc4" multiple hidden>
 <input type="file" id="pick-pkg" accept=".pkg" hidden>
+<input type="file" id="pick-cfg" accept=".json" hidden>
 <div class="toast" id="toast" role="status"></div>
 <dialog id="dlg"><h4 id="dh"></h4><p id="dp"></p><input class="in" id="di" hidden>
   <div class="row"><button class="btn" id="dno"></button><button class="btn pri" id="dyes"></button></div></dialog>
@@ -426,7 +438,15 @@ dialog textarea{width:100%;height:min(60vh,560px);resize:vertical;font:500 12.5p
 <script>
 (function(){
 "use strict";
-var ES=/^es\b/i.test(navigator.language||"");
+/* What the user has chosen for this page. Kept in the browser (so it is
+ * there before the first paint) and on the console (so it follows the user
+ * to any other device). */
+var CFG_FILE="/data/neohen/web/ui.json";
+var CFG_DEF={lang:"auto",accent:"blue",zoom:100,start:"panel",hide:[],refresh:5,temp:"c",cover:"m",anim:true,grid:true,
+  confirmLaunch:false,libFilter:"games",libSort:"name",clock12:false,toast:4,stats10:10};
+var CFG={};(function(){var o={};try{o=JSON.parse(localStorage.getItem("neoweb_ui")||"{}")||{}}catch(e){}
+  for(var k in CFG_DEF)CFG[k]=o[k]!==undefined&&typeof o[k]===typeof CFG_DEF[k]?o[k]:CFG_DEF[k]})();
+var ES=CFG.lang==="es"||(CFG.lang!=="en"&&/^es\b/i.test(navigator.language||""));
 function L(es,en){return ES?es:en}
 document.documentElement.lang=ES?"es":"en";
 var $=function(id){return document.getElementById(id)};
@@ -466,6 +486,7 @@ var P={
  scale:"M4 20h16M6 20V10M12 20V4M18 20v-7",
  saves:"M5 4h11l3 3v13H5zM8 4v5h7V4M8 20v-6h8v6",
  stats:"M4 20V10M10 20V4M16 20v-7M22 20H2",
+ settings:"M4 7h10M18 7h2M4 12h4M12 12h8M4 17h12M20 17h0M14 5v4M8 10v4M16 15v4",
  cheats:"M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6-5.3-3-5.3 3 1.2-6L3.4 9.3l6-.7z",
  captures:"M4 7h3l2-2h6l2 2h3v12H4zM12 10a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7z",
  themes:"M12 3a9 9 0 1 0 0 18c1.2 0 2-.9 2-2 0-1.3 1-2 2.2-2H18a3 3 0 0 0 3-3c0-5-4-9-9-9zM7.5 12h.01M9.5 8h.01M14.5 8h.01"
@@ -491,7 +512,7 @@ function parent(p){var i=p.replace(/\/+$/,"").lastIndexOf("/");return i<=0?"/":p
 function base(p){return p.replace(/\/+$/,"").split("/").pop()||"/"}
 function wait(ms){return new Promise(function(r){setTimeout(r,ms)})}
 function toast(msg,err){var t=$("toast");t.textContent=msg;t.className="toast on"+(err?" err":"");
-  clearTimeout(toast.t);toast.t=setTimeout(function(){t.className="toast"},err?6000:2800)}
+  clearTimeout(toast.t);toast.t=setTimeout(function(){t.className="toast"},(err?2:1)*CFG.toast*1000)}
 function fail(e){toast(e.message||String(e),true)}
 function ask(title,text,yes,danger,input){return new Promise(function(res){
   var d=$("dlg"),di=$("di");$("dh").textContent=title;$("dp").textContent=text||"";$("dp").hidden=!text;
@@ -506,7 +527,7 @@ function ask(title,text,yes,danger,input){return new Promise(function(res){
 /* ------------------------------------------------------------ state */
 var UTIL=/^(NPXS|APDU|APRE|ORBT|PLDM|FAKE|WKAL|MOUU|PPSA99)/;
 var S={info:{},apps:[],mounts:[],running:null,hist:[],pay:[],payDir:"",ro:false,full:null,jobs:[],procs:[],
-       view:"panel",filter:"games",sort:"name",q:"",cwd:"/data",dir:[],fsort:"name",fdir:1,pq:"",psort:"rss",online:null};
+       view:"panel",filter:CFG.libFilter,sort:CFG.libSort,q:"",cwd:"/data",dir:[],fsort:"name",fdir:1,pq:"",psort:"rss",online:null};
 var VIEWS=[
  ["panel",L("Panel","Dashboard"),L("Estado de la consola en directo","The console, live")],
  ["library",L("Biblioteca","Library"),L("Juegos y aplicaciones instalados","Installed games and apps")],
@@ -519,7 +540,8 @@ var VIEWS=[
  ["cheats",L("Trucos","Cheats"),L("Ficheros de trucos para tus juegos","Cheat files for your games"),1],
  ["transfers",L("Transferencias","Transfers"),L("Subidas y tareas de la consola","Uploads and console jobs"),1],
  ["procs",L("Procesos","Processes"),L("Lo que está en ejecución ahora","What is running right now"),1],
- ["system",L("Sistema","System"),L("Información, almacenamiento y registro","Information, storage and log")]];
+ ["system",L("Sistema","System"),L("Información, almacenamiento y registro","Information, storage and log")],
+ ["settings",L("Configuración","Settings"),L("Cómo se ve y se comporta esta página","How this page looks and behaves")]];
 function title(id){for(var i=0;i<S.apps.length;i++)if(S.apps[i].titleId===id)return S.apps[i].title||id;return id}
 function app(id){for(var i=0;i<S.apps.length;i++)if(S.apps[i].titleId===id)return S.apps[i];return null}
 function games(){return S.apps.filter(function(a){return !UTIL.test(a.titleId)})}
@@ -528,8 +550,8 @@ function games(){return S.apps.filter(function(a){return !UTIL.test(a.titleId)})
 function paintNav(){
   var act=S.ups.filter(function(u){return u.st==="run"||u.st==="wait"}).length+S.jobs.filter(function(j){return j.state==="running"}).length;
   var badge={library:games().length||"",payloads:S.pay.length?S.pay.filter(function(p){return p.running}).length+"/"+S.pay.length:"",transfers:act||""};
-  $("nav").innerHTML='<h6>'+L("Consola","Console")+'</h6>'+VIEWS.filter(function(v){return !v[3]||S.full}).map(function(v,i){
-    return (v[0]==="files"?'<h6>'+L("Herramientas","Tools")+'</h6>':"")+(v[0]==="system"&&!S.full?'<h6>'+L("Herramientas","Tools")+'</h6>':"")+
+  $("nav").innerHTML='<h6>'+L("Consola","Console")+'</h6>'+VIEWS.filter(function(v){return (!v[3]||S.full)&&CFG.hide.indexOf(v[0])<0}).map(function(v,i){
+    return (v[0]===VIEWS.filter(function(x){return x[3]&&CFG.hide.indexOf(x[0])<0})[0][0]&&S.full?'<h6>'+L("Herramientas","Tools")+'</h6>':"")+(v[0]==="system"?'<h6>'+L("Consola y página","Console and page")+'</h6>':"")+
       '<button data-v="'+v[0]+'" class="'+(S.view===v[0]?"on":"")+'">'+ic(v[0])+'<span>'+v[1]+'</span>'+
       (badge[v[0]]?'<em class="'+(v[0]==="transfers"?"hot":"")+'">'+badge[v[0]]+'</em>':"")+'</button>'}).join("");
 }
@@ -548,7 +570,7 @@ $("burger").innerHTML=ic("menu");$("reload").innerHTML=ic("refresh");
 $("burger").onclick=function(){$("side").className="side open"};
 $("view").addEventListener("click",function(){$("side").className="side"});
 $("reload").onclick=function(){fast();slow();show(S.view);toast(L("Actualizado","Refreshed"))};
-function render(){({panel:paintPanel,library:paintLib,files:paintFiles,payloads:paintPay,themes:paintThemes,saves:paintSaves,captures:paintCaps,cheats:paintCheats,stats:paintStats,transfers:paintTr,procs:paintProcs,system:paintSys})[S.view]()}
+function render(){({panel:paintPanel,library:paintLib,files:paintFiles,payloads:paintPay,themes:paintThemes,saves:paintSaves,captures:paintCaps,cheats:paintCheats,stats:paintStats,transfers:paintTr,procs:paintProcs,system:paintSys,settings:paintCfg})[S.view]()}
 
 /* ------------------------------------------------------------ dashboard */
 function tcol(v){return v>=88?"var(--bad)":v>=78?"var(--warn)":"var(--ok)"}
@@ -587,8 +609,8 @@ function paintPanel(){
         :'<button class="btn pri" data-go="library">'+ic("library")+L("Abrir biblioteca","Open library")+'</button>')+'</div></div></div>';
   var cpu=i.cpuTemp|0,soc=i.socTemp|0,ssd=S.mounts.filter(function(m){return m.path==="/user"})[0];
   var k='<div class="kpis">'+
-    kpi("temp","CPU",cpu>0?cpu:"–","°C",cpu>0?(cpu-25)/75*100:null,tcol(cpu),cpu>=88?L("Muy caliente","Very hot"):cpu>=78?L("Caliente","Warm"):L("Normal","Normal"))+
-    kpi("chip","SoC",soc>0?soc:"–","°C",soc>0?(soc-25)/75*100:null,tcol(soc),soc>=88?L("Muy caliente","Very hot"):soc>=78?L("Caliente","Warm"):L("Normal","Normal"))+
+    kpi("temp","CPU",cpu>0?tv(cpu):"–",TU(),cpu>0?(cpu-25)/75*100:null,tcol(cpu),cpu>=88?L("Muy caliente","Very hot"):cpu>=78?L("Caliente","Warm"):L("Normal","Normal"))+
+    kpi("chip","SoC",soc>0?tv(soc):"–",TU(),soc>0?(soc-25)/75*100:null,tcol(soc),soc>=88?L("Muy caliente","Very hot"):soc>=78?L("Caliente","Warm"):L("Normal","Normal"))+
     kpi("scale",L("Reloj CPU","CPU clock"),i.cpuFreqMhz>0?num(i.cpuFreqMhz/1000,1):"–","GHz",i.cpuFreqMhz>0?i.cpuFreqMhz/3500*100:null,"var(--grad)",i.cpuFreqMhz>0&&i.cpuFreqMhz<1500?L("En reposo","Idle"):L("Trabajando","Working"))+
     kpi("clock",L("Encendida","Uptime"),i.uptime?dur(i.uptime):"–","",null,"",L("desde el último arranque","since the last boot"))+
     kpi("game",L("Juegos","Games"),g||"–","",null,"",ssd?size(ssd.free)+" "+L("libres en el SSD","free on the SSD"):"")+'</div>';
@@ -626,7 +648,8 @@ function act(p,body,msg){toast(msg);return api(p,body).then(function(){toast(L("
 function notify(){ask(L("Aviso en la consola","Console notification"),L("El texto aparece como notificación en la pantalla de la PS5.","The text shows up as a notification on the PS5 screen."),L("Enviar","Send"),false,"").then(function(t){
   if(t)api("/api/sys/notify",{text:t}).then(function(){toast(L("Enviado","Sent"))}).catch(fail)})}
 function launch(id){var n=title(id);
-  (S.running&&S.running!==id?ask(L("Lanzar ","Launch ")+n,L("Hay otro juego abierto y la consola lo cerrará. Lo que no esté guardado se pierde.","Another game is open and the console will close it. Anything unsaved is lost."),L("Lanzar","Launch")):Promise.resolve(true))
+  (S.running&&S.running!==id?ask(L("Lanzar ","Launch ")+n,L("Hay otro juego abierto y la consola lo cerrará. Lo que no esté guardado se pierde.","Another game is open and the console will close it. Anything unsaved is lost."),L("Lanzar","Launch"))
+    :CFG.confirmLaunch?ask(L("Lanzar ","Launch ")+n,L("Se abrirá en la consola.","It will open on the console."),L("Lanzar","Launch")):Promise.resolve(true))
     .then(function(ok){if(ok)act("/api/apps/launch",{titleId:id},L("Lanzando ","Launching ")+n+"…")})}
 
 /* ------------------------------------------------------------ library */
@@ -1193,12 +1216,12 @@ function paintStats(){
   function span(n){var s=0;for(var i=0;i<n;i++)s+=byDay[dayAdd(td,-i)]||0;return s}
   /* streaks: days in a row with at least ten minutes */
   var cur=0,best=0,run=0,days=Object.keys(byDay).sort(),first=days[0];
-  for(var d=td,i=0;i<3650&&d>=first;i++,d=dayAdd(d,-1)){if((byDay[d]||0)>=600){run++;best=Math.max(best,run)}else{if(d===td){continue}run=0}}
-  for(d=td,i=0;i<3650;i++,d=dayAdd(d,-1)){if((byDay[d]||0)>=600)cur++;else if(d!==td)break}
+  for(var d=td,i=0;i<3650&&d>=first;i++,d=dayAdd(d,-1)){if((byDay[d]||0)>=CFG.stats10*60){run++;best=Math.max(best,run)}else{if(d===td){continue}run=0}}
+  for(d=td,i=0;i<3650;i++,d=dayAdd(d,-1)){if((byDay[d]||0)>=CFG.stats10*60)cur++;else if(d!==td)break}
   var top=ids.slice().sort(function(a,b){return g[b].total-g[a].total}),max=g[top[0]].total||1;
   var wk=[],wmax=1;for(i=7;i>=0;i--){var s=0;for(var k=0;k<7;k++)s+=byDay[dayAdd(td,-(i*7+k))]||0;wk.push([dayAdd(td,-(i*7+6)),s]);wmax=Math.max(wmax,s)}
   var dd=[],dmax=1;for(i=13;i>=0;i--){var x=dayAdd(td,-i);dd.push([x,byDay[x]||0]);dmax=Math.max(dmax,byDay[x]||0)}
-  var wd=td?new Date(td+"T12:00:00"):new Date(),week7=span(7),active=Object.keys(byDay).filter(function(x){return byDay[x]>=600}).length;
+  var wd=td?new Date(td+"T12:00:00"):new Date(),week7=span(7),active=Object.keys(byDay).filter(function(x){return byDay[x]>=CFG.stats10*60}).length;
   function kpi(l,v,sub){return '<div class="card stk"><label>'+l+'</label><b>'+v+'</b><small>'+sub+'</small></div>'}
   function bars(list,mx,fmt){return '<div class="bars">'+list.map(function(p){return '<div title="'+p[0]+" · "+hm(p[1])+'"><i style="height:'+Math.max(1,Math.round(p[1]/mx*100))+'%;opacity:'+(p[1]?1:.25)+'"></i><span>'+fmt(p[0])+'</span></div>'}).join("")+'</div>'}
   $("v-stats").innerHTML='<div class="stg">'+
@@ -1212,9 +1235,87 @@ function paintStats(){
     '<h3 class="h" style="margin-top:24px">'+L("Por juego","By game")+' <em>'+ids.length+'</em></h3><div class="card pad">'+top.map(function(id){var a=app(id),x=g[id],st=S.status[id];
       return '<div class="rk">'+(a&&a.hasIcon?'<img loading="lazy" alt="" src="/apps/icon?id='+id+'">':'<div class="ph"></div>')+'<div class="t"><b>'+esc(title(id))+(st?' <span class="chip">'+stName(st)+'</span>':"")+'</b><div class="prog"><i style="width:'+Math.max(2,Math.round(x.total/max*100))+'%"></i></div></div>'+
         '<em>'+hm(x.total)+" · "+x.sessions+" "+L("ses.","sess.")+(x.last?" · "+when(x.last):"")+'</em></div>'}).join("")+'</div>'+
-    '<p style="margin:14px 2px 0;font:500 11.5px var(--mono);color:var(--faint)">'+L("Cuenta NeoWEB mientras está cargado; lo jugado sin NeoHEN, o antes de esta versión, no aparece. Una racha pide al menos diez minutos de juego al día.","Counted by NeoWEB while it is loaded; what was played without NeoHEN, or before this version, is not here. A streak needs at least ten minutes of play a day.")+'</p>';
+    '<p style="margin:14px 2px 0;font:500 11.5px var(--mono);color:var(--faint)">'+L("Cuenta NeoWEB mientras está cargado; lo jugado sin NeoHEN, o antes de esta versión, no aparece. El mínimo diario para una racha se elige en Configuración.","Counted by NeoWEB while it is loaded; what was played without NeoHEN, or before this version, is not here. The daily minimum for a streak is chosen in Settings.")+'</p>';
   void wd;
 }
+
+/* ------------------------------------------------------------ settings */
+var ACC={blue:["#4DA3FF","#4DD0FF","#8E7BFF"],violet:["#A78BFA","#C4B5FD","#F472B6"],green:["#34D399","#6EE7B7","#22D3EE"],
+  amber:["#FBBF24","#FCD34D","#FB923C"],red:["#F87171","#FCA5A5","#FB7185"],ice:["#E2E8F0","#F8FAFC","#94A3B8"]};
+function tv(c){return CFG.temp==="f"?Math.round(c*9/5+32):c}
+function TU(){return CFG.temp==="f"?"°F":"°C"}
+function cfgApply(){
+  var r=document.documentElement,a=ACC[CFG.accent]||ACC.blue;
+  r.style.setProperty("--blue",a[0]);r.style.setProperty("--cyan",a[1]);r.style.setProperty("--violet",a[2]);
+  r.style.setProperty("--grad","linear-gradient(110deg,"+a[1]+","+a[0]+" 45%,"+a[2]+")");
+  r.style.setProperty("--cover",{s:"128px",m:"164px",l:"210px",xl:"260px"}[CFG.cover]||"164px");
+  r.style.zoom=CFG.zoom===100?"":CFG.zoom/100;
+  r.classList.toggle("noanim",!CFG.anim);r.classList.toggle("plain",!CFG.grid);
+}
+var cfgT=0;
+function cfgSet(k,v,reload){
+  CFG[k]=v;try{localStorage.setItem("neoweb_ui",JSON.stringify(CFG))}catch(e){}
+  cfgApply();clock();paintNav();
+  clearTimeout(cfgT);cfgT=setTimeout(function(){if(S.full)api("/api/fs/text",{path:CFG_FILE,content:JSON.stringify(CFG,null,1)}).catch(function(){})},600);
+  if(reload){toast(L("Recargando…","Reloading…"));setTimeout(function(){location.reload()},700)}else if(S.view==="settings")paintCfg();
+}
+/* what the console keeps wins over what this browser remembers */
+function cfgPull(){
+  if(!S.full)return;
+  return api("/api/fs/text?path="+enc(CFG_FILE)).then(function(j){var o={},ch=false;try{o=JSON.parse(j.content||"{}")||{}}catch(e){}
+    for(var k in CFG_DEF)if(o[k]!==undefined&&typeof o[k]===typeof CFG_DEF[k]&&JSON.stringify(o[k])!==JSON.stringify(CFG[k])){CFG[k]=o[k];ch=true}
+    if(ch){try{localStorage.setItem("neoweb_ui",JSON.stringify(CFG))}catch(e){}
+      var es=CFG.lang==="es"||(CFG.lang!=="en"&&/^es\b/i.test(navigator.language||""));
+      if(es!==ES){location.reload();return}
+      cfgApply();clock();paintNav();render()}},function(){});
+}
+function paintCfg(){
+  function seg(k,opts,reload){return '<div class="seg">'+opts.map(function(o){return '<button data-ck="'+k+'" data-cv="'+o[0]+'"'+(reload?' data-cr="1"':"")+' class="'+(String(CFG[k])===String(o[0])?"on":"")+'">'+o[1]+'</button>'}).join("")+'</div>'}
+  function sw(k){return '<label class="sw"><input type="checkbox" data-cb="'+k+'"'+(CFG[k]?" checked":"")+'><i></i></label>'}
+  function opt(t,d,c){return '<div class="opt"><div class="t"><b>'+t+'</b>'+(d?'<small>'+d+'</small>':"")+'</div>'+c+'</div>'}
+  var vis=VIEWS.filter(function(v){return v[0]!=="panel"&&v[0]!=="settings"&&(!v[3]||S.full)});
+  $("v-settings").innerHTML='<div class="cfg">'+
+    '<div class="card"><h3 class="h">'+L("Aspecto","Looks")+'</h3>'+
+      opt(L("Color","Colour"),L("El acento de botones, gráficas y resaltados","The accent of buttons, charts and highlights"),'<div class="sws">'+Object.keys(ACC).map(function(k){return '<button data-ck="accent" data-cv="'+k+'" class="'+(CFG.accent===k?"on":"")+'" style="background:linear-gradient(135deg,'+ACC[k][1]+','+ACC[k][0]+' 50%,'+ACC[k][2]+')" title="'+k+'"></button>'}).join("")+'</div>')+
+      opt(L("Tamaño de la interfaz","Interface size"),L("Todo más pequeño o más grande","Everything smaller or bigger"),seg("zoom",[[85,"85%"],[100,"100%"],[115,"115%"],[130,"130%"]]))+
+      opt(L("Animaciones","Animations"),L("Transiciones y efectos al pasar el ratón","Transitions and hover effects"),sw("anim"))+
+      opt(L("Fondo con rejilla","Grid background"),L("El dibujo de fondo de la página","The pattern behind the page"),sw("grid"))+
+      opt(L("Idioma","Language"),L("Automático usa el del navegador","Automatic follows the browser"),seg("lang",[["auto",L("Automático","Automatic")],["es","Español"],["en","English"]],1))+'</div>'+
+    '<div class="card"><h3 class="h">'+L("Inicio y menú","Start and menu")+'</h3>'+
+      opt(L("Abrir en","Open on"),L("La sección que sale al entrar","The section shown when you come in"),'<select class="in" data-cs="start">'+VIEWS.filter(function(v){return !v[3]||S.full}).map(function(v){return '<option value="'+v[0]+'"'+(CFG.start===v[0]?" selected":"")+'>'+v[1]+'</option>'}).join("")+'</select>')+
+      '<div class="opt" style="display:block"><div class="t"><b>'+L("Secciones del menú","Menu sections")+'</b><small>'+L("Desmarca las que no uses; siguen ahí si las vuelves a marcar","Untick the ones you do not use; they are still there if you tick them again")+'</small></div>'+
+        '<div class="hidel">'+vis.map(function(v){return '<label class="sw"><input type="checkbox" data-hide="'+v[0]+'"'+(CFG.hide.indexOf(v[0])<0?" checked":"")+'><i></i>'+v[1]+'</label>'}).join("")+'</div></div>'+
+      opt(L("Reloj","Clock"),"",seg("clock12",[[false,"24 h"],[true,"12 h"]]))+'</div>'+
+    '<div class="card"><h3 class="h">'+L("Biblioteca","Library")+'</h3>'+
+      opt(L("Tamaño de las carátulas","Cover size"),"",seg("cover",[["s",L("Pequeñas","Small")],["m",L("Medianas","Medium")],["l",L("Grandes","Large")],["xl",L("Enormes","Huge")]]))+
+      opt(L("Mostrar al entrar","Show on entry"),L("Solo juegos, o también utilidades y homebrew","Games only, or utilities and homebrew too"),seg("libFilter",[["games",L("Juegos","Games")],["all",L("Todo","All")]]))+
+      opt(L("Orden","Order"),"",seg("libSort",[["name","A–Z"],["id","ID"]]))+
+      opt(L("Preguntar antes de lanzar","Ask before launching"),L("Evita abrir un juego por un clic sin querer","Avoids opening a game with a stray click"),sw("confirmLaunch"))+'</div>'+
+    '<div class="card"><h3 class="h">'+L("Datos","Data")+'</h3>'+
+      opt(L("Refresco del panel","Dashboard refresh"),L("Cada cuánto se piden temperaturas y estado","How often temperatures and status are asked for"),seg("refresh",[[2,"2 s"],[5,"5 s"],[10,"10 s"],[30,"30 s"]]))+
+      opt(L("Temperatura en","Temperature in"),L("El umbral del ventilador va siempre en °C","The fan threshold is always in °C"),seg("temp",[["c","°C"],["f","°F"]]))+
+      opt(L("Racha: minutos al día","Streak: minutes a day"),L("Lo mínimo jugado para que un día cuente","The least played for a day to count"),seg("stats10",[[1,"1"],[10,"10"],[30,"30"],[60,"60"]]))+
+      opt(L("Avisos en pantalla","On-screen notices"),L("Cuánto duran los mensajes de esta página","How long this page's messages stay"),seg("toast",[[2,"2 s"],[4,"4 s"],[8,"8 s"]]))+'</div>'+
+    '<div class="card"><h3 class="h">'+L("Estos ajustes","These settings")+'</h3><p style="margin:0 0 14px;color:var(--dim)">'+
+      (S.full?L("Se guardan en la consola, así que valen en cualquier navegador desde el que entres.","They are kept on the console, so they hold in any browser you come in from.")
+        :L("En la variante restringida se guardan solo en este navegador.","In the restricted build they are kept in this browser only."))+'</p>'+
+      '<div class="row"><button class="btn" id="cfg-exp">'+ic("download")+L("Exportar","Export")+'</button><button class="btn" id="cfg-imp">'+ic("upload")+L("Importar","Import")+'</button><span class="sp"></span><button class="btn danger" id="cfg-rst">'+L("Restablecer todo","Reset everything")+'</button></div></div></div>';
+}
+$("v-settings").addEventListener("click",function(e){
+  var b=e.target.closest("button");if(!b)return;var k=b.getAttribute("data-ck");
+  if(k){var v=b.getAttribute("data-cv"),d=CFG_DEF[k];cfgSet(k,typeof d==="number"?+v:typeof d==="boolean"?v==="true":v,b.hasAttribute("data-cr"));return}
+  if(b.id==="cfg-exp"){var a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(CFG,null,1)],{type:"application/json"}));a.download="neoweb-ajustes.json";a.click();setTimeout(function(){URL.revokeObjectURL(a.href)},2000)}
+  else if(b.id==="cfg-imp")$("pick-cfg").click();
+  else if(b.id==="cfg-rst")ask(L("Restablecer los ajustes","Reset the settings"),L("La página vuelve a como venía.","The page goes back to how it came."),L("Restablecer","Reset"),true).then(function(ok){
+    if(!ok)return;for(var x in CFG_DEF)CFG[x]=JSON.parse(JSON.stringify(CFG_DEF[x]));cfgSet("lang",CFG_DEF.lang,true)})});
+$("v-settings").addEventListener("change",function(e){
+  var t=e.target,k;
+  if((k=t.getAttribute("data-cb")))cfgSet(k,t.checked);
+  else if((k=t.getAttribute("data-cs")))cfgSet(k,t.value);
+  else if((k=t.getAttribute("data-hide"))){var h=CFG.hide.filter(function(x){return x!==k});if(!t.checked)h.push(k);cfgSet("hide",h)}});
+$("pick-cfg").onchange=function(){var f=this.files[0];this.value="";if(!f)return;f.text().then(function(t){var o=JSON.parse(t);
+  for(var k in CFG_DEF)if(o[k]!==undefined&&typeof o[k]===typeof CFG_DEF[k])CFG[k]=o[k];cfgSet("lang",CFG.lang,true)}).catch(function(){toast(L("Ese fichero no es de ajustes de NeoWEB","That file is not NeoWEB settings"),true)})};
+cfgApply();
 
 /* ------------------------------------------------------------ themes */
 var TDIR="/data/neohen/themes";
@@ -1458,7 +1559,7 @@ function paintSys(){
   var mounts=S.mounts.filter(function(m){return m.total>0&&!/^\/mnt\/sandbox|^\/devlog|^\/dev$/.test(m.path)});
   $("v-system").innerHTML='<div class="g2" style="margin-top:0"><div class="card pad"><h3 class="h">'+L("Consola","Console")+'</h3><dl class="kv" style="margin:0">'+
     kv(L("Modelo","Model"),i.model)+kv("Firmware",i.firmware)+kv("IP",(i.ips||[]).map(function(x){return x.iface+" "+x.ip}).join(", "))+
-    kv(L("Encendida","Uptime"),i.uptime?dur(i.uptime):"")+kv("CPU",i.cpuTemp>0?i.cpuTemp+" °C · "+(i.cpuFreqMhz||0)+" MHz":"")+kv("SoC",i.socTemp>0?i.socTemp+" °C":"")+
+    kv(L("Encendida","Uptime"),i.uptime?dur(i.uptime):"")+kv("CPU",i.cpuTemp>0?tv(i.cpuTemp)+" "+TU()+" · "+(i.cpuFreqMhz||0)+" MHz":"")+kv("SoC",i.socTemp>0?tv(i.socTemp)+" "+TU():"")+
     kv("NeoWEB",(i.version||"")+" · "+(S.full?L("completa","full"):L("restringida","restricted"))+(S.ro?" · "+L("solo lectura","read-only"):""))+'</dl></div>'+
     '<div class="card pad"><h3 class="h">'+L("Aviso en pantalla","On-screen notification")+'</h3><p style="margin:0 0 12px;color:var(--dim)">'+L("Envía un mensaje que aparece como notificación en la PS5.","Send a message that pops up as a notification on the PS5.")+'</p>'+
     '<div style="display:flex;gap:10px"><input class="in" id="nt" style="flex:1" maxlength="200" placeholder="'+L("Texto del aviso…","Notification text…")+'"><button class="btn pri" id="nb">'+ic("bell")+L("Enviar","Send")+'</button></div></div></div>'+
@@ -1505,16 +1606,16 @@ function slow(){
 }
 function probe(){return fetch("/api/fs/stat?path=/data").then(function(r){S.full=r.status!==404},function(){S.full=false})}
 $("sfoot").innerHTML=L("Servicio remoto de NeoHEN","NeoHEN remote service")+'<br><a href="https://github.com/neox69/NeoHEN" target="_blank" rel="noopener">github.com/neox69/NeoHEN</a>';
-function clock(){$("clock").textContent=new Date().toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit"})}
+function clock(){$("clock").textContent=new Date().toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit",hour12:CFG.clock12})}
 clock();setInterval(clock,20000);
 
 paintNav();paintPanel();$("vt").textContent=VIEWS[0][1];$("vs").textContent=VIEWS[0][2];
-probe().then(function(){show(location.hash.slice(1)||"panel");return fast()}).then(slow).then(function(){loadPay();loadJobs()});
-setInterval(function(){
-  if(document.hidden)return;fast();
-  if(S.view==="payloads")loadPay();if(S.view==="procs")loadProcs();
-  if(S.view==="transfers"||S.jobs.some(function(j){return j.state==="running"}))loadJobs();
-},5000);
+probe().then(function(){show(location.hash.slice(1)||CFG.start||"panel");return fast()}).then(cfgPull).then(slow).then(function(){loadPay();loadJobs()});
+(function tickFast(){setTimeout(function(){
+  if(!document.hidden){fast();
+    if(S.view==="payloads")loadPay();if(S.view==="procs")loadProcs();
+    if(S.view==="transfers"||S.jobs.some(function(j){return j.state==="running"}))loadJobs()}
+  tickFast()},Math.max(2,CFG.refresh)*1000)})();
 setInterval(function(){if(!document.hidden){slow();loadPay()}},60000);
 document.addEventListener("visibilitychange",function(){if(!document.hidden){fast();slow();loadPay()}});
 document.addEventListener("keydown",function(e){
