@@ -232,7 +232,11 @@ html.plain body::before{display:none}
 .cpc{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden}
 .cpc.on{border-color:var(--blue);box-shadow:0 0 0 1px var(--blue)}
 .cpc .pv{position:relative;aspect-ratio:16/9;background:rgba(9,13,24,.7)}
-.cpc .pv img{width:100%;height:100%;object-fit:cover;display:block}
+.cpc .pv img,.cpc .pv canvas{width:100%;height:100%;object-fit:cover;display:block}
+.cpc .pv canvas{cursor:zoom-in;opacity:0;transition:opacity .25s}.cpc .pv canvas.ok{opacity:1}
+.cpc .pv .hdr{position:absolute;right:8px;top:8px;padding:2px 7px;border-radius:6px;font:700 9.5px var(--mono);letter-spacing:.1em;background:rgba(6,10,20,.78);color:var(--dim)}
+#lbox{position:fixed;inset:0;z-index:120;background:rgba(3,5,10,.93);display:flex;align-items:center;justify-content:center;cursor:zoom-out}
+#lbox canvas{max-width:96vw;max-height:94vh;border-radius:10px;box-shadow:0 30px 80px -20px #000}
 .cpc .pv .ph{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;color:var(--faint);font:700 10.5px var(--mono);letter-spacing:.14em;text-decoration:none}
 .cpc .pv .ph svg{width:30px;height:30px}
 .cpc .pv a.ph:hover{color:var(--blue)}
@@ -1133,7 +1137,7 @@ function paintCaps(){
     '<div><label>'+L("Juego","Game")+'</label><select class="in" id="cp-game"><option value="">'+L("Todos","All")+" ("+gl.length+')</option>'+gl.map(function(g){return '<option value="'+g.id+'"'+(cp.game===g.id?" selected":"")+'>'+esc(g.name)+" ("+g.n+')</option>'}).join("")+'</select></div><span class="sp"></span>'+
     '<button class="btn" id="cp-sel"'+(nsel?"":" disabled")+'>'+L("Descargar seleccionadas","Download selected")+(nsel?" ("+nsel+")":"")+'</button>'+
     '<button class="btn pri" id="cp-all"'+(list.length?"":" disabled")+'>'+ic("captures")+L("Descargar lo que se ve","Download what is shown")+" · "+size(bytes)+'</button></div>'+
-    '<div class="note" style="border-color:rgba(77,163,255,.4);background:rgba(77,163,255,.08);color:#CFE4FF">'+L("Las capturas en HDR se guardan en formato JXR, que los navegadores no saben mostrar: aquí salen sin vista previa, pero se descargan igual y Windows las abre con Fotos. Los vídeos (WebM) y las capturas en JPG sí se ven.","HDR screenshots are kept as JXR, which browsers cannot show: here they have no preview, but they download all the same and Windows opens them with Photos. Clips (WebM) and JPG screenshots do show.")+'</div>';
+    '<div class="note" style="border-color:rgba(77,163,255,.4);background:rgba(77,163,255,.08);color:#CFE4FF">'+L("Las capturas en HDR se guardan en formato JXR, que los navegadores no saben mostrar. Aquí se ve la miniatura que guarda la consola de cada una (1080p, con los brillos del HDR recortados); pulsa una para verla grande. Lo que se descarga es siempre el original, que Windows abre con Fotos.","HDR screenshots are kept as JXR, which browsers cannot show. What you see here is the thumbnail the console keeps of each (1080p, HDR highlights clipped); click one to see it large. What is downloaded is always the original, which Windows opens with Photos.")+'</div>';
   if(!list.length)h+='<div class="card"><div class="empty">'+L("No hay capturas ni vídeos que coincidan.","No screenshots or clips match.")+'</div></div>';
   var last="";
   list.slice(0,cp.max||240).forEach(function(c){
@@ -1141,17 +1145,63 @@ function paintCaps(){
       h+='<h3 class="h" style="margin-top:22px">'+esc(cpGame(c))+' <em>'+c.titleId+" · "+n+'</em></h3><div class="cpg">'}
     var url="/fs/get?path="+enc(c.path),see=c.ext==="jpg"||c.ext==="jpeg"||c.ext==="png";
     h+='<div class="cpc'+(cp.sel[c.id]?" on":"")+'"><div class="pv">'+(see?'<a href="'+url+'" target="_blank" rel="noopener"><img loading="lazy" alt="" src="'+url+'"></a>'
-        :c.kind==="video"?'<a href="'+url+'" target="_blank" rel="noopener" class="ph">'+ic("play")+'<span>'+L("Vídeo","Clip")+'</span></a>':'<div class="ph">'+ic("captures")+'<span>HDR · JXR</span></div>')+
+        :c.kind==="video"?(c.thumb?'<a href="'+url+'" target="_blank" rel="noopener"><canvas data-jx="'+esc(c.thumb)+'" data-novw="1"></canvas></a><div class="hdr">'+L("VÍDEO","CLIP")+'</div>':'<a href="'+url+'" target="_blank" rel="noopener" class="ph">'+ic("play")+'<span>'+L("Vídeo","Clip")+'</span></a>')
+        :c.thumb?'<div class="ph">'+ic("captures")+'<span>HDR · JXR</span></div><canvas data-jx="'+esc(c.thumb)+'" style="position:absolute;inset:0"></canvas><div class="hdr">HDR</div>':'<div class="ph">'+ic("captures")+'<span>HDR · JXR</span></div>')+
       '<label class="ck"><input type="checkbox" data-id="'+c.id+'"'+(cp.sel[c.id]?" checked":"")+'></label></div>'+
       '<div class="bd"><b>'+cpDate(c.id)+'</b><small>'+size(c.size)+" · "+esc(cp.users[c.user]||c.user||"")+'</small><a class="btn sm" href="'+url+'&download=1" download>'+L("Descargar","Download")+'</a></div></div>'});
   if(last)h+='</div>';
   if(list.length>(cp.max||240))h+='<div class="row" style="justify-content:center;margin-top:18px"><button class="btn" id="cp-more">'+L("Mostrar más","Show more")+" ("+(list.length-(cp.max||240))+')</button></div>';
   $("v-captures").innerHTML=h;
+  jxWatch();
+}
+/* HDR screenshots are JPEG XR, which no browser shows. The console keeps a
+ * 1080p thumbnail of each; a decoder built to WebAssembly (/jxr.js, asked for
+ * only when one is needed) turns those into pixels, one at a time and only
+ * for the cards that are on screen. */
+var jxMod=null,jxQ=[],jxBusy=false,jxObs=null;
+function jxReady(){
+  if(!jxMod)jxMod=new Promise(function(res,rej){var sc=document.createElement("script");sc.src="/jxr.js";
+    sc.onload=function(){try{JxrModule().then(res,rej)}catch(e){rej(e)}};sc.onerror=function(){rej(new Error("jxr.js"))};document.head.appendChild(sc)});
+  return jxMod;
+}
+function jxDecode(path){
+  return Promise.all([jxReady(),fetch("/fs/get?path="+enc(path)).then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);return r.arrayBuffer()})]).then(function(x){
+    var m=x[0],buf=new Uint8Array(x[1]),p=m._malloc(buf.length),wh=m._malloc(8);
+    m.HEAPU8.set(buf,p);
+    var px=m._jxr_decode(p,buf.length,4096,wh,wh+4),w=m.HEAP32[wh>>2],h=m.HEAP32[(wh>>2)+1],img=null;
+    if(px&&w>0&&h>0){img=new ImageData(new Uint8ClampedArray(m.HEAPU8.buffer.slice(px,px+w*h*4)),w,h);m._free(px)}
+    m._free(p);m._free(wh);
+    if(!img)throw new Error(L("No se pudo decodificar","Could not decode"));
+    return img});
+}
+function jxDraw(cv,img,maxW){
+  var k=Math.min(1,maxW/img.width),t=document.createElement("canvas");t.width=img.width;t.height=img.height;t.getContext("2d").putImageData(img,0,0);
+  cv.width=Math.round(img.width*k);cv.height=Math.round(img.height*k);var g=cv.getContext("2d");g.imageSmoothingQuality="high";g.drawImage(t,0,0,cv.width,cv.height);
+}
+function jxPump(){
+  if(jxBusy)return;var cv=jxQ.shift();if(!cv)return;
+  if(!cv.isConnected||cv.jxDone){jxPump();return}
+  jxBusy=true;
+  jxDecode(cv.getAttribute("data-jx")).then(function(img){jxDraw(cv,img,520);cv.className="ok";cv.jxDone=true},function(){cv.jxDone=true})
+    .then(function(){jxBusy=false;setTimeout(jxPump,0)});
+}
+function jxWatch(){
+  if(jxObs)jxObs.disconnect();jxQ=[];
+  var list=$("v-captures").querySelectorAll("canvas[data-jx]");if(!list.length)return;
+  if(!("IntersectionObserver" in window)||typeof WebAssembly==="undefined")return;
+  jxObs=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){jxObs.unobserve(e.target);jxQ.push(e.target);jxPump()}})},{root:$("view"),rootMargin:"300px"});
+  [].forEach.call(list,function(cv){jxObs.observe(cv)});
+}
+function jxView(path){
+  var b=document.createElement("div");b.id="lbox";b.innerHTML='<canvas></canvas>';b.onclick=function(){b.remove()};document.body.appendChild(b);
+  jxDecode(path).then(function(img){if(b.isConnected)jxDraw(b.firstChild,img,img.width)},function(e){b.remove();fail(e)});
 }
 function cpZip(q){toast(L("Preparando el ZIP… la descarga empieza en unos segundos","Preparing the ZIP… the download starts in a few seconds"));
   var a=document.createElement("a");a.href="/api/captures/zip"+q;a.download="";document.body.appendChild(a);a.click();a.remove()}
 $("v-captures").addEventListener("click",function(e){
-  var cp=S.cp,b=e.target.closest("button"),v;if(!b)return;
+  var cp=S.cp,b=e.target.closest("button"),v,cv=e.target.closest("canvas[data-jx]");
+  if(cv&&!cv.hasAttribute("data-novw")){jxView(cv.getAttribute("data-jx"));return}
+  if(!b)return;
   if((v=b.getAttribute("data-kind"))!=null){cp.kind=v;cp.game="";cp.max=240;paintCaps()}
   else if(b.id==="cp-more"){cp.max=(cp.max||240)+480;paintCaps()}
   else if(b.id==="cp-all"){var q=[];if(cp.kind)q.push("kind="+cp.kind);if(cp.user)q.push("user="+cp.user);if(cp.game)q.push("title="+cp.game);cpZip(q.length?"?"+q.join("&"):"")}

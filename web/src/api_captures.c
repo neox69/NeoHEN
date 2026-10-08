@@ -6,6 +6,9 @@
  *   /user/av_contents/video/<app>/<TITLE>/<xxx>/<date>_<time>_<n>.webm|.mp4
  *                                               ...the same name with .dat
  *
+ * The console also keeps a thumbnail of each, as JPEG XR, under
+ * /user/av_contents/thumbnails/ with the same path and ".jxr" added.
+ *
  * The .dat says whose it is (the user, at byte 4) and the game's name (text
  * at byte 0x44, followed by the date). This lists them and sends them, one by one through
  * /fs/get or many as a ZIP grouped by user and game. Nothing is changed on
@@ -32,6 +35,7 @@
 
 typedef struct capture {
   char path[300]; /* console path */
+  char thumb[320]; /* the console's own thumbnail of it (JPEG XR), or "" */
   char stem[48];  /* 20250615_150127_00997366 */
   char ext[8];
   char title_id[12];
@@ -169,6 +173,16 @@ scan(capture_list_t *l, const char *console, int depth, const char *title_id) {
       c.size = (uint64_t)st.st_size;
       c.mtime = st.st_mtime;
       read_dat(child_local, &c);
+      /* the same path below thumbnails/, with .jxr added to the name */
+      if(!strncmp(child, ROOT "/", strlen(ROOT) + 1)) {
+        char tlocal[PATH_MAX];
+        struct stat ts;
+        snprintf(c.thumb, sizeof(c.thumb), ROOT "/thumbnails/%s.jxr", child + strlen(ROOT) + 1);
+        plat_path(c.thumb, tlocal, sizeof(tlocal));
+        if(stat(tlocal, &ts) || !S_ISREG(ts.st_mode) || ts.st_size > (8 << 20)) {
+          c.thumb[0] = 0;
+        }
+      }
       captures_add(l, &c);
     }
   }
@@ -238,6 +252,7 @@ api_captures_list(http_req_t *req) {
     jw_kstr(&w, "title", c->title);
     jw_kstr(&w, "user", c->user);
     jw_kstr(&w, "path", c->path);
+    jw_kstr(&w, "thumb", c->thumb);
     jw_kuint(&w, "size", c->size);
     jw_kint(&w, "mtime", (int64_t)c->mtime);
     jw_obj_end(&w);

@@ -4,6 +4,9 @@
  * A customised copy in /data/neohen/web/webui/ takes precedence, which also
  * allows serving extra static files from that folder.
  *
+ * The full build carries a second file, /jxr.js: the JPEG XR decoder the
+ * page asks for when there are HDR screenshots to show (see web/jxr).
+ *
  * SPDX-License-Identifier: GPL-3.0-or-later */
 #include <limits.h>
 #include <stdio.h>
@@ -34,6 +37,20 @@ __asm__(".section .rodata\n"
 extern const char ps5aio_webui[];
 extern const char ps5aio_webui_end[];
 
+#ifdef NEOWEB_FULL
+__asm__(".section .rodata\n"
+        ".global ps5aio_jxrjs\n"
+        "ps5aio_jxrjs:\n"
+        ".incbin \"" JXRJS_PATH "\"\n"
+        ".global ps5aio_jxrjs_end\n"
+        "ps5aio_jxrjs_end:\n"
+        ".byte 0\n"
+        ".previous\n");
+
+extern const char ps5aio_jxrjs[];
+extern const char ps5aio_jxrjs_end[];
+#endif
+
 void
 webui_serve(http_req_t *req) {
   char console[PATH_MAX], local[PATH_MAX];
@@ -63,5 +80,12 @@ webui_serve(http_req_t *req) {
                   (size_t)(ps5aio_webui_end - ps5aio_webui));
     return;
   }
+#ifdef NEOWEB_FULL
+  if(!strcmp(p, "/jxr.js")) {
+    http_send_buf(req, 200, "application/javascript; charset=utf-8", ps5aio_jxrjs,
+                  (size_t)(ps5aio_jxrjs_end - ps5aio_jxrjs));
+    return;
+  }
+#endif
   http_send_error(req, 404, "not found: %s", req->path);
 }
