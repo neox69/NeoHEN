@@ -71,6 +71,10 @@ void api_apps_install_dir(http_req_t *req);
 void api_apps_install_pkg(http_req_t *req);
 void api_apps_uninstall(http_req_t *req);
 
+void api_stats_init(void);
+void api_stats_playtime(http_req_t *req);
+void api_library_status_get(http_req_t *req);
+void api_library_status_set(http_req_t *req);
 void api_captures_list(http_req_t *req);
 void api_captures_zip(http_req_t *req);
 void api_saves_list(http_req_t *req);

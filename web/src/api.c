@@ -604,6 +604,10 @@ static const api_route_t g_routes[] = {
   {"POST", "/api/sys/browser",      api_sys_browser},
   {"POST", "/api/sys/menu",         api_sys_menu},
 
+  {"GET",  "/api/stats/playtime",   api_stats_playtime},
+  {"GET",  "/api/library/status",   api_library_status_get},
+  {"POST", "/api/library/status",   api_library_status_set},
+
   {"GET",  "/api/captures/list",    api_captures_list},
   {"GET",  "/api/captures/zip",     api_captures_zip},
 
@@ -687,6 +691,7 @@ api_init(void) {
   load_config();
 #ifdef NEOWEB_FULL
   api_mem_init();
+  api_stats_init();
 #endif
 }
 
