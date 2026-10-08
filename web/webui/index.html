@@ -231,6 +231,20 @@ h3.h .sp{flex:1}
 .cpc .bd b{font-size:13.5px}.cpc .bd small{grid-row:2;font:500 11px var(--mono);color:var(--faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cpc .bd .btn{grid-row:1/3;grid-column:2;text-decoration:none}
 .svbar select.in{min-width:170px}
+.game .st{position:absolute;left:8px;bottom:8px;padding:3px 8px;border-radius:999px;font:700 9.5px var(--mono);letter-spacing:.1em;background:rgba(6,10,20,.82);border:1px solid var(--line2)}
+.game .st.playing{color:var(--blue);border-color:rgba(77,163,255,.6)}.game .st.done{color:var(--ok);border-color:rgba(52,211,153,.5)}
+.game .st.pending{color:var(--warn);border-color:rgba(251,191,36,.5)}.game .st.dropped{color:var(--faint)}
+.stg{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:18px}
+.stk{padding:16px 18px}.stk label{display:block;font:700 10.5px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--faint);margin-bottom:8px}
+.stk b{font:800 26px var(--sans,inherit);letter-spacing:-.01em}.stk small{display:block;margin-top:4px;color:var(--dim);font-size:12.5px}
+.bars{display:flex;align-items:flex-end;gap:6px;height:150px;padding:6px 2px 0}
+.bars div{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:6px;height:100%}
+.bars i{display:block;width:100%;border-radius:6px 6px 2px 2px;background:var(--grad);min-height:2px}
+.bars span{font:600 10px var(--mono);color:var(--faint);white-space:nowrap}
+.rk{display:flex;align-items:center;gap:12px;padding:9px 0;border-top:1px solid var(--line)}.rk:first-child{border-top:0}
+.rk img,.rk .ph{width:40px;height:40px;border-radius:9px;object-fit:cover;background:rgba(132,153,204,.12);flex:none}
+.rk .t{flex:1;min-width:0}.rk .t b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rk .t .prog{margin-top:6px}.rk em{font:700 12.5px var(--mono);font-style:normal;color:var(--dim);white-space:nowrap}
 .svbar{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;padding:16px 18px;margin-bottom:16px}
 .svbar label{display:block;font:700 10.5px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--faint);margin-bottom:7px}
 .svbar .sp,.svh .sp{flex:1}
@@ -383,6 +397,7 @@ dialog textarea{width:100%;height:min(60vh,560px);resize:vertical;font:500 12.5p
       <section id="v-saves" hidden></section>
       <section id="v-captures" hidden></section>
       <section id="v-cheats" hidden></section>
+      <section id="v-stats" hidden></section>
       <section id="v-transfers" hidden></section>
       <section id="v-procs" hidden></section>
       <section id="v-system" hidden></section>
@@ -450,6 +465,7 @@ var P={
  dots:"M5 12h.01M12 12h.01M19 12h.01",
  scale:"M4 20h16M6 20V10M12 20V4M18 20v-7",
  saves:"M5 4h11l3 3v13H5zM8 4v5h7V4M8 20v-6h8v6",
+ stats:"M4 20V10M10 20V4M16 20v-7M22 20H2",
  cheats:"M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6-5.3-3-5.3 3 1.2-6L3.4 9.3l6-.7z",
  captures:"M4 7h3l2-2h6l2 2h3v12H4zM12 10a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7z",
  themes:"M12 3a9 9 0 1 0 0 18c1.2 0 2-.9 2-2 0-1.3 1-2 2.2-2H18a3 3 0 0 0 3-3c0-5-4-9-9-9zM7.5 12h.01M9.5 8h.01M14.5 8h.01"
@@ -494,6 +510,7 @@ var S={info:{},apps:[],mounts:[],running:null,hist:[],pay:[],payDir:"",ro:false,
 var VIEWS=[
  ["panel",L("Panel","Dashboard"),L("Estado de la consola en directo","The console, live")],
  ["library",L("Biblioteca","Library"),L("Juegos y aplicaciones instalados","Installed games and apps")],
+ ["stats",L("Estadísticas","Stats"),L("Cuánto y a qué has jugado","How much you have played, and what")],
  ["files",L("Ficheros","Files"),L("Explora, sube, descarga y edita","Browse, upload, download and edit"),1],
  ["payloads","Payloads",L("Lo que NeoHEN arranca y lo que puedes lanzar","What NeoHEN starts and what you can launch")],
  ["themes",L("Temas","Themes"),L("Fondo y música del menú de la PS5","Background and music of the PS5 menu"),1],
@@ -523,7 +540,7 @@ function show(v,push){
   $("vt").textContent=def[1];$("vs").textContent=def[2];
   if(push)history.replaceState(null,"","#"+v);
   $("side").className="side";paintNav();render();$("view").scrollTop=0;
-  if(v==="files")loadDir(S.cwd);if(v==="procs")loadProcs();if(v==="system"){loadLog();S.fanEdit=null;loadFan()}if(v==="transfers")loadJobs();if(v==="payloads")loadPay();if(v==="themes")loadThemes();if(v==="saves")loadSaves();if(v==="captures")loadCaps();if(v==="cheats")loadCheats();
+  if(v==="files")loadDir(S.cwd);if(v==="procs")loadProcs();if(v==="system"){loadLog();S.fanEdit=null;loadFan()}if(v==="transfers")loadJobs();if(v==="payloads")loadPay();if(v==="themes")loadThemes();if(v==="saves")loadSaves();if(v==="captures")loadCaps();if(v==="cheats")loadCheats();if(v==="stats")loadStats();
 }
 $("nav").onclick=function(e){var b=e.target.closest("button[data-v]");if(b)show(b.getAttribute("data-v"),true)};
 window.addEventListener("hashchange",function(){var h=location.hash.slice(1);if(h!==S.view)show(h)});
@@ -531,7 +548,7 @@ $("burger").innerHTML=ic("menu");$("reload").innerHTML=ic("refresh");
 $("burger").onclick=function(){$("side").className="side open"};
 $("view").addEventListener("click",function(){$("side").className="side"});
 $("reload").onclick=function(){fast();slow();show(S.view);toast(L("Actualizado","Refreshed"))};
-function render(){({panel:paintPanel,library:paintLib,files:paintFiles,payloads:paintPay,themes:paintThemes,saves:paintSaves,captures:paintCaps,cheats:paintCheats,transfers:paintTr,procs:paintProcs,system:paintSys})[S.view]()}
+function render(){({panel:paintPanel,library:paintLib,files:paintFiles,payloads:paintPay,themes:paintThemes,saves:paintSaves,captures:paintCaps,cheats:paintCheats,stats:paintStats,transfers:paintTr,procs:paintProcs,system:paintSys})[S.view]()}
 
 /* ------------------------------------------------------------ dashboard */
 function tcol(v){return v>=88?"var(--bad)":v>=78?"var(--warn)":"var(--ok)"}
@@ -636,10 +653,13 @@ function paintLib(){
   if(!$("lib-q")){
     $("v-library").innerHTML='<div class="tools"><div class="srch">'+ic("search")+'<input class="in" id="lib-q" type="search" placeholder="'+L("Buscar juego o ID…","Search title or ID…")+'"></div>'+
       '<div class="seg" id="lib-f"><button data-f="games" class="on">'+L("Juegos","Games")+'</button><button data-f="all">'+L("Todo","All")+'</button></div>'+
-      '<div class="seg" id="lib-s"><button data-s="name" class="on">A–Z</button><button data-s="id">ID</button></div><span class="sp"></span><span class="chip" id="lib-n"></span>'+(S.full?'<button class="btn" id="lib-pkg">'+ic("download")+L("Instalar PKG","Install PKG")+'</button>':"")+'</div><div id="pkgbox"></div><div class="grid" id="grid"></div>';
+      '<div class="seg" id="lib-s"><button data-s="name" class="on">A–Z</button><button data-s="id">ID</button></div>'+
+      (S.full?'<select class="in" id="lib-st"><option value="">'+L("Cualquier estado","Any status")+'</option>'+STS.map(function(x){return '<option value="'+x[0]+'">'+x[1]+'</option>'}).join("")+'<option value="none">'+L("Sin marcar","Not marked")+'</option></select>':"")+
+      '<span class="sp"></span><span class="chip" id="lib-n"></span>'+(S.full?'<button class="btn" id="lib-pkg">'+ic("download")+L("Instalar PKG","Install PKG")+'</button>':"")+'</div><div id="pkgbox"></div><div class="grid" id="grid"></div>';
     if($("lib-pkg"))$("lib-pkg").onclick=function(){S.pkgOpen=!S.pkgOpen;paintPkg()};
     $("lib-q").oninput=function(){S.q=this.value.trim().toLowerCase();paintGrid()};
     $("lib-f").onclick=function(e){var b=e.target.closest("button");if(!b)return;S.filter=b.getAttribute("data-f");seg(this,b);paintGrid()};
+    if($("lib-st"))$("lib-st").onchange=function(){S.stf=this.value;paintGrid()};
     $("lib-s").onclick=function(e){var b=e.target.closest("button");if(!b)return;S.sort=b.getAttribute("data-s");seg(this,b);paintGrid()};
     $("grid").onclick=function(e){var b=e.target.closest("button[data-id]"),g=e.target.closest(".game");
       if(b){e.stopPropagation();launch(b.getAttribute("data-id"))}else if(g)detail(g.getAttribute("data-id"))};
@@ -648,17 +668,24 @@ function paintLib(){
   paintGrid();
 }
 function seg(box,b){[].forEach.call(box.children,function(x){x.className=x===b?"on":""})}
+var STS=[["pending",L("Pendiente","Pending")],["playing",L("Jugando","Playing")],["done",L("Terminado","Finished")],["dropped",L("Abandonado","Dropped")]];
+S.status={};S.stf="";S.play={games:{},today:""};
+function stName(k){for(var i=0;i<STS.length;i++)if(STS[i][0]===k)return STS[i][1];return ""}
+function loadStatus(){if(!S.full)return Promise.resolve();return api("/api/library/status").then(function(j){S.status=j.status||{};if(S.view==="library")paintGrid()}).catch(function(){})}
+function setStatus(id,st){S.status[id]=st;if(!st)delete S.status[id];paintGrid();return api("/api/library/status",{titleId:id,status:st}).catch(function(e){fail(e);loadStatus()})}
 function paintGrid(){
   if(!$("grid"))return;
   var list=S.apps.filter(function(a){
     if(S.filter==="games"&&UTIL.test(a.titleId))return false;
     if(S.filter==="all"&&/^NPXS/.test(a.titleId))return false;
+    if(S.stf&&(S.stf==="none"?!!S.status[a.titleId]:S.status[a.titleId]!==S.stf))return false;
     return !S.q||(a.title||"").toLowerCase().indexOf(S.q)>=0||a.titleId.toLowerCase().indexOf(S.q)>=0});
   list.sort(function(a,b){return (b.titleId===S.running)-(a.titleId===S.running)||(S.sort==="id"?a.titleId.localeCompare(b.titleId):(a.title||"").localeCompare(b.title||""))});
   $("lib-n").textContent=list.length+" "+L("títulos","titles");
   $("grid").innerHTML=list.length?list.map(function(a){var run=a.titleId===S.running,id=esc(a.titleId);
     return '<div class="game'+(run?" run":"")+'" data-id="'+id+'" tabindex="0"><div class="cover">'+
       (a.hasIcon?'<img loading="lazy" alt="" src="/apps/icon?id='+id+'">':'<div class="ph">'+id+'</div>')+
+      (S.status[a.titleId]?'<div class="st '+S.status[a.titleId]+'">'+stName(S.status[a.titleId]).toUpperCase()+'</div>':"")+
       (run?'<div class="tag">'+L("EN MARCHA","RUNNING")+'</div>':'<div class="go"><button class="btn pri sm" data-id="'+id+'">'+ic("play")+L("Lanzar","Launch")+'</button></div>')+
       '</div><b title="'+esc(a.title)+'">'+esc(a.title||a.titleId)+'</b><i>'+id+(a.version?" · v"+esc(a.version.replace(/^0/,"")):"")+'</i></div>'
   }).join(""):'<div class="empty" style="grid-column:1/-1">'+ic("search")+'<div>'+L("No hay nada que mostrar.","Nothing to show.")+'</div></div>';
@@ -670,13 +697,16 @@ function detail(id){
     (run?'<span class="chip ok">'+L("En marcha","Running")+'</span>':'<span class="chip">'+esc(a.format||"").toUpperCase()+'</span>')+
     '<dl class="kv"><dt>Title ID</dt><dd>'+e+'</dd>'+(a.version?'<dt>'+L("Versión","Version")+'</dt><dd>'+esc(a.version)+'</dd>':"")+
     (a.contentId?'<dt>Content ID</dt><dd>'+esc(a.contentId)+'</dd>':"")+(loc?'<dt>'+L("Ruta","Path")+'</dt><dd>'+esc(loc.path)+'</dd>':"")+
-    '<dt>'+L("Idioma","Language")+'</dt><dd>'+esc(a.defaultLanguage||"–")+'</dd></dl>'+
+    '<dt>'+L("Idioma","Language")+'</dt><dd>'+esc(a.defaultLanguage||"–")+'</dd>'+
+    (S.play.games[id]?'<dt>'+L("Jugado","Played")+'</dt><dd>'+dur(S.play.games[id].total)+" · "+S.play.games[id].sessions+" "+L("sesiones","sessions")+'</dd>':"")+'</dl>'+
+    (S.full?'<div class="seg" style="margin-bottom:16px;flex-wrap:wrap">'+STS.map(function(x){return '<button data-st="'+x[0]+'" class="'+(S.status[id]===x[0]?"on":"")+'">'+x[1]+'</button>'}).join("")+'</div>':"")+
     '<div style="display:flex;gap:10px;flex-wrap:wrap">'+
     (run?'<button class="btn danger" data-k="close">'+ic("x")+L("Cerrar juego","Close game")+'</button>':'<button class="btn pri" data-k="launch">'+ic("play")+L("Lanzar","Launch")+'</button>')+
     (S.full&&loc?'<button class="btn" data-k="open">'+ic("files")+L("Ver ficheros","Browse files")+'</button>':"")+
     '<button class="btn" data-k="copy">'+ic("copy")+L("Copiar ID","Copy ID")+'</button></div></div>';
   $("drawer").className="drawer on";
   $("drawer-p").onclick=function(ev){var b=ev.target.closest("button");if(!b)return;var k=b.getAttribute("data-k");
+    if(b.hasAttribute("data-st")){var v=b.getAttribute("data-st");setStatus(id,S.status[id]===v?"":v);detail(id);return}
     if(b.hasAttribute("data-x")){}else if(k==="launch")launch(id);else if(k==="close")closeGame();
     else if(k==="open"){S.cwd=loc.path;show("files",true)}
     else if(k==="copy"){(navigator.clipboard?navigator.clipboard.writeText(id):Promise.reject()).then(function(){toast(L("Copiado","Copied"))},function(){toast(id)});return}
@@ -1151,6 +1181,41 @@ $("v-cheats").addEventListener("click",function(e){
     if(ok)api("/api/fs/delete",{path:CDIR+"/"+v}).then(loadCheats).catch(fail)});return}
   if(hd&&!b&&!e.target.closest("a")){v=hd.getAttribute("data-ch");ch.open[v]=!ch.open[v];paintCheats()}});
 
+/* ------------------------------------------------------------ stats */
+function loadStats(){if(!S.full)return Promise.resolve();return api("/api/stats/playtime").then(function(j){S.play={games:j.games||{},today:j.today||""};if(S.view==="stats")paintStats()}).catch(fail)}
+function dayAdd(d,n){var t=new Date(d+"T12:00:00");t.setDate(t.getDate()+n);return t.getFullYear()+"-"+("0"+(t.getMonth()+1)).slice(-2)+"-"+("0"+t.getDate()).slice(-2)}
+function hm(s){s=Math.round(s/60);var h=Math.floor(s/60),m=s%60;return h?h+" h"+(m?" "+m+" min":""):m+" min"}
+function paintStats(){
+  var g=S.play.games,ids=Object.keys(g),td=S.play.today;
+  if(!ids.length||!td){$("v-stats").innerHTML='<div class="card"><div class="empty">'+ic("stats")+'<div>'+L("Todavía no hay nada contado. NeoHEN empieza a contar el tiempo de juego desde que carga esta versión; abre un juego y vuelve luego.","Nothing counted yet. NeoHEN starts counting play time from the moment this version is loaded; open a game and come back later.")+'</div></div></div>';return}
+  var byDay={},total=0,sessions=0;
+  ids.forEach(function(id){total+=g[id].total;sessions+=g[id].sessions;Object.keys(g[id].days||{}).forEach(function(d){byDay[d]=(byDay[d]||0)+g[id].days[d]})});
+  function span(n){var s=0;for(var i=0;i<n;i++)s+=byDay[dayAdd(td,-i)]||0;return s}
+  /* streaks: days in a row with at least ten minutes */
+  var cur=0,best=0,run=0,days=Object.keys(byDay).sort(),first=days[0];
+  for(var d=td,i=0;i<3650&&d>=first;i++,d=dayAdd(d,-1)){if((byDay[d]||0)>=600){run++;best=Math.max(best,run)}else{if(d===td){continue}run=0}}
+  for(d=td,i=0;i<3650;i++,d=dayAdd(d,-1)){if((byDay[d]||0)>=600)cur++;else if(d!==td)break}
+  var top=ids.slice().sort(function(a,b){return g[b].total-g[a].total}),max=g[top[0]].total||1;
+  var wk=[],wmax=1;for(i=7;i>=0;i--){var s=0;for(var k=0;k<7;k++)s+=byDay[dayAdd(td,-(i*7+k))]||0;wk.push([dayAdd(td,-(i*7+6)),s]);wmax=Math.max(wmax,s)}
+  var dd=[],dmax=1;for(i=13;i>=0;i--){var x=dayAdd(td,-i);dd.push([x,byDay[x]||0]);dmax=Math.max(dmax,byDay[x]||0)}
+  var wd=td?new Date(td+"T12:00:00"):new Date(),week7=span(7),active=Object.keys(byDay).filter(function(x){return byDay[x]>=600}).length;
+  function kpi(l,v,sub){return '<div class="card stk"><label>'+l+'</label><b>'+v+'</b><small>'+sub+'</small></div>'}
+  function bars(list,mx,fmt){return '<div class="bars">'+list.map(function(p){return '<div title="'+p[0]+" · "+hm(p[1])+'"><i style="height:'+Math.max(1,Math.round(p[1]/mx*100))+'%;opacity:'+(p[1]?1:.25)+'"></i><span>'+fmt(p[0])+'</span></div>'}).join("")+'</div>'}
+  $("v-stats").innerHTML='<div class="stg">'+
+    kpi(L("Tiempo total","Total time"),hm(total),sessions+" "+L("sesiones","sessions")+" · "+ids.length+" "+L("juegos","games"))+
+    kpi(L("Últimos 7 días","Last 7 days"),hm(week7),L("media de ","average ")+hm(week7/7)+L(" al día"," a day"))+
+    kpi(L("Últimos 30 días","Last 30 days"),hm(span(30)),active+" "+L("días con juego en total","days played in all"))+
+    kpi(L("Racha actual","Current streak"),cur+" "+(cur===1?L("día","day"):L("días","days")),L("mejor racha: ","best streak: ")+best+" "+L("días","days"))+
+    kpi(L("Más jugado","Most played"),esc(title(top[0])),hm(g[top[0]].total))+'</div>'+
+    '<div class="g2" style="margin-top:0"><div class="card pad"><h3 class="h">'+L("Por semana","By week")+' <em>'+L("últimas 8","last 8")+'</em></h3>'+bars(wk,wmax,function(x){return x.slice(8)+"/"+x.slice(5,7)})+'</div>'+
+    '<div class="card pad"><h3 class="h">'+L("Por día","By day")+' <em>'+L("últimos 14","last 14")+'</em></h3>'+bars(dd,dmax,function(x){return x.slice(8)})+'</div></div>'+
+    '<h3 class="h" style="margin-top:24px">'+L("Por juego","By game")+' <em>'+ids.length+'</em></h3><div class="card pad">'+top.map(function(id){var a=app(id),x=g[id],st=S.status[id];
+      return '<div class="rk">'+(a&&a.hasIcon?'<img loading="lazy" alt="" src="/apps/icon?id='+id+'">':'<div class="ph"></div>')+'<div class="t"><b>'+esc(title(id))+(st?' <span class="chip">'+stName(st)+'</span>':"")+'</b><div class="prog"><i style="width:'+Math.max(2,Math.round(x.total/max*100))+'%"></i></div></div>'+
+        '<em>'+hm(x.total)+" · "+x.sessions+" "+L("ses.","sess.")+(x.last?" · "+when(x.last):"")+'</em></div>'}).join("")+'</div>'+
+    '<p style="margin:14px 2px 0;font:500 11.5px var(--mono);color:var(--faint)">'+L("Cuenta NeoWEB mientras está cargado; lo jugado sin NeoHEN, o antes de esta versión, no aparece. Una racha pide al menos diez minutos de juego al día.","Counted by NeoWEB while it is loaded; what was played without NeoHEN, or before this version, is not here. A streak needs at least ten minutes of play a day.")+'</p>';
+  void wd;
+}
+
 /* ------------------------------------------------------------ themes */
 var TDIR="/data/neohen/themes";
 /* The 128 bytes that start a 3840x2160 DXT1 file, as the console's own are. */
@@ -1434,7 +1499,7 @@ function fast(){
 }
 function slow(){
   return Promise.all([api("/api/apps/list"),api("/api/sys/mounts")]).then(function(x){
-    S.apps=x[0].apps||[];S.mounts=x[1].mounts||[];paintNav();
+    S.apps=x[0].apps||[];S.mounts=x[1].mounts||[];paintNav();loadStatus();if(S.full)api("/api/stats/playtime").then(function(j){S.play={games:j.games||{},today:j.today||""}}).catch(function(){});
     if(S.view==="panel")paintPanel();else if(S.view==="library")paintGrid();else if(S.view==="system"&&!/^(fan-r|nt)$/.test((document.activeElement||{}).id||""))paintSys();
   }).catch(function(){});
 }

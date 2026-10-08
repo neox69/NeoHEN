@@ -174,7 +174,7 @@ class PayloadTest(unittest.TestCase):
         cls.port = free_port()
         cls.ctl_port = free_port()
         env = dict(os.environ, PS5AIO_ROOT=cls.root, NEOWEB_CTL_PORT=str(cls.ctl_port),
-                   NEOWEB_TEST_USB="1")
+                   NEOWEB_TEST_USB="1", NEOWEB_PLAY_TICK_MS="100")
         cls.proc = subprocess.Popen([BIN, str(cls.port)], env=env,
                                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         cls.api = Api(f"http://127.0.0.1:{cls.port}")
@@ -307,6 +307,40 @@ class PayloadTest(unittest.TestCase):
         st, body, _ = self.api.req("PUT", "/fs/put?path=/data/t/h.bin&offset=%d" % (len(payload) + 10),
                                    raw=b"x")
         self.assertEqual(st, 409, body)
+
+    def test_playtime_and_status(self):
+        _, j = self.api.get("/api/library/status")
+        self.assertEqual(j["status"], {})
+        st, body, _ = self.api.req("POST", "/api/library/status", body={"titleId": "PPSA01234", "status": "winning"})
+        self.assertEqual(st, 400, body)
+        st, body, _ = self.api.req("POST", "/api/library/status", body={"titleId": "../x", "status": "done"})
+        self.assertEqual(st, 400, body)
+        self.api.post("/api/library/status", {"titleId": "PPSA01234", "status": "playing"})
+        self.api.post("/api/library/status", {"titleId": "CUSA00001", "status": "done"})
+        self.api.post("/api/library/status", {"titleId": "CUSA00001", "status": ""})
+        _, j = self.api.get("/api/library/status")
+        self.assertEqual(j["status"], {"PPSA01234": "playing"})
+        with open(f"{self.root}/data/neohen/web/library.json") as f:
+            self.assertEqual(json.load(f)["status"], {"PPSA01234": "playing"})
+
+        # a game open for a moment is counted, to the day
+        self.api.post("/api/apps/kill", {})
+        _, before = self.api.get("/api/stats/playtime")
+        had = before["games"].get("PPSA01234", {}).get("sessions", 0)
+        self.api.post("/api/apps/launch", {"titleId": "PPSA01234"})
+        time.sleep(2.4)
+        self.api.post("/api/apps/kill", {})
+        time.sleep(0.5)
+        _, j = self.api.get("/api/stats/playtime")
+        g = j["games"]["PPSA01234"]
+        self.assertEqual(g["sessions"], had + 1)
+        self.assertGreaterEqual(g["total"], 1)
+        self.assertLessEqual(g["total"], 60)
+        self.assertEqual(sum(g["days"].values()), g["total"])
+        self.assertIn(j["today"], g["days"])
+        self.assertGreater(g["last"], 1700000000)
+        with open(f"{self.root}/data/neohen/web/playtime.json") as f:
+            self.assertIn("PPSA01234", json.load(f)["games"])
 
     def test_report(self):
         import io
