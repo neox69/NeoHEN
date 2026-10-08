@@ -174,7 +174,7 @@ class PayloadTest(unittest.TestCase):
         cls.port = free_port()
         cls.ctl_port = free_port()
         env = dict(os.environ, PS5AIO_ROOT=cls.root, NEOWEB_CTL_PORT=str(cls.ctl_port),
-                   NEOWEB_TEST_USB="1", NEOWEB_PLAY_TICK_MS="100")
+                   NEOWEB_TEST_USB="1", NEOWEB_PLAY_TICK_MS="100", NEOWEB_AUTOSAVE_DELAY_MS="100")
         cls.proc = subprocess.Popen([BIN, str(cls.port)], env=env,
                                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         cls.api = Api(f"http://127.0.0.1:{cls.port}")
@@ -341,6 +341,37 @@ class PayloadTest(unittest.TestCase):
         self.assertGreater(g["last"], 1700000000)
         with open(f"{self.root}/data/neohen/web/playtime.json") as f:
             self.assertIn("PPSA01234", json.load(f)["games"])
+
+    def test_zz_autosave(self):
+        base = f"{self.root}/mnt/usb0/NeoHEN/saves/users/NeoX_ESP (1d31cd9c)/PPSA01234"
+
+        def autos():
+            return sorted(d for d in os.listdir(base) if d.endswith("-auto")) if os.path.isdir(base) else []
+
+        def play():
+            self.api.post("/api/apps/launch", {"titleId": "PPSA01234"})
+            time.sleep(0.5)
+            self.api.post("/api/apps/kill", {})
+            time.sleep(1.3)  # the copy is named to the second
+
+        _, j = self.api.get("/api/saves/auto")
+        self.assertEqual((j["enabled"], j["keep"], j["usb"]), (False, 5, True))
+        had = len(autos())
+        play()
+        self.assertEqual(len(autos()), had)  # off: nothing is copied
+        st, body, _ = self.api.req("POST", "/api/saves/auto", body={"enabled": True, "keep": 99})
+        self.assertEqual(st, 400, body)
+        self.api.post("/api/saves/auto", {"enabled": True, "keep": 2})
+        for _ in range(3):
+            play()
+        got = autos()
+        self.assertEqual(len(got), 2, got)  # three were made, the two newest stay
+        with open(f"{base}/{got[-1]}/savedata_prospero/sdimg_SAVEDATA0", "rb") as f:
+            with open(f"{self.save}/sdimg_SAVEDATA0", "rb") as g:
+                self.assertEqual(f.read(), g.read())
+        self.api.post("/api/saves/auto", {"enabled": False})
+        _, j = self.api.get("/api/saves/auto")
+        self.assertEqual((j["enabled"], j["keep"]), (False, 2))
 
     def test_report(self):
         import io

@@ -261,6 +261,10 @@ count_thread(void *arg) {
         g_dirty = 1;
       }
     }
+    char closed[16] = "";
+    if(open_now[0] && strcmp(open_now, tid)) {
+      snprintf(closed, sizeof(closed), "%s", open_now);
+    }
     snprintf(open_now, sizeof(open_now), "%s", tid);
     unsaved_ms += tick_ms;
     if(g_dirty && (unsaved_ms >= SAVE_EVERY_S * 1000L || !tid[0])) {
@@ -269,6 +273,9 @@ count_thread(void *arg) {
       unsaved_ms = 0;
     }
     pthread_mutex_unlock(&g_lock);
+    if(closed[0]) {
+      saves_on_game_closed(closed);
+    }
   }
   return NULL;
 }
