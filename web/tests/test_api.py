@@ -170,6 +170,11 @@ class PayloadTest(unittest.TestCase):
                 f.write(dat)
             with open(f"{d}/{name.rsplit('.', 1)[0]}.meta", "wb") as f:
                 f.write(b"{}")
+        # the console keeps a thumbnail of the screenshot, not of the clip here
+        t = f"{r}/user/av_contents/thumbnails/photo/NPXS40087/PPSA01234/2fc"
+        os.makedirs(t)
+        with open(f"{t}/20250615_150127_00997366.jxr.jxr", "wb") as f:
+            f.write(b"II\xbc\x01" + b"t" * 500)
 
         cls.port = free_port()
         cls.ctl_port = free_port()
@@ -517,6 +522,13 @@ class PayloadTest(unittest.TestCase):
                           ("20261005_180320_00660961", "video", "webm", "PPSA01234", "My Game: II", "1d31cd9c")])
         self.assertEqual(j["users"], {"1d31cd9c": "NeoX ESP"})
         self.assertEqual(items[0]["size"], 3004)
+        self.assertEqual(items[0]["thumb"], "/user/av_contents/thumbnails/photo/NPXS40087/PPSA01234/2fc/"
+                                            "20250615_150127_00997366.jxr.jxr")
+        self.assertEqual(items[1]["thumb"], "")
+        st, body, hdrs = self.api.req("GET", "/jxr.js")
+        self.assertEqual(st, 200)
+        self.assertIn("javascript", hdrs["Content-Type"])
+        self.assertIn(b"JxrModule", body[:200])
         st, body, _ = self.api.req("GET", "/api/captures/zip")
         self.assertEqual(st, 200)
         z = zipfile.ZipFile(io.BytesIO(body))

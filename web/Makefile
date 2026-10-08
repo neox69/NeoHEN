@@ -28,9 +28,10 @@ FULLDEF     := -Wno-unused-function
 endif
 HEADERS     := $(wildcard src/*.h)
 WEBUI       := webui/index.html
+JXRJS       := jxr/jxr.js
 
 WARN   := -Wall -Wextra -Wno-unused-parameter -Wno-sign-compare -Wno-format-truncation -Werror
-DEFS   := -DWEBUI_PATH=\"$(CURDIR)/$(WEBUI)\" $(FULLDEF)
+DEFS   := -DWEBUI_PATH=\"$(CURDIR)/$(WEBUI)\" -DJXRJS_PATH=\"$(CURDIR)/$(JXRJS)\" $(FULLDEF)
 
 .PHONY: all host clean test
 
@@ -47,7 +48,7 @@ endif
 
 all: $(ELF)
 
-$(ELF): $(COMMON_SRCS) src/plat_ps5.c $(HEADERS) $(WEBUI)
+$(ELF): $(COMMON_SRCS) src/plat_ps5.c $(HEADERS) $(WEBUI) $(JXRJS)
 	$(CC) -O2 -g $(WARN) -Isrc $(DEFS) -o $@ $(COMMON_SRCS) src/plat_ps5.c \
 	  -lkernel_sys -lSceSystemService -lSceUserService -lSceAppInstUtil
 
@@ -59,7 +60,7 @@ HOST_CC ?= cc
 
 host: $(HOST_BIN)
 
-$(HOST_BIN): $(COMMON_SRCS) src/plat_host.c $(HEADERS) $(WEBUI)
+$(HOST_BIN): $(COMMON_SRCS) src/plat_host.c $(HEADERS) $(WEBUI) $(JXRJS)
 	@mkdir -p build
 	$(HOST_CC) -O1 -g $(WARN) -D_GNU_SOURCE -Isrc $(DEFS) -o $@ \
 	  $(COMMON_SRCS) src/plat_host.c -lpthread -lm
