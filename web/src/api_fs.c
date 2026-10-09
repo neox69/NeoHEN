@@ -9,6 +9,7 @@
 #include <string.h>
 #include <strings.h>
 #include <sys/stat.h>
+#include <pthread.h>
 #include <sys/statvfs.h>
 #include <unistd.h>
 
@@ -632,12 +633,83 @@ api_fs_hash(http_req_t *req) {
   api_finish(req, &w);
 }
 
+/* ---- an upload on its way from the socket to the drive */
+
+#define UP_SLOTS 8
+#define UP_SLOT  (1024 * 1024)
+
+typedef struct up_pipe {
+  char           *buf[UP_SLOTS];
+  size_t          len[UP_SLOTS];
+  int             head, tail, count;
+  int             done;  /* nothing more will come */
+  int             error; /* errno of the write that failed */
+  int             fd;
+  uint64_t        written;
+  pthread_mutex_t lock;
+  pthread_cond_t  turn;
+} up_pipe_t;
+
+static void
+up_free(up_pipe_t *up) {
+  for(int i = 0; i < UP_SLOTS; i++) {
+    free(up->buf[i]);
+  }
+  pthread_mutex_destroy(&up->lock);
+  pthread_cond_destroy(&up->turn);
+  free(up);
+}
+
+/* write what is waiting; with `wait`, keep at it until the upload is over */
+static void
+up_write(up_pipe_t *up, int wait) {
+  pthread_mutex_lock(&up->lock);
+  for(;;) {
+    while(wait && !up->count && !up->done) {
+      pthread_cond_wait(&up->turn, &up->lock);
+    }
+    if(!up->count) {
+      break;
+    }
+    int slot = up->head;
+    size_t left = up->len[slot];
+    const char *p = up->buf[slot];
+    int err = up->error;
+
+    pthread_mutex_unlock(&up->lock);
+    while(left && !err) {
+      ssize_t n = write(up->fd, p, left);
+      if(n < 0 && errno == EINTR) {
+        continue;
+      }
+      if(n <= 0) {
+        err = n < 0 ? errno : EIO;
+        break;
+      }
+      p += n;
+      left -= (size_t)n;
+    }
+    pthread_mutex_lock(&up->lock);
+    up->written += up->len[slot] - left;
+    up->error = err;
+    up->head = (up->head + 1) % UP_SLOTS;
+    up->count--;
+    pthread_cond_broadcast(&up->turn);
+  }
+  pthread_mutex_unlock(&up->lock);
+}
+
+static void *
+up_writer(void *arg) {
+  up_write(arg, 1);
+  return NULL;
+}
+
 void
 api_fs_put(http_req_t *req) {
   char console[PATH_MAX], local[PATH_MAX];
   int64_t offset = http_query_int(req, "offset", -1);
   uint64_t written = 0;
-  char *buf;
   int fd;
   jw_t w;
 
@@ -694,38 +766,79 @@ api_fs_put(http_req_t *req) {
     http_send_error(req, 500, "seek: %s", strerror(errno));
     return;
   }
-  if(!(buf = malloc(UPLOAD_BUF))) {
+  /* The network and the drive each at their own pace: this thread takes the
+   * data off the socket into a few buffers, another one writes them out. */
+  up_pipe_t *up = calloc(1, sizeof(*up));
+  pthread_t writer;
+  int failed = 0, threaded = 0;
+
+  if(up) {
+    pthread_mutex_init(&up->lock, NULL);
+    pthread_cond_init(&up->turn, NULL);
+    up->fd = fd;
+    for(int i = 0; i < UP_SLOTS; i++) {
+      if(!(up->buf[i] = malloc(UP_SLOT))) {
+        up_free(up);
+        up = NULL;
+        break;
+      }
+    }
+  }
+  if(!up) {
     close(fd);
     http_send_error(req, 500, "out of memory");
     return;
   }
+  threaded = !pthread_create(&writer, NULL, up_writer, up);
+  while(req->body_left > 0 && !failed) {
+    size_t n = 0;
+    int slot;
 
-  int failed = 0;
-  while(req->body_left > 0) {
-    ssize_t n = http_read_body(req, buf, UPLOAD_BUF);
-    if(n <= 0) {
-      failed = 1;
-      break;
+    pthread_mutex_lock(&up->lock);
+    while(up->count == UP_SLOTS && !up->error) {
+      pthread_cond_wait(&up->turn, &up->lock);
     }
-    char *p = buf;
-    while(n > 0) {
-      ssize_t wn = write(fd, p, (size_t)n);
-      if(wn <= 0) {
-        if(wn < 0 && errno == EINTR) {
-          continue;
-        }
-        failed = 2;
-        break;
-      }
-      p += wn;
-      n -= wn;
-      written += (uint64_t)wn;
-    }
+    slot = up->tail;
+    failed = up->error ? 2 : 0;
+    pthread_mutex_unlock(&up->lock);
     if(failed) {
       break;
     }
+    while(n < UP_SLOT && req->body_left > 0) {
+      ssize_t got = http_read_body(req, up->buf[slot] + n, UP_SLOT - n);
+      if(got <= 0) {
+        failed = 1;
+        break;
+      }
+      n += (size_t)got;
+    }
+    /* what did arrive is written even when the connection broke: the
+     * upload continues from there */
+    pthread_mutex_lock(&up->lock);
+    up->len[slot] = n;
+    up->tail = (up->tail + 1) % UP_SLOTS;
+    up->count++;
+    pthread_cond_broadcast(&up->turn);
+    pthread_mutex_unlock(&up->lock);
+    if(!threaded) {
+      up_write(up, 0);
+    }
   }
-  free(buf);
+  pthread_mutex_lock(&up->lock);
+  up->done = 1;
+  pthread_cond_broadcast(&up->turn);
+  pthread_mutex_unlock(&up->lock);
+  if(threaded) {
+    pthread_join(writer, NULL);
+  } else {
+    up_write(up, 0);
+  }
+  written = up->written;
+  if(up->error) {
+    errno = up->error;
+    failed = 2;
+  }
+  up_free(up);
   if(close(fd) && !failed) {
     failed = 2;
   }

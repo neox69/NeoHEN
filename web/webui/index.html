@@ -423,6 +423,8 @@ dialog textarea{width:100%;height:min(60vh,560px);resize:vertical;font:500 12.5p
       <section id="v-library" hidden></section>
       <section id="v-files" hidden></section>
       <section id="v-payloads" hidden></section>
+      <section id="v-smp" hidden></section>
+      <section id="v-game" hidden></section>
       <section id="v-themes" hidden></section>
       <section id="v-saves" hidden></section>
       <section id="v-captures" hidden></section>
@@ -449,6 +451,7 @@ dialog textarea{width:100%;height:min(60vh,560px);resize:vertical;font:500 12.5p
 <input type="file" id="pick-sz" accept=".zip" hidden>
 <input type="file" id="pick-ch" accept=".json,.shn,.mc4" multiple hidden>
 <input type="file" id="pick-pkg" accept=".pkg" hidden>
+<input type="file" id="pick-img" accept=".ffpfsc,.ffpfs,.ffpkg,.exfat,.ufs,.pfs" hidden>
 <input type="file" id="pick-cfg" accept=".json" hidden>
 <div class="toast" id="toast" role="status"></div>
 <dialog id="dlg"><h4 id="dh"></h4><p id="dp"></p><input class="in" id="di" hidden>
@@ -508,6 +511,7 @@ var P={
  saves:"M5 4h11l3 3v13H5zM8 4v5h7V4M8 20v-6h8v6",
  stats:"M4 20V10M10 20V4M16 20v-7M22 20H2",
  trophies:"M7 4h10v5a5 5 0 0 1-10 0zM7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3M12 14v4M8 20h8",
+ smp:"M4 7l8-4 8 4-8 4zM4 12l8 4 8-4M4 17l8 4 8-4",
  settings:"M4 7h10M18 7h2M4 12h4M12 12h8M4 17h12M20 17h0M14 5v4M8 10v4M16 15v4",
  cheats:"M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6-5.3-3-5.3 3 1.2-6L3.4 9.3l6-.7z",
  captures:"M4 7h3l2-2h6l2 2h3v12H4zM12 10a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7z",
@@ -548,7 +552,7 @@ function ask(title,text,yes,danger,input){return new Promise(function(res){
 
 /* ------------------------------------------------------------ state */
 var UTIL=/^(NPXS|APDU|APRE|ORBT|PLDM|FAKE|WKAL|MOUU|PPSA99)/;
-var S={info:{},apps:[],mounts:[],running:null,hist:[],pay:[],payDir:"",ro:false,full:null,jobs:[],procs:[],
+var S={gp:{id:"",tro:null},info:{},apps:[],mounts:[],running:null,hist:[],pay:[],payDir:"",ro:false,full:null,jobs:[],procs:[],
        view:"panel",filter:CFG.libFilter,sort:CFG.libSort,q:"",cwd:"/data",dir:[],fsort:"name",fdir:1,pq:"",psort:"rss",online:null};
 var VIEWS=[
  ["panel",L("Panel","Dashboard"),L("Estado de la consola en directo","The console, live")],
@@ -557,6 +561,8 @@ var VIEWS=[
  ["trophies",L("Trofeos","Trophies"),L("Lo conseguido y lo que falta, por juego","What you have and what is left, by game"),1],
  ["files",L("Ficheros","Files"),L("Explora, sube, descarga y edita","Browse, upload, download and edit"),1],
  ["payloads","Payloads",L("Lo que NeoHEN arranca y lo que puedes lanzar","What NeoHEN starts and what you can launch")],
+ ["smp","ShadowMount+",L("Los juegos que monta y cómo le va","The games it mounts, and how it is doing"),1],
+ ["game","","",0,1],
  ["themes",L("Temas","Themes"),L("Fondo y música del menú de la PS5","Background and music of the PS5 menu"),1],
  ["saves",L("Partidas","Saves"),L("Copias de seguridad de las partidas, por usuario","Backups of save data, by user"),1],
  ["captures",L("Capturas","Captures"),L("Capturas de pantalla y vídeos de la consola","Screenshots and clips on the console"),1],
@@ -573,27 +579,28 @@ function games(){return S.apps.filter(function(a){return !UTIL.test(a.titleId)})
 function paintNav(){
   var act=S.ups.filter(function(u){return u.st==="run"||u.st==="wait"}).length+S.jobs.filter(function(j){return j.state==="running"}).length;
   var badge={library:games().length||"",payloads:S.pay.length?S.pay.filter(function(p){return p.running}).length+"/"+S.pay.length:"",transfers:act||""};
-  $("nav").innerHTML='<h6>'+L("Consola","Console")+'</h6>'+VIEWS.filter(function(v){return (!v[3]||S.full)&&CFG.hide.indexOf(v[0])<0}).map(function(v,i){
-    return (v[0]===VIEWS.filter(function(x){return x[3]&&CFG.hide.indexOf(x[0])<0})[0][0]&&S.full?'<h6>'+L("Herramientas","Tools")+'</h6>':"")+(v[0]==="system"?'<h6>'+L("Consola y página","Console and page")+'</h6>':"")+
+  $("nav").innerHTML='<h6>'+L("Consola","Console")+'</h6>'+VIEWS.filter(function(v){return (!v[3]||S.full)&&!v[4]&&CFG.hide.indexOf(v[0])<0}).map(function(v,i){
+    return (v[0]===VIEWS.filter(function(x){return x[3]&&!x[4]&&CFG.hide.indexOf(x[0])<0})[0][0]&&S.full?'<h6>'+L("Herramientas","Tools")+'</h6>':"")+(v[0]==="system"?'<h6>'+L("Consola y página","Console and page")+'</h6>':"")+
       '<button data-v="'+v[0]+'" class="'+(S.view===v[0]?"on":"")+'">'+ic(v[0])+'<span>'+v[1]+'</span>'+
       (badge[v[0]]?'<em class="'+(v[0]==="transfers"?"hot":"")+'">'+badge[v[0]]+'</em>':"")+'</button>'}).join("");
 }
 function show(v,push){
+  if(/^game=/.test(v)){S.gp.id=v.slice(5);v="game"}
   var def=VIEWS.filter(function(x){return x[0]===v&&(!x[3]||S.full!==false)})[0];
   if(!def){def=VIEWS[0];v="panel"}
   S.view=v;VIEWS.forEach(function(x){$("v-"+x[0]).hidden=x[0]!==v});
   $("vt").textContent=def[1];$("vs").textContent=def[2];
-  if(push)history.replaceState(null,"","#"+v);
+  if(push)history.replaceState(null,"","#"+(v==="game"?"game="+S.gp.id:v));
   $("side").className="side";paintNav();render();$("view").scrollTop=0;
-  if(v==="files")loadDir(S.cwd);if(v==="procs")loadProcs();if(v==="system"){loadLog();S.fanEdit=null;loadFan()}if(v==="transfers")loadJobs();if(v==="payloads")loadPay();if(v==="themes")loadThemes();if(v==="saves")loadSaves();if(v==="captures")loadCaps();if(v==="cheats")loadCheats();if(v==="stats")loadStats();if(v==="trophies")loadTrophies();
+  if(v==="files")loadDir(S.cwd);if(v==="procs")loadProcs();if(v==="system"){loadLog();S.fanEdit=null;loadFan()}if(v==="transfers")loadJobs();if(v==="payloads")loadPay();if(v==="themes")loadThemes();if(v==="saves")loadSaves();if(v==="captures")loadCaps();if(v==="cheats")loadCheats();if(v==="stats")loadStats();if(v==="trophies")loadTrophies();if(v==="smp")loadSmp();if(v==="game")loadGame();
 }
 $("nav").onclick=function(e){var b=e.target.closest("button[data-v]");if(b)show(b.getAttribute("data-v"),true)};
-window.addEventListener("hashchange",function(){var h=location.hash.slice(1);if(h!==S.view)show(h)});
+window.addEventListener("hashchange",function(){var h=location.hash.slice(1);if(h!==S.view&&h!=="game="+S.gp.id)show(h)});
 $("burger").innerHTML=ic("menu");$("reload").innerHTML=ic("refresh");
 $("burger").onclick=function(){$("side").className="side open"};
 $("view").addEventListener("click",function(){$("side").className="side"});
 $("reload").onclick=function(){fast();slow();show(S.view);toast(L("Actualizado","Refreshed"))};
-function render(){({panel:paintPanel,library:paintLib,files:paintFiles,payloads:paintPay,themes:paintThemes,saves:paintSaves,captures:paintCaps,cheats:paintCheats,stats:paintStats,trophies:paintTrophies,transfers:paintTr,procs:paintProcs,system:paintSys,settings:paintCfg})[S.view]()}
+function render(){({panel:paintPanel,library:paintLib,files:paintFiles,payloads:paintPay,themes:paintThemes,saves:paintSaves,captures:paintCaps,cheats:paintCheats,stats:paintStats,trophies:paintTrophies,smp:paintSmp,game:paintGameView,transfers:paintTr,procs:paintProcs,system:paintSys,settings:paintCfg})[S.view]()}
 
 /* ------------------------------------------------------------ dashboard */
 function tcol(v){return v>=88?"var(--bad)":v>=78?"var(--warn)":"var(--ok)"}
@@ -695,14 +702,49 @@ $("pick-pkg").onchange=function(){var f=this.files[0];this.value="";if(!f)return
   var dest=pj(PKGDIR,f.name.replace(/[^A-Za-z0-9._ -]/g,"_"));
   S.ups.push({f:f,name:f.name,dest:dest,size:f.size,done:0,cur:0,base:0,st:"wait",after:function(){installPkg(dest,f.name.replace(/\.pkg$/i,""))}});
   toast(L("Subiendo el PKG; al terminar te pregunto para instalarlo. Progreso en Transferencias.","Uploading the PKG; when it is done you are asked to install it. Progress under Transfers."));paintNav();pump()};
+/* add a game: an image from this PC to the drive ShadowMount+ watches */
+S.add={open:false,f:null,name:"",to:"",roots:[]};
+function addRoots(){return api("/api/games/images?id=-").then(function(j){S.add.roots=j.roots||[];if(!S.add.roots.some(function(r){return r.path===S.add.to}))S.add.to="";paintAdd()}).catch(function(){})}
+function imgName(n){var dot=n.lastIndexOf("."),ext=dot>0?n.slice(dot):"",b=dot>0?n.slice(0,dot):n;
+  b=b.normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/['’`´]/g,"").replace(/\s*:\s*/g," - ").replace(/[\\\/*?"<>|™®]/g,"").replace(/[_.]+/g," ").replace(/\s+/g," ").trim();
+  return b+ext.toLowerCase()}
+function paintAdd(){
+  var b=$("addbox"),A=S.add;if(!b)return;if(!A.open){b.innerHTML="";return}
+  var f=A.f,busy=S.ups.filter(function(u){return u.game&&(u.st==="run"||u.st==="wait")})[0];
+  b.innerHTML='<div class="card pad" style="margin-bottom:16px"><h3 class="h">'+L("Añadir un juego","Add a game")+'</h3>'+
+    '<p style="margin:0 0 14px;color:var(--dim)">'+L("Elige la imagen del juego en este PC (.ffpfsc, .exfat…) y a qué disco va. Se sube a la misma velocidad que por FTP; si se corta, vuelve a elegir el mismo fichero y continúa donde iba. ShadowMount+ lo registra solo al terminar.","Pick the game image on this PC (.ffpfsc, .exfat…) and the drive it goes to. It uploads as fast as FTP; if it is cut, pick the same file again and it carries on where it was. ShadowMount+ registers it by itself when it is done.")+'</p>'+
+    (busy?'<div class="note">'+L("Subiendo ","Uploading ")+esc(busy.name)+" · "+esc(upState(busy))+'</div>':"")+
+    '<div class="row" style="margin-bottom:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center"><button class="btn" id="add-pick">'+ic("files")+(f?L("Elegir otra imagen","Pick another image"):L("Elegir la imagen","Pick the image"))+'</button>'+(f?'<span class="chip">'+size(f.size)+'</span>':"")+'</div>'+
+    (f?'<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px"><input class="in" id="add-name" style="flex:1;min-width:280px" value="'+esc(A.name)+'" title="'+L("Nombre que tendrá en la consola","Name it will have on the console")+'"></div>'+
+      '<div class="row" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">'+A.roots.map(function(r){var room=r.free>f.size+7e7;
+        return '<button class="btn'+(A.to===r.path?" pri":"")+'" data-to="'+esc(r.path)+'"'+(room?"":" disabled")+'>'+ic("disk")+whereName(r.where).replace(/^./,function(c){return c.toUpperCase()})+" · "+size(r.free)+" "+L("libres","free")+(room?"":" · "+L("no cabe","no room"))+'</button>'}).join("")+'</div>'+
+      '<button class="btn pri" id="add-go"'+(A.to&&!S.ro?"":" disabled")+'>'+ic("upload")+L("Subir a la consola","Upload to the console")+'</button>':"")+'</div>';
+  $("add-pick").onclick=function(){$("pick-img").click()};
+  if(f){$("add-name").oninput=function(){A.name=this.value};
+    b.onclick=function(e){var t=e.target.closest("button[data-to]");if(t){A.to=t.getAttribute("data-to");paintAdd()}};
+    $("add-go").onclick=addGo}
+}
+$("pick-img").onchange=function(){var f=this.files[0];this.value="";if(!f)return;S.add.f=f;S.add.name=imgName(f.name);addRoots();paintAdd()};
+function addGo(){
+  var A=S.add,f=A.f,name=A.name.trim().replace(/[\\\/]/g,"");if(!f||!A.to||!name)return;
+  var fin=pj(A.to,name),tmp=fin+".subiendo",had=S.apps.map(function(a){return a.titleId});
+  api("/api/fs/stat?path="+enc(fin)).then(function(s){if(s.exists)throw new Error(L("Ya hay un fichero con ese nombre en ese disco","There is already a file with that name on that drive"));
+    /* under another name until it is whole, so that a cut upload is never taken for a game */
+    S.ups.push({f:f,name:name,dest:tmp,size:f.size,done:0,cur:0,base:0,st:"wait",game:true,after:function(){
+      api("/api/fs/rename",{from:tmp,to:fin}).then(function(){toast(name+L(" ya está en la consola. Esperando a que ShadowMount+ lo registre…"," is on the console. Waiting for ShadowMount+ to register it…"));
+        var n=0;(function look(){slow().then(function(){var nu=S.apps.filter(function(a){return had.indexOf(a.titleId)<0})[0];
+          if(nu)toast(L("Registrado: ","Registered: ")+(nu.title||nu.titleId));else if(++n<24)setTimeout(look,5000)})})()},fail)}});
+    A.f=null;toast(L("Subiendo. El progreso está en Transferencias.","Uploading. Progress is under Transfers."));paintNav();paintAdd();pump()}).catch(fail);
+}
 function paintLib(){
   if(!$("lib-q")){
     $("v-library").innerHTML='<div class="tools"><div class="srch">'+ic("search")+'<input class="in" id="lib-q" type="search" placeholder="'+L("Buscar juego o ID…","Search title or ID…")+'"></div>'+
       '<div class="seg" id="lib-f"><button data-f="games" class="on">'+L("Juegos","Games")+'</button><button data-f="all">'+L("Todo","All")+'</button></div>'+
       '<div class="seg" id="lib-s"><button data-s="name" class="on">A–Z</button><button data-s="id">ID</button></div>'+
       (S.full?'<select class="in" id="lib-st"><option value="">'+L("Cualquier estado","Any status")+'</option>'+STS.map(function(x){return '<option value="'+x[0]+'">'+x[1]+'</option>'}).join("")+'<option value="none">'+L("Sin marcar","Not marked")+'</option></select>':"")+
-      '<span class="sp"></span><span class="chip" id="lib-n"></span>'+(S.full?'<button class="btn" id="lib-pkg">'+ic("download")+L("Instalar PKG","Install PKG")+'</button>':"")+'</div><div id="pkgbox"></div><div class="grid" id="grid"></div>';
+      '<span class="sp"></span><span class="chip" id="lib-n"></span>'+(S.full?'<button class="btn pri" id="lib-add">'+ic("upload")+L("Añadir juego","Add a game")+'</button><button class="btn" id="lib-pkg">'+ic("download")+L("Instalar PKG","Install PKG")+'</button>':"")+'</div><div id="addbox"></div><div id="pkgbox"></div><div class="grid" id="grid"></div>';
     if($("lib-pkg"))$("lib-pkg").onclick=function(){S.pkgOpen=!S.pkgOpen;paintPkg()};
+    if($("lib-add"))$("lib-add").onclick=function(){S.add.open=!S.add.open;if(S.add.open)addRoots();paintAdd()};
     $("lib-q").oninput=function(){S.q=this.value.trim().toLowerCase();paintGrid()};
     $("lib-f").onclick=function(e){var b=e.target.closest("button");if(!b)return;S.filter=b.getAttribute("data-f");seg(this,b);paintGrid()};
     if($("lib-st"))$("lib-st").onchange=function(){S.stf=this.value;paintGrid()};
@@ -710,7 +752,7 @@ function paintLib(){
     $("grid").onclick=function(e){var b=e.target.closest("button[data-id]"),g=e.target.closest(".game");
       if(b){e.stopPropagation();launch(b.getAttribute("data-id"))}else if(g)detail(g.getAttribute("data-id"))};
   }
-  paintPkg();
+  paintPkg();paintAdd();
   paintGrid();
 }
 function seg(box,b){[].forEach.call(box.children,function(x){x.className=x===b?"on":""})}
@@ -749,13 +791,15 @@ function detail(id){
     '<div style="display:flex;gap:10px;flex-wrap:wrap">'+
     (run?'<button class="btn danger" data-k="close">'+ic("x")+L("Cerrar juego","Close game")+'</button>':'<button class="btn pri" data-k="launch">'+ic("play")+L("Lanzar","Launch")+'</button>')+
     (S.full&&loc?'<button class="btn" data-k="open">'+ic("files")+L("Ver ficheros","Browse files")+'</button>':"")+
-    '<button class="btn" data-k="copy">'+ic("copy")+L("Copiar ID","Copy ID")+'</button></div>'+(S.full?'<div class="gmb" id="gmb" style="margin-top:18px"></div>':"")+'</div>';
+    '<button class="btn" data-k="copy">'+ic("copy")+L("Copiar ID","Copy ID")+'</button>'+(S.full?'<button class="btn" data-k="page">'+ic("stats")+L("Todo sobre este juego","All about this game")+'</button>':"")+'</div>'+(S.full?'<div class="gmb" id="gmb" style="margin-top:18px"></div>':"")+'</div>';
+  if(S.view!=="game")$("v-game").innerHTML="";
   $("drawer").className="drawer on";S.gmId=id;if(S.full)gameBox(id);
   $("drawer-p").onclick=function(ev){var b=ev.target.closest("button");if(!b)return;var k=b.getAttribute("data-k");
     if(b.hasAttribute("data-g")){gameAct(id,b.getAttribute("data-g"),b.getAttribute("data-v"));return}
     if(b.hasAttribute("data-st")){var v=b.getAttribute("data-st");setStatus(id,S.status[id]===v?"":v);detail(id);return}
     if(b.hasAttribute("data-x")){}else if(k==="launch")launch(id);else if(k==="close")closeGame();
     else if(k==="open"){S.cwd=loc.path;show("files",true)}
+    else if(k==="page"){$("drawer-p").innerHTML="";show("game="+id,true)}
     else if(k==="copy"){(navigator.clipboard?navigator.clipboard.writeText(id):Promise.reject()).then(function(){toast(L("Copiado","Copied"))},function(){toast(id)});return}
     $("drawer").className="drawer"};
 }
@@ -781,8 +825,9 @@ function paintGame(id){
     var on=g.backport.playgo&&g.backport.enabled;
     h+='<h3 class="h" style="margin-top:6px">'+L("Arreglo de instalación","Install fix")+'</h3>';
     if(on)h+='<p><span class="chip ok">'+L("Aplicado","Applied")+" · "+esc(g.backport.values)+'</span> '+L("El juego ya no espera a que «se instale el contenido».","The game no longer waits for the content “to install”.")+(g.backport.fakelib.length>1?" "+L("Librerías: ","Libraries: ")+esc(g.backport.fakelib.join(", ")):"")+'</p><div class="row"><button class="btn sm danger" data-g="unfix"'+(S.ro?" disabled":"")+'>'+L("Quitar el arreglo","Remove the fix")+'</button></div>';
+    else if(g.image.fakelib.indexOf("libScePlayGo.sprx")>=0)h+='<p>'+L("La imagen de este juego ya trae su propio arreglo de instalación (libScePlayGo.sprx): no necesita este.","The image of this game already brings its own install fix (libScePlayGo.sprx): it does not need this one.")+'</p>';
     else if(!m.stub)h+='<p>'+L("Si este juego se queda en «espera a que se instale el contenido», se arregla con un clic. Falta una pieza que NeoWEB no trae: copia libScePlayGo.sprx (pgo_stub) a ","If this game stays at “wait for the content to install”, one click fixes it. A piece NeoWEB does not ship is missing: copy libScePlayGo.sprx (pgo_stub) to ")+esc(m.stubFolder)+'.</p>';
-    else if(!g.image.known&&!g.running)h+='<p>'+L("Si este juego se queda en «espera a que se instale el contenido», se arregla con un clic. Antes ábrelo una vez (aunque se quede en esa pantalla) y vuelve aquí: NeoWEB necesita ver qué librerías trae su imagen para no dejarlo sin ellas.","If this game stays at “wait for the content to install”, one click fixes it. First open it once (even if it stays on that screen) and come back: NeoWEB needs to see which libraries its image brings so as not to leave it without them.")+'</p><div class="row"><button class="btn sm ghost" data-g="fix" data-v="force"'+(S.ro?" disabled":"")+'>'+L("Aplicar sin mirar","Apply without looking")+'</button></div>';
+    else if(!g.image.known&&!g.running)h+='<p>'+L("Si este juego se queda en «espera a que se instale el contenido», se arregla con un clic. Antes ábrelo una vez (aunque se quede en esa pantalla) y vuelve aquí: NeoWEB necesita ver qué librerías trae su imagen para no dejarlo sin ellas.","If this game stays at “wait for the content to install”, one click fixes it. First open it once (even if it stays on that screen) and come back: NeoWEB needs to see which libraries its image brings so as not to leave it without them.")+'</p><div class="row"><button class="btn sm pri" data-g="peek"'+(S.ro||S.running?" disabled":"")+'>'+L("Mirarlo ahora sin abrir el juego","Look now without opening the game")+'</button><button class="btn sm ghost" data-g="fix" data-v="force"'+(S.ro?" disabled":"")+'>'+L("Aplicar sin mirar","Apply without looking")+'</button></div>';
     else h+='<p>'+L("Si este juego se queda en «espera a que se instale el contenido», pulsa aquí y después ciérralo y vuelve a abrirlo.","If this game stays at “wait for the content to install”, click here, then close it and open it again.")+(g.image.fakelib.length?" "+L("Su imagen trae: ","Its image brings: ")+esc(g.image.fakelib.join(", ")):"")+'</p><div class="row"><button class="btn sm pri" data-g="fix"'+(S.ro?" disabled":"")+'>'+L("Arreglar la instalación","Fix the install")+" ("+g.playgo.chunks+"/"+g.playgo.scenarios+')</button></div>';
   }
   box.innerHTML=h;
@@ -793,6 +838,9 @@ function gameAct(id,k,v){
   if(k==="fix")api("/api/games/fix",{id:id,force:v==="force"}).then(function(j){done(j);toast(L("Arreglo aplicado. Cierra el juego y vuelve a abrirlo.","Fix applied. Close the game and open it again."))}).catch(fail);
   else if(k==="unfix")ask(L("Quitar el arreglo","Remove the fix"),L("Se quita solo lo que puso el arreglo; lo demás del backport se queda.","Only what the fix put is removed; the rest of the backport stays."),L("Quitar","Remove"),true).then(function(ok){if(ok)api("/api/games/unfix",{id:id}).then(done).catch(fail)});
   else if(k==="bad")api("/api/games/note",{id:id,bad:v}).then(done).catch(fail);
+  else if(k==="peek"){toast(L("Montando la imagen un momento…","Mounting the image for a moment…"));
+    smp("/games/mount",{title_id:id}).then(function(){return api("/api/games/peek",{id:id})}).then(function(j){done(j);return smp("/games/unmount",{title_id:id})})
+      .then(function(){toast(L("Visto. Ya puedes aplicar el arreglo.","Seen. The fix can be applied now."))},function(e){fail(e);smp("/games/unmount",{title_id:id}).catch(function(){})})}
   else if(k==="move"){var r=S.gm.roots.filter(function(x){return x.path===v})[0];if(!r)return;
     ask(L("Mover ","Move ")+title(id),(g.bad===r.where?L("OJO: tienes anotado que este juego no funciona desde el ","WARNING: you noted that this game does not work from the ")+whereName(r.where)+". ":"")+
       L("Se copian ","This copies ")+size(g.size)+L(" al "," to the ")+whereName(r.where)+L(" y, solo cuando la copia está completa, se borra el original. Su backport va con él. Puede tardar un buen rato; no apagues la consola."," and, only once the copy is complete, deletes the original. Its backport goes along. It can take a good while; do not turn the console off."),L("Mover","Move"),g.bad===r.where).then(function(ok){if(!ok)return;
@@ -901,7 +949,7 @@ document.addEventListener("click",function(){$("menu").hidden=true});
 window.addEventListener("resize",function(){$("menu").hidden=true});
 
 /* ------------------------------------------------------------ uploads */
-S.ups=[];var upBusy=false,CH=32*1048576,raf=0;
+S.ups=[];var upBusy=false,CH=256*1048576,raf=0;
 function upState(u){
   if(u.st==="wait")return L("En cola","Queued")+" · "+size(u.size);
   if(u.st==="ok")return L("Completado","Done")+" · "+size(u.size)+(u.resumed?" · "+L("reanudado","resumed"):"");
@@ -1525,6 +1573,133 @@ function paintTrophies(){
 }
 $("v-trophies").addEventListener("click",function(e){var b=e.target.closest("button[data-tk]"),c=e.target.closest("[data-set]");
   if(b)S.tr[b.getAttribute("data-tk")]=b.getAttribute("data-tv");else if(c){S.tr.open=c.getAttribute("data-set");$("view").scrollTop=0}else return;paintTrophies()});
+
+/* ------------------------------------------------------------ ShadowMount+ */
+S.sm={loaded:false,err:"",ver:null,games:[],set:null,log:null,logRoute:"",q:"",busy:false};
+function smp(path,body){return api("/api/smp?path=/api/v1"+path,body||{}).then(function(j){if(j.status){var e=new Error(j.error||("ShadowMount+ "+j.status));throw e}return j})}
+function loadSmp(){
+  if(!S.full)return Promise.resolve();
+  return Promise.all([smp("/version"),smp("/games",{include_size:false}),smp("/settings")]).then(function(x){var m=S.sm;m.ver=x[0];m.games=x[1].games||[];m.set=x[2];m.err="";m.loaded=true},
+    function(e){S.sm.err=e.message;S.sm.loaded=true}).then(function(){if(S.view==="smp")paintSmp()});
+}
+var SMSET=[["debug",L("Registro detallado","Detailed log")],["quiet_mode",L("Sin avisos en pantalla (solo errores)","No notices on screen (errors only)")],["update_emulators",L("Poner al día los emuladores del fakelib de cada juego","Keep the emulators in each game's fakelib up to date")],
+  ["auto_update_ampr",L("Descargar solo el emulador AMPR (usa internet)","Download the AMPR emulator by itself (uses the internet)")],["auto_remove_missing_games",L("Quitar de la biblioteca los juegos cuyo origen ya no está","Remove from the library the games whose source is gone")]];
+function paintSmp(){
+  var m=S.sm,box=$("v-smp");
+  if(!m.loaded){box.innerHTML='<div class="empty">'+L("Preguntando a ShadowMount+…","Asking ShadowMount+…")+'</div>';return}
+  var relaunch='<button class="btn" data-sm="relaunch"'+(S.running||S.ro?" disabled":"")+' title="'+(S.running?L("Cierra el juego antes","Close the game first"):"")+'">'+ic("refresh")+L("Relanzar ShadowMount+","Relaunch ShadowMount+")+'</button>';
+  if(m.err){box.innerHTML='<div class="card pad"><div class="empty">'+ic("smp")+'<div>'+L("ShadowMount+ no responde.","ShadowMount+ is not answering.")+'<br><small>'+esc(m.err)+'</small></div></div><div class="tools" style="justify-content:center;margin:14px 0 0">'+relaunch+'</div></div>';return}
+  var g=m.games,mounted=g.filter(function(x){return x.mounted}),gone=g.filter(function(x){return !x.source_available}),q=m.q.trim().toLowerCase();
+  function st(l,v,sub){return '<div class="card stk"><label>'+l+'</label><b>'+v+'</b><small>'+sub+'</small></div>'}
+  var list=g.filter(function(x){return !q||(x.title_name||"").toLowerCase().indexOf(q)>=0||(x.title_id||"").toLowerCase().indexOf(q)>=0||(x.path||"").toLowerCase().indexOf(q)>=0})
+    .sort(function(a,b){return (b.mounted-a.mounted)||(a.title_name||"").localeCompare(b.title_name||"")});
+  var keep=document.activeElement&&document.activeElement.id==="sm-q";
+  box.innerHTML='<div class="stg">'+st(L("Versión","Version"),esc(m.ver.shadowmount_version||"?"),"API v"+(m.ver.api_version||"?"))+
+      st(L("Juegos","Games"),g.length,g.filter(function(x){return x.image_backed}).length+" "+L("en imagen","as images"))+
+      st(L("Montados ahora","Mounted now"),mounted.length,mounted.length?esc(mounted.map(function(x){return x.title_name||x.title_id}).join(", ")):L("ninguno","none"))+
+      st(L("Sin origen","Source missing"),'<span style="color:'+(gone.length?"var(--warn)":"inherit")+'">'+gone.length+'</span>',gone.length?esc(gone.map(function(x){return x.title_name||x.title_id}).slice(0,3).join(", ")):L("todo en su sitio","everything in place"))+'</div>'+
+    '<div class="card svbar"><button class="btn pri" data-sm="scan"'+(S.ro?" disabled":"")+'>'+ic("search")+L("Buscar juegos ahora","Scan for games now")+'</button><button class="btn" data-sm="rescan"'+(S.ro?" disabled":"")+'>'+L("Reintentar los que fallaron","Retry the ones that failed")+'</button>'+relaunch+
+      '<span class="sp"></span><button class="btn'+(m.logRoute==="/debug-log"?" pri":"")+'" data-sm="log" data-v="/debug-log">'+L("Registro","Log")+'</button><button class="btn'+(m.logRoute==="/kernel-log"?" pri":"")+'" data-sm="log" data-v="/kernel-log">'+L("Registro del sistema","Kernel log")+'</button></div>'+
+    (m.log!=null?'<div class="card pad" style="margin-bottom:16px"><h3 class="h">'+(m.logRoute==="/kernel-log"?L("Registro del sistema","Kernel log"):L("Registro de ShadowMount+","ShadowMount+ log"))+'<span class="sp" style="flex:1"></span><button class="btn sm ghost" data-sm="log" data-v="'+m.logRoute+'">'+L("Releer","Read again")+'</button><button class="btn sm ghost" data-sm="nolog">'+L("Cerrar","Close")+'</button></h3>'+
+      '<pre id="sm-log" style="margin:0;max-height:420px;overflow:auto;font:500 11.5px/1.5 var(--mono);color:var(--dim);white-space:pre-wrap;word-break:break-all">'+esc(m.log)+'</pre></div>':"")+
+    '<div class="card pad" style="margin-bottom:16px"><h3 class="h">'+L("Ajustes de ShadowMount+","ShadowMount+ settings")+'</h3><div style="display:grid;gap:12px">'+SMSET.map(function(x){
+      return '<label class="sw"><input type="checkbox" data-smset="'+x[0]+'"'+(m.set[x[0]]?" checked":"")+(S.ro||m.busy?" disabled":"")+'><i></i>'+x[1]+'</label>'}).join("")+'</div></div>'+
+    '<div class="tools"><h3 class="h" style="margin:0">'+L("Juegos","Games")+' <em>'+list.length+'</em></h3><span class="sp"></span><div class="srch">'+ic("search")+'<input class="in" id="sm-q" type="search" style="width:220px" placeholder="'+L("Buscar…","Search…")+'" value="'+esc(m.q)+'"></div></div>'+
+    '<div class="card" style="overflow:auto"><table class="t"><thead><tr><th>'+L("Juego","Game")+'</th><th>'+L("Tipo","Kind")+'</th><th>'+L("Origen","Source")+'</th><th>'+L("Estado","State")+'</th><th>fakelib</th><th></th></tr></thead><tbody>'+
+    list.map(function(x){var id=esc(x.title_id),a=app(x.title_id);
+      return '<tr><td class="n"><a data-smg="'+id+'" style="cursor:pointer">'+(a&&a.hasIcon?'<img class="svi" loading="lazy" alt="" src="/apps/icon?id='+id+'">':'<span class="svi"></span>')+esc(x.title_name||x.title_id)+'</a><small>'+id+'</small></td>'+
+        '<td><span class="chip">'+esc((x.image_backed?x.image_type:x.source_type)||"")+'</span></td><td style="white-space:normal;font:500 11.5px var(--mono);color:var(--faint)">'+esc(x.path||"")+'</td>'+
+        '<td>'+(x.mounted?'<span class="chip ok">'+L("montado","mounted")+'</span>':!x.source_available?'<span class="chip warn">'+L("sin origen","source missing")+'</span>':'<span class="chip">'+L("en espera","idle")+'</span>')+'</td>'+
+        '<td>'+(x.can_toggle_fakelib?'<label class="sw"><input type="checkbox" data-smfl="'+id+'"'+(x.fakelib_enabled?" checked":"")+(S.ro?" disabled":"")+'><i></i></label>':"")+'</td>'+
+        '<td>'+(x.image_backed&&x.source_available?'<button class="btn sm'+(x.mounted?" danger":"")+'" data-sm="'+(x.mounted?"unmount":"mount")+'" data-v="'+id+'"'+(S.ro||S.running===x.title_id?" disabled":"")+'>'+(x.mounted?L("Desmontar","Unmount"):L("Montar","Mount"))+'</button>':"")+'</td></tr>'}).join("")+'</tbody></table></div>'+
+    '<p style="margin:14px 2px 0;font:500 11.5px var(--mono);color:var(--faint)">'+L("Esto es lo que ShadowMount+ dice de sí mismo; NeoWEB solo pregunta en tu nombre. Una imagen se monta sola al abrir su juego: montarla a mano sirve para mirar dentro desde Ficheros.","This is what ShadowMount+ says about itself; NeoWEB only asks on your behalf. An image mounts by itself when its game is opened: mounting it by hand is for looking inside from Files.")+'</p>';
+  $("sm-q").oninput=function(){m.q=this.value;paintSmp()};
+  if(keep){var e=$("sm-q");e.focus();e.setSelectionRange(e.value.length,e.value.length)}
+  if($("sm-log"))$("sm-log").scrollTop=$("sm-log").scrollHeight;
+}
+function smDo(p,msg){return p.then(function(){toast(msg);return wait(1200)}).then(loadSmp).catch(function(e){fail(e);loadSmp()})}
+$("v-smp").addEventListener("click",function(e){
+  var m=S.sm,a=e.target.closest("a[data-smg]"),b=e.target.closest("button[data-sm]");
+  if(a){show("game="+a.getAttribute("data-smg"),true);return}
+  if(!b||b.disabled)return;var k=b.getAttribute("data-sm"),v=b.getAttribute("data-v");
+  if(k==="scan"||k==="rescan")smDo(smp("/scan",{reset_attempts:k==="rescan"}),L("Búsqueda pedida","Scan requested"));
+  else if(k==="mount")smDo(smp("/games/mount",{title_id:v}),v+L(" montado"," mounted"));
+  else if(k==="unmount")smDo(smp("/games/unmount",{title_id:v}),v+L(" desmontado"," unmounted"));
+  else if(k==="nolog"){m.log=null;m.logRoute="";paintSmp()}
+  else if(k==="log"){m.logRoute=v;smp(v,{max_bytes:262144}).then(function(j){m.log=j.content||"";paintSmp()}).catch(fail)}
+  else if(k==="relaunch")ask(L("Relanzar ShadowMount+","Relaunch ShadowMount+"),L("Se para y se vuelve a arrancar. Hazlo sin ningún juego abierto.","It is stopped and started again. Do it with no game open."),L("Relanzar","Relaunch")).then(function(ok){if(!ok)return;
+    toast(L("Relanzando…","Relaunching…"));api("/api/payloads/stop",{name:"shadowmountplus.elf"}).catch(function(){}).then(function(){return wait(1500)}).then(function(){return api("/api/payloads/start",{name:"shadowmountplus.elf"})})
+      .then(function(){return wait(6000)}).then(function(){toast(L("ShadowMount+ relanzado","ShadowMount+ relaunched"));loadSmp()}).catch(fail)})});
+$("v-smp").addEventListener("change",function(e){var m=S.sm,t=e.target,k;
+  if((k=t.getAttribute("data-smset"))){var o={};["debug","quiet_mode","update_emulators","auto_update_ampr","auto_remove_missing_games","auto_remove_missing_delay_seconds","allow_lan_access","fan_target_temperature"].forEach(function(x){o[x]=m.set[x]});
+    o.scan_paths=m.set.scan_paths||[];o[k]=t.checked;m.busy=true;smp("/settings/update",o).then(function(){toast(L("Guardado","Saved"));return wait(1200)}).then(function(){m.busy=false;return loadSmp()},function(er){m.busy=false;fail(er);loadSmp()})}
+  else if((k=t.getAttribute("data-smfl")))smDo(smp("/games/fakelib",{title_id:k,enabled:t.checked}),L("Hecho","Done"))});
+
+/* ------------------------------------------------------------ one game, everything */
+function loadGame(){
+  var id=S.gp.id;S.gp.tro=null;S.gmId=id;$("drawer").className="drawer";
+  var ps=[];if(!S.tr.loaded)ps.push(loadTrophies());if(!S.sv.loaded)ps.push(loadSaves());if(!S.cp.loaded)ps.push(loadCaps());if(!S.ch.loaded)ps.push(loadCheats());else ps.push(loadLive());
+  Promise.all(ps).then(function(){if(S.view!=="game"||S.gp.id!==id)return;paintGameView();gameBox(id);
+    var t=gpSet(id);if(t)api("/api/trophies/set?user="+t.u.id+"&id="+t.s.id+"&lang="+TLANG).then(function(j){S.gp.tro=j;if(S.view==="game"&&S.gp.id===id){paintGameView();paintGame(id)}}).catch(function(){})});
+}
+function gpSet(id){for(var i=0;i<S.tr.users.length;i++){var u=S.tr.users[i];for(var k=0;k<u.sets.length;k++)if((" "+(u.sets[k].games||"")+" ").indexOf(" "+id+" ")>=0&&(u.sets[k].local||u.sets[k].progress>0||i===S.tr.users.length-1))return{u:u,s:u.sets[k]}}
+  for(i=0;i<S.tr.users.length;i++)for(k=0;k<S.tr.users[i].sets.length;k++)if((" "+(S.tr.users[i].sets[k].games||"")+" ").indexOf(" "+id+" ")>=0)return{u:S.tr.users[i],s:S.tr.users[i].sets[k]};return null}
+function paintGameView(){
+  var id=S.gp.id,a=app(id),box=$("v-game");
+  if(!a){box.innerHTML='<div class="card"><div class="empty">'+L("Ese juego no está en la consola.","That game is not on the console.")+'</div></div>';return}
+  $("vt").textContent=a.title||id;$("vs").textContent=id+(a.version?" · v"+a.version:"");
+  var run=S.running===id,e=esc(id),pl=S.play.games[id],td=S.play.today,keepBox=$("gmb")&&box.contains($("gmb"))?$("gmb").innerHTML:"";
+  function card(t,body,foot){return '<div class="card pad"><h3 class="h">'+t+'</h3>'+body+(foot?'<div style="margin-top:14px">'+foot+'</div>':"")+'</div>'}
+  function none(t){return '<p style="margin:0;color:var(--faint)">'+t+'</p>'}
+  function go(k,t){return '<button class="btn sm" data-gp="'+k+'">'+t+'</button>'}
+  /* play time */
+  var time=none(L("Todavía no hay tiempo contado para este juego.","No play time counted for this game yet."));
+  if(pl){var bars="",mx=1,ds=[];for(var i=13;i>=0;i--){var d=dayAdd(td,-i),v=(pl.days||{})[d]||0;ds.push([d,v]);mx=Math.max(mx,v)}
+    bars=ds.map(function(x){return '<i title="'+x[0]+" · "+dur(x[1])+'" style="flex:1;align-self:flex-end;height:'+Math.max(3,Math.round(x[1]/mx*100))+'%;border-radius:3px;background:'+(x[1]?"var(--grad)":"rgba(132,153,204,.14)")+'"></i>'}).join("");
+    time='<div style="display:flex;gap:22px;flex-wrap:wrap;margin-bottom:14px"><div><b style="font-size:22px">'+dur(pl.total)+'</b><br><small style="color:var(--dim)">'+L("en total","in all")+'</small></div><div><b style="font-size:22px">'+pl.sessions+'</b><br><small style="color:var(--dim)">'+L("sesiones","sessions")+'</small></div>'+
+      (pl.last?'<div><b style="font-size:22px">'+new Date(pl.last*1000).toLocaleDateString(undefined,{day:"2-digit",month:"short"})+'</b><br><small style="color:var(--dim)">'+L("última vez","last time")+'</small></div>':"")+'</div>'+
+      '<div style="display:flex;gap:4px;height:64px">'+bars+'</div><small style="color:var(--faint);font:500 11px var(--mono)">'+L("últimos 14 días","last 14 days")+'</small>'}
+  /* trophies */
+  var t=gpSet(id),tro=none(L("La consola no tiene trofeos de este juego.","The console has no trophies for this game."));
+  if(t){var s=t.s,one=S.gp.tro,last=one?(one.trophies||[]).filter(function(x){return x.got}).sort(function(x,y){return x.when<y.when?1:-1}).slice(0,4):[];
+    tro='<div style="display:flex;align-items:center;gap:14px;margin-bottom:10px"><b style="font-size:26px">'+s.progress+'%</b><div style="flex:1"><div class="prog'+(s.progress>=100?" ok":"")+'"><i style="width:'+Math.max(1,s.progress)+'%"></i></div>'+
+      '<div class="trc" style="padding:8px 0 0;display:block"><div class="g" style="margin:0">'+TG.map(function(g){return s.total[g[0]]?'<span title="'+g[2]+'"><i style="background:'+g[1]+'"></i>'+(s.got[g[0]]||0)+"/"+s.total[g[0]]+'</span>':""}).join("")+'</div></div></div></div>'+
+      (last.length?last.map(function(x){return '<div class="item trw" style="padding:9px 0"><img loading="lazy" alt="" style="width:40px;height:40px" src="/api/trophies/icon?set='+s.id+"&id="+x.id+'"><div class="t"><b>'+esc(x.name||x.id)+'</b><small>'+(x.when?new Date(x.when).toLocaleDateString(undefined,{day:"2-digit",month:"short",year:"numeric"}):"")+'</small></div></div>'}).join("")
+        :one?none(L("Ninguno conseguido todavía.","None earned yet.")):"")}
+  /* saves */
+  var svs=[];S.sv.users.forEach(function(u){u.saves.forEach(function(x){if(x.titleId===id)svs.push([u,x])})});
+  var sav=svs.length?svs.map(function(x){return '<div class="item" style="padding:9px 0"><div class="t"><b>'+esc(x[0].name)+'</b><small>'+size(x[1].bytes)+" · "+when(x[1].mtime)+'</small></div></div>'}).join(""):none(L("Nadie tiene partida de este juego.","Nobody has a save of this game."));
+  var bks=S.sv.backups.filter(function(b){return b.titleId===id}).length;
+  /* cheats */
+  var cf=S.ch.by[id]||[],mine=cf.filter(function(f){var p=chParts(f.name);return a.version&&(p.ver===a.version||p.ver.replace(/^0+/,"")===a.version.replace(/^0+/,""))}),lv=S.ch.live;
+  var chs=cf.length?'<p style="margin:0 0 6px"><b style="font-size:22px">'+cf.length+'</b> '+(cf.length===1?L("fichero de trucos","cheat file"):L("ficheros de trucos","cheat files"))+'</p><p style="margin:0;color:'+(mine.length?"var(--ok)":"var(--warn)")+'">'+(mine.length?mine.length+" "+L("para tu versión","for your version")+" ("+esc(a.version)+")":L("Ninguno es de tu versión","None is for your version")+" ("+esc(a.version||"?")+")")+'</p>'+
+      (run&&lv&&lv.list?'<p style="margin:8px 0 0;color:var(--dim)">'+(function(){var n=0,on=0;(lv.list.groups||[]).forEach(function(g){(g.cheats||[]).forEach(function(c){n++;if(c.enabled)on++})});return on+" / "+n+" "+L("activos ahora","on right now")})()+'</p>':"")
+    :none(L("No hay ficheros de trucos para este juego.","There are no cheat files for this game."));
+  /* captures */
+  var cps=S.cp.items.filter(function(c){return c.titleId===id}),nv=cps.filter(function(c){return c.kind==="video"}).length;
+  var cap=cps.length?'<p style="margin:0 0 6px"><b style="font-size:22px">'+(cps.length-nv)+'</b> '+L("capturas","screenshots")+(nv?' · <b style="font-size:22px">'+nv+'</b> '+L("vídeos","clips"):"")+'</p><p style="margin:0;color:var(--dim)">'+L("La última, ","The last one, ")+cpDate(cps[0].id)+'</p>':none(L("No hay capturas de este juego.","There are no captures of this game."));
+  box.innerHTML='<div class="card" style="overflow:hidden;margin-bottom:16px"><div style="height:210px;background:#05080F center/cover;background-image:linear-gradient(0deg,var(--solid),transparent 75%),url(/apps/icon?id='+e+'&kind=pic1),url(/apps/icon?id='+e+'&kind=pic0)"></div>'+
+      '<div style="display:flex;gap:18px;align-items:flex-end;padding:0 22px 20px;margin-top:-56px;position:relative;flex-wrap:wrap">'+(a.hasIcon?'<img alt="" style="width:108px;height:108px;border-radius:14px;border:1px solid var(--line2);object-fit:cover" src="/apps/icon?id='+e+'">':"")+
+      '<div style="flex:1;min-width:220px"><h2 style="margin:0 0 6px">'+esc(a.title||id)+'</h2>'+(run?'<span class="chip ok">'+L("En marcha","Running")+'</span> ':"")+'<span class="chip">'+e+'</span>'+(a.version?' <span class="chip">v'+esc(a.version)+'</span>':"")+'</div>'+
+      '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center"><div class="seg">'+STS.map(function(x){return '<button data-st="'+x[0]+'" class="'+(S.status[id]===x[0]?"on":"")+'">'+x[1]+'</button>'}).join("")+'</div>'+
+      (run?'<button class="btn danger" data-gp="close">'+ic("x")+L("Cerrar juego","Close game")+'</button>':'<button class="btn pri" data-gp="launch">'+ic("play")+L("Lanzar","Launch")+'</button>')+'</div></div></div>'+
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:14px">'+
+      card(L("Tiempo de juego","Play time"),time,go("stats",L("Ver estadísticas","See the stats")))+
+      card(L("Trofeos","Trophies"),tro,t?go("trophies",L("Ver todos los trofeos","See every trophy")):"")+
+      card(L("Partidas","Saves"),sav,go("saves",L("Copias y restaurar","Backups and restore")+(bks?" · "+bks:"")))+
+      card(L("Trucos","Cheats"),chs,go("cheats",run?L("Encender y apagar","Switch on and off"):L("Ver los ficheros","See the files")))+
+      card(L("Capturas","Captures"),cap,cps.length?go("captures",L("Verlas","See them")):"")+
+      '<div class="card pad"><div class="gmb" id="gmb" style="border:0;padding:0;margin:0">'+keepBox+'</div></div></div>';
+}
+$("v-game").addEventListener("click",function(e){
+  var id=S.gp.id,b=e.target.closest("button");if(!b||b.disabled)return;var k;
+  if(b.hasAttribute("data-g")){gameAct(id,b.getAttribute("data-g"),b.getAttribute("data-v"));return}
+  if(b.hasAttribute("data-st")){k=b.getAttribute("data-st");setStatus(id,S.status[id]===k?"":k);paintGameView();paintGame(id);return}
+  k=b.getAttribute("data-gp");
+  if(k==="launch")launch(id);else if(k==="close")closeGame();
+  else if(k==="trophies"){var t=gpSet(id);if(t){S.tr.user=t.u.id;S.tr.open=t.s.id}show("trophies",true)}
+  else if(k==="captures"){S.cp.game=id;show("captures",true)}
+  else if(k)show(k,true)});
 
 /* ------------------------------------------------------------ themes */
 var TDIR="/data/neohen/themes";
