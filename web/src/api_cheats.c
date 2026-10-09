@@ -71,9 +71,9 @@ io_all(int fd, void *buf, size_t len, int sending) {
 
 /* Ask the service. 0: it said yes, 1: it said no, -1: it did not answer.
  * `var` gets what came back with the answer, if anything. */
-static int
-ipc_call(uint32_t cmd, const jw_t *request, char *var, size_t size) {
-  struct timeval tv = {TIMEOUT_S, 0};
+int
+neohen_util_call(uint32_t cmd, const jw_t *request, char *var, size_t size, int timeout_s) {
+  struct timeval tv = {timeout_s, 0};
   struct sockaddr_un addr;
   char local[PATH_MAX];
   ipc_msg_t *m;
@@ -162,7 +162,7 @@ api_cheats_live(http_req_t *req) {
     jw_kint(&q, "appid", app_id);
     jw_kstr(&q, "generation", gen);
     jw_obj_end(&q);
-    rc = ipc_call(CMD_LIST, &q, var, sizeof(var));
+    rc = neohen_util_call(CMD_LIST, &q, var, sizeof(var), TIMEOUT_S);
     jw_free(&q);
     if(rc < 0) {
       jw_kstr(&w, "error", "NeoHEN's cheat service is not answering");
@@ -213,7 +213,7 @@ api_cheats_toggle(http_req_t *req) {
   jw_kstr(&q, "cheat_key", key);
   jw_kbool(&q, "enabled", json_get_bool(b, "enabled", 0));
   jw_obj_end(&q);
-  rc = ipc_call(CMD_TOGGLE, &q, var, sizeof(var));
+  rc = neohen_util_call(CMD_TOGGLE, &q, var, sizeof(var), TIMEOUT_S);
   jw_free(&q);
   LOG_INFO("cheats: %s %s -> %s", json_get_bool(b, "enabled", 0) ? "on" : "off", key,
            rc < 0 ? "no answer" : var);

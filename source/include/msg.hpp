@@ -75,6 +75,9 @@ enum DaemonCommands : unsigned int {
   // Daemon pushes a live console system language so util re-applies it without
   // needing a SystemService query (util is under PTRACE_AUTHID after launch).
   BREW_UTIL_SET_SYSTEM_LANG = 0x8000019u,
+  // NeoHEN: fetch one release file from GitHub into the payloads folder.
+  // NeoWEB's payload store asks for it; the page cannot download it itself.
+  BREW_UTIL_DOWNLOAD_FILE = 0x800001Au,
 
   // Crit daemon plugin management. Payloads contain only validated plugin IDs;
   // filesystem paths never cross the IPC boundary.
