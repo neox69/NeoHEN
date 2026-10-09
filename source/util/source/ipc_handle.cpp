@@ -25,6 +25,7 @@ extern "C" {
 #include "cheats/cheat_service.hpp"
 #include "cheats/runtime.h"
 #include "cheats/sync/cheat_sync_service.hpp"
+#include "cheats/sync/http_transport_ps5.hpp"
 #include <cstdio>
 #include <cerrno>
 #include <cstdlib>
@@ -37,7 +38,10 @@ extern "C" {
 #include <sstream>
 #include <string>
 #include <vector>
+#include <algorithm>
 #include <atomic>
+#include <cctype>
+#include <cstring>
 
 extern bool is_handler_enabled;
 extern "C" int sceKernelGetProcessName(int pid, char *name);
@@ -362,6 +366,69 @@ void handleIPC(clientArgs *client, std::string &inputStr,
       util_apply_ui_language(g_settings.snapshot().ui_lang);
     }
     reply(sender_app, false);
+    break;
+  }
+  case BREW_UTIL_DOWNLOAD_FILE: {
+    /* Only from github.com, only into the payloads folder, only under a
+     * plain file name: the caller chooses neither host nor folder. */
+    const std::string url = onion_cjson::string_item(my_json.get(), "url", "");
+    const std::string name = onion_cjson::string_item(my_json.get(), "name", "");
+    bool name_ok = !name.empty() && name.size() < 64 && name[0] != '.';
+    for (const char c : name) {
+      name_ok = name_ok && (std::isalnum(static_cast<unsigned char>(c)) ||
+                            c == '.' || c == '_' || c == '-');
+    }
+    const bool is_elf = name.size() > 4 &&
+                        name.compare(name.size() - 4, 4, ".elf") == 0;
+    const bool is_bin = name.size() > 4 &&
+                        name.compare(name.size() - 4, 4, ".bin") == 0;
+    if (!name_ok || !(is_elf || is_bin) ||
+        url.compare(0, 19, "https://github.com/") != 0) {
+      LOG_ERROR("[store] rejected url='%s' name='%s'", url.c_str(), name.c_str());
+      reply(sender_app, true, "rejected");
+      break;
+    }
+    const std::string dest = ONION_USER_DATA_DIR "/payloads/" + name;
+    const std::string part = dest + ".part";
+    FILE *out = fopen(part.c_str(), "wb");
+    if (!out) {
+      reply(sender_app, true, "cannot write to the payloads folder");
+      break;
+    }
+    using namespace onion::cheats::sync;
+    HttpRequest request;
+    request.url = url.c_str();
+    request.host_allow = "github.com";
+    request.accept = "application/octet-stream";
+    request.timeout_ms = 120000;
+    request.max_body_bytes = 64u << 20;
+    size_t bytes = 0;
+    unsigned char head[4] = {};
+    Ps5HttpTransport http;
+    const SyncStatus st = http.perform(request, [&](const void *data, size_t n) {
+      if (bytes < sizeof(head)) {
+        std::memcpy(head + bytes, data, std::min(n, sizeof(head) - bytes));
+      }
+      bytes += n;
+      return fwrite(data, 1, n, out) == n ? SyncStatus::Ok : SyncStatus::Io;
+    });
+    const bool closed = fclose(out) == 0;
+    const bool looks_right =
+        !is_elf || (bytes > 4 && std::memcmp(head, "\x7f" "ELF", 4) == 0);
+    if (st != SyncStatus::Ok || !closed || bytes == 0 || !looks_right ||
+        rename(part.c_str(), dest.c_str()) != 0) {
+      unlink(part.c_str());
+      LOG_ERROR("[store] download failed url='%s' status=%s bytes=%zu",
+                url.c_str(), sync_status_name(st), bytes);
+      reply(sender_app, true,
+            st != SyncStatus::Ok ? sync_status_name(st)
+                                 : (looks_right ? "could not be saved"
+                                                : "what came is not a payload"));
+      break;
+    }
+    chmod(dest.c_str(), 0777);
+    LOG_INFO("[store] %s <- %s (%zu bytes)", dest.c_str(), url.c_str(), bytes);
+    reply(sender_app, false, std::to_string(bytes));
     break;
   }
   case BREW_RELOAD_SETTINGS: {

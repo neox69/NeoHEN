@@ -76,7 +76,14 @@ En una PS5 CFI-7021, firmware 13.42, con kstuff-lite 1.11 y ShadowMount+
 
 ## En desarrollo
 
-- **0.1.0-rc4** — en desarrollo, sin publicar: ShadowMount+ 1.7beta4, el
+- **0.1.0-rc5** — en desarrollo, sin publicar: NeoWEB 0.3.0 con trofeos
+  leídos de la propia consola (sin PlayStation Network), trucos del juego
+  abierto desde la página, «Añadir juego» con subidas a la velocidad del
+  FTP, mover imágenes entre discos, arreglo de PlayGo con un clic, página
+  por juego, panel de ShadowMount+ y tienda de payloads (la consola los
+  descarga de GitHub). El tema de serie pasa a llamarse «Neon Tide Basic».
+  Sin probar en consola: mover una imagen y aplicar el arreglo de PlayGo.
+- **0.1.0-rc4** — sin publicar: ShadowMount+ 1.7beta4, el
   vigilante comprobando cada minuto, NeoWEB 0.2.0 con su variante completa
   por defecto (explorador de ficheros, subidas reanudables y verificadas) y
   página nueva, copias de las partidas guardadas y más entradas en el menú

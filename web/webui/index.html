@@ -592,7 +592,7 @@ function show(v,push){
   $("vt").textContent=def[1];$("vs").textContent=def[2];
   if(push)history.replaceState(null,"","#"+(v==="game"?"game="+S.gp.id:v));
   $("side").className="side";paintNav();render();$("view").scrollTop=0;
-  if(v==="files")loadDir(S.cwd);if(v==="procs")loadProcs();if(v==="system"){loadLog();S.fanEdit=null;loadFan()}if(v==="transfers")loadJobs();if(v==="payloads")loadPay();if(v==="themes")loadThemes();if(v==="saves")loadSaves();if(v==="captures")loadCaps();if(v==="cheats")loadCheats();if(v==="stats")loadStats();if(v==="trophies")loadTrophies();if(v==="smp")loadSmp();if(v==="game")loadGame();
+  if(v==="files")loadDir(S.cwd);if(v==="procs")loadProcs();if(v==="system"){loadLog();S.fanEdit=null;loadFan()}if(v==="transfers")loadJobs();if(v==="payloads"){loadPay();loadStore()}if(v==="themes")loadThemes();if(v==="saves")loadSaves();if(v==="captures")loadCaps();if(v==="cheats")loadCheats();if(v==="stats")loadStats();if(v==="trophies")loadTrophies();if(v==="smp")loadSmp();if(v==="game")loadGame();
 }
 $("nav").onclick=function(e){var b=e.target.closest("button[data-v]");if(b)show(b.getAttribute("data-v"),true)};
 window.addEventListener("hashchange",function(){var h=location.hash.slice(1);if(h!==S.view&&h!=="game="+S.gp.id)show(h)});
@@ -1066,12 +1066,55 @@ function paintPay(){
         '<div class="acts"><label class="sw"><input type="checkbox" data-auto="'+n+'"'+(p.autoStart?" checked":"")+dis+'><i></i>'+L("Al arrancar","On boot")+'</label>'+
         (p.running?'<button class="btn sm danger" data-stop="'+n+'"'+(p.self?" disabled":dis)+'>'+L("Parar","Stop")+'</button>':'<button class="btn sm pri" data-start="'+n+'"'+dis+'>'+L("Arrancar","Start")+'</button>')+
         '<button class="btn sm" data-del="'+n+'"'+(p.running?" disabled":dis)+'>'+L("Borrar","Delete")+'</button></div></div>'}).join("")
-      :'<div class="empty">'+L("No hay payloads en la consola todavía.","No payloads on the console yet.")+'</div>')+'</div>';
+      :'<div class="empty">'+L("No hay payloads en la consola todavía.","No payloads on the console yet.")+'</div>')+'</div>'+(S.full?'<div id="stbox" style="margin-top:26px"></div>':"");
+  paintStore();
   $("ppick").onclick=function(){$("pick-p").click()};
   var d=$("pdrop");
   ["dragenter","dragover"].forEach(function(ev){d.addEventListener(ev,function(e){e.preventDefault();e.stopPropagation();if(!S.ro)d.className="drop over"})});
   ["dragleave","drop"].forEach(function(ev){d.addEventListener(ev,function(e){e.preventDefault();d.className="drop"})});
   d.addEventListener("drop",function(e){dzN=0;$("dropz").className="dropz";if(!S.ro&&e.dataTransfer)upPay(e.dataTransfer.files)});
+}
+/* the payload store: GitHub says what the latest release of each one is, the
+ * console downloads it */
+var STORE=[
+ ["shadowmountplus.elf","ShadowMount+","drakmor/ShadowMountPlus",/^shadowmountplus\.elf$/,L("Monta los juegos guardados como imagen o carpeta","Mounts games kept as an image or a folder")],
+ ["ftpsrv.elf","ftpsrv","ps5-payload-dev/ftpsrv",/^ftpsrv-ps5\.elf$/,L("Servidor FTP, puerto 2121","FTP server, port 2121")],
+ ["nanodns.elf","nanoDNS","drakmor/nanoDNS",/^nanodns\.elf$/,L("DNS en la propia consola, para cortar el paso a lo que no quieres","DNS on the console itself, to keep out what you do not want")],
+ ["websrv.elf","websrv","ps5-payload-dev/websrv",/^websrv-ps5\.elf$/,L("Lanzador de homebrew por web, puerto 8080","Homebrew launcher over the web, port 8080")],
+ ["klogsrv.elf","klogsrv","ps5-payload-dev/klogsrv",/^klogsrv-ps5\.elf$/,L("Registro del sistema por red, puerto 3232","Kernel log over the network, port 3232")],
+ ["shsrv.elf","shsrv","ps5-payload-dev/shsrv",/^shsrv-ps5\.elf$/,L("Consola de órdenes por telnet, puerto 2323","Telnet shell, port 2323")],
+ ["gdbsrv.elf","gdbsrv","ps5-payload-dev/gdbsrv",/^gdbsrv-ps5\.elf$/,L("Depurador remoto","Remote debugger")],
+ ["ps5-app-dumper.elf","PS5 App Dumper","EchoStretch/ps5-app-dumper",/^ps5-app-dumper.*\.elf$/,L("Vuelca el juego que está abierto","Dumps the game that is open")],
+ ["garlic-savemgr.elf","Garlic SaveMgr","earthonion/garlic-savemgr",/^garlic-savemgr\.elf$/,L("Gestor de partidas por web","Save manager over the web")],
+ ["ps5-backpork.elf","BackPork","BestPig/BackPork",/^ps5-backpork\.elf$/,L("Librerías de reemplazo para juegos de un firmware más nuevo","Replacement libraries for games of a newer firmware")]];
+S.st={rel:{},inst:{},busy:{},err:"",asked:false};
+function loadStore(){
+  if(!S.full)return Promise.resolve();
+  var st=S.st;st.asked=true;st.err="";
+  try{var c=JSON.parse(sessionStorage.getItem("nw-store")||"null");if(c&&Date.now()-c.t<36e5)st.rel=c.rel}catch(_){}
+  var ps=[api("/api/store").then(function(j){st.inst=j.installed||{}}).catch(function(){})];
+  STORE.forEach(function(x){if(st.rel[x[0]])return;
+    ps.push(fetch("https://api.github.com/repos/"+x[2]+"/releases?per_page=1").then(function(r){if(!r.ok)throw new Error("GitHub "+r.status);return r.json()}).then(function(j){
+      var rl=j[0],a=rl&&rl.assets.filter(function(y){return x[3].test(y.name)})[0];if(a)st.rel[x[0]]={tag:rl.tag_name,url:a.browser_download_url,size:a.size,date:(rl.published_at||"").slice(0,10)}},
+      function(e){st.err=e.message}))});
+  return Promise.all(ps).then(function(){try{if(Object.keys(st.rel).length)sessionStorage.setItem("nw-store",JSON.stringify({t:Date.now(),rel:st.rel}))}catch(_){}if(S.view==="payloads")paintStore()});
+}
+function paintStore(){
+  var box=$("stbox"),st=S.st;if(!box)return;
+  var have={};S.pay.forEach(function(p){have[p.name]=p});
+  box.innerHTML='<div class="tools"><h3 class="h" style="margin:0">'+L("Tienda de payloads","Payload store")+' <em>'+STORE.length+'</em></h3><span class="sp"></span><button class="btn sm ghost" id="st-re">'+ic("refresh")+L("Mirar versiones","Check versions")+'</button></div>'+
+    '<div class="note" style="border-color:rgba(77,163,255,.4);background:rgba(77,163,255,.08);color:#CFE4FF">'+L("La consola descarga cada payload de la página de su autor en GitHub, a su carpeta de payloads. Hace falta que la consola tenga salida a internet. Uno que está en marcha sigue con la versión vieja hasta que lo pares y lo arranques.","The console downloads each payload from its author's page on GitHub, into its payloads folder. The console needs a way out to the internet. One that is running keeps the old version until you stop and start it.")+'</div>'+
+    (st.err?'<div class="note">'+L("GitHub no ha contestado a todo: ","GitHub did not answer everything: ")+esc(st.err)+'</div>':"")+
+    '<div class="card">'+STORE.map(function(x){var n=x[0],r=st.rel[n],p=have[n],it=st.inst[n],busy=st.busy[n],same=p&&r&&it===r.tag;
+      return '<div class="item"><i class="dot'+(p&&p.running?" on":"")+'"></i><div class="t"><b>'+esc(x[1])+'</b><small>'+esc(x[4])+' · <a href="https://github.com/'+x[2]+'" target="_blank" rel="noopener">'+x[2]+'</a></small></div>'+
+        '<div class="acts">'+(r?'<span class="chip" title="'+esc(r.date)+'">'+esc(r.tag)+" · "+size(r.size)+'</span>':'<span class="chip">'+(st.asked&&st.err?"?":"…")+'</span>')+
+        (p?'<span class="chip'+(same?" ok":it?" warn":"")+'">'+(same?L("al día","up to date"):it?L("tienes ","you have ")+esc(it):L("en la consola","on the console"))+'</span>':"")+
+        (r&&!same?'<button class="btn sm'+(p?"":" pri")+'" data-store="'+n+'"'+(busy||S.ro?" disabled":"")+'>'+(busy?L("Descargando…","Downloading…"):p?L("Poner la ","Get ")+esc(r.tag):L("Instalar","Install"))+'</button>':"")+'</div></div>'}).join("")+'</div>';
+}
+function storeGet(n){
+  var st=S.st,r=st.rel[n];if(!r||st.busy[n])return;st.busy[n]=1;paintStore();
+  api("/api/store/fetch",{url:r.url,name:n,tag:r.tag}).then(function(j){delete st.busy[n];st.inst[n]=r.tag;toast(n+" "+r.tag+L(" descargado en la consola"," downloaded to the console")+" · "+size(j.bytes));return loadPay()},
+    function(e){delete st.busy[n];fail(e);paintStore()});
 }
 function pact(path,body,before,after){
   toast(before);pbusy=true;
@@ -1079,6 +1122,8 @@ function pact(path,body,before,after){
 }
 $("v-payloads").addEventListener("click",function(e){
   var b=e.target.closest("button");if(!b||b.disabled)return;var n;
+  if((n=b.getAttribute("data-store"))){storeGet(n);return}
+  if(b.id==="st-re"){try{sessionStorage.removeItem("nw-store")}catch(_){}S.st.rel={};loadStore();return}
   if((n=b.getAttribute("data-start")))pact("/api/payloads/start",{name:n},L("Arrancando ","Starting ")+n+"…",function(j){return n+(j.running?L(" arrancado"," started"):L(" enviado al cargador; no ha dejado ningún proceso en marcha"," sent to the loader; it left no process running"))});
   else if((n=b.getAttribute("data-stop")))ask(L("Parar ","Stop ")+n,L("El proceso se cierra de inmediato. Si es un payload del que depende la consola, como ShadowMount+, dejará de hacer su trabajo hasta que lo arranques otra vez.","The process is closed at once. If the console relies on it, like ShadowMount+, it stops doing its job until you start it again."),L("Parar","Stop"),true).then(function(ok){if(ok)pact("/api/payloads/stop",{name:n},"…",n+L(" parado"," stopped"))});
   else if((n=b.getAttribute("data-del")))ask(L("Borrar ","Delete ")+n,L("Se elimina el fichero de la consola. No se puede deshacer.","The file is removed from the console. This cannot be undone."),L("Borrar","Delete"),true).then(function(ok){if(ok)pact("/api/payloads/delete",{name:n},"…",n+L(" borrado"," deleted"))});

@@ -76,7 +76,14 @@ On a PS5 CFI-7021, firmware 13.42, with kstuff-lite 1.11 and ShadowMount+
 
 ## In progress
 
-- **0.1.0-rc4** — in development, not released: ShadowMount+ 1.7beta4, the
+- **0.1.0-rc5** — in development, not released: NeoWEB 0.3.0 with trophies
+  read from the console itself (no PlayStation Network), cheats of the open
+  game from the page, "Add a game" with uploads as fast as FTP, moving
+  images between drives, the PlayGo fix in one click, a page per game, a
+  ShadowMount+ panel and a payload store (the console downloads them from
+  GitHub). The bundled theme is now called "Neon Tide Basic". Not tried on
+  a console: moving an image and applying the PlayGo fix.
+- **0.1.0-rc4** — not released: ShadowMount+ 1.7beta4, the
   watchdog checking every minute, NeoWEB 0.2.0 shipping its full variant by
   default (file manager, resumable and verified uploads) behind a new page,
   save data backups and more entries in a game's Options menu, and themes

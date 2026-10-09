@@ -1126,6 +1126,19 @@ class PayloadTest(unittest.TestCase):
         self.assertEqual(self.api.get("/api/smp?path=/etc/passwd")[0], 400)
         self.assertEqual(self.api.get("/api/smp?path=/api/../x")[0], 400)
 
+    def test_store(self):
+        _, j = self.api.get("/api/store")
+        self.assertEqual(j["installed"], {})
+        ok = {"url": "https://github.com/a/b/releases/download/v1/x.elf", "name": "x.elf", "tag": "v1"}
+        # only github.com, only a plain .elf or .bin name
+        for bad in ({"url": "https://example.com/x.elf"}, {"url": "http://github.com/a/x.elf"},
+                    {"name": "../x.elf"}, {"name": "x.sh"}, {"name": ".x.elf"}, {"name": "a/x.elf"}):
+            self.assertEqual(self.api.post("/api/store/fetch", dict(ok, **bad))[0], 400)
+        # NeoHEN's service is not there in the tests
+        st, j = self.api.post("/api/store/fetch", ok)
+        self.assertEqual(st, 502)
+        self.assertEqual(self.api.get("/api/store")[1]["installed"], {})
+
     def test_jobs_listing(self):
         _, j = self.api.get("/api/jobs")
         ids = [x["id"] for x in j["jobs"]]
