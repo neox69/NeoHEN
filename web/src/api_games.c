@@ -474,6 +474,26 @@ body_game(http_req_t *req, jval_t **body, game_t *g) {
   return 0;
 }
 
+/* POST /api/games/peek {"id": "PPSA01234"}
+ * the image is mounted right now (the page asked ShadowMount+ to): keep
+ * what its fakelib holds, as when the game is seen open */
+void
+api_games_peek(http_req_t *req) {
+  jval_t *b;
+  game_t g;
+
+  if(body_game(req, &b, &g)) {
+    return;
+  }
+  json_free(b);
+  games_on_game_open(g.id);
+  if(!seen(g.id)) {
+    http_send_error(req, 409, "the image of %s is not mounted", g.id);
+    return;
+  }
+  reply_game(req, g.id);
+}
+
 /* ------------------------------------------------------------ the fix */
 
 static int
@@ -515,6 +535,11 @@ api_games_fix(http_req_t *req) {
   }
   if(is_running(g.id)) {
     games_on_game_open(g.id);
+  }
+  snprintf(path, sizeof(path), SEEN "/%s/" STUB, g.id);
+  if(exists(path, NULL)) {
+    http_send_error(req, 409, "the image of %s already brings its own %s", g.id, STUB);
+    return;
   }
   if(!seen(g.id) && !force) {
     http_send_error(req, 409, "open %s once first, so that what its image brings can be kept",

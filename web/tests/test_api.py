@@ -1105,6 +1105,27 @@ class PayloadTest(unittest.TestCase):
                 srv.close()
             shutil.rmtree(f"{r}/data/neohen/cheats", ignore_errors=True)
 
+    def test_games_peek_and_smp(self):
+        r = self.root
+        # not mounted: nothing to look at
+        self.assertEqual(self.api.post("/api/games/peek", {"id": "PPSA05555"})[0], 409)
+        os.makedirs(f"{r}/mnt/shadowmnt/PPSA05555_abcd/sce_sys")
+        os.makedirs(f"{r}/mnt/shadowmnt/PPSA05555_abcd/fakelib")
+        with open(f"{r}/mnt/shadowmnt/PPSA05555_abcd/fakelib/libScePlayGo.sprx", "wb") as f:
+            f.write(b"own stub")
+        try:
+            st, j = self.api.post("/api/games/peek", {"id": "PPSA05555"})
+            self.assertEqual((st, j["game"]["image"]), (200, {"known": True, "fakelib": ["libScePlayGo.sprx"]}))
+            # an image with a stub of its own is left alone
+            self.assertEqual(self.api.post("/api/games/fix", {"id": "PPSA05555", "force": True})[0], 409)
+        finally:
+            shutil.rmtree(f"{r}/mnt/shadowmnt/PPSA05555_abcd")
+            shutil.rmtree(f"{r}/data/neohen/web/fakelib/PPSA05555", ignore_errors=True)
+        # ShadowMount+ is not there in the tests: its door says so, and takes no other path
+        self.assertEqual(self.api.post("/api/smp?path=/api/v1/version", {})[0], 502)
+        self.assertEqual(self.api.get("/api/smp?path=/etc/passwd")[0], 400)
+        self.assertEqual(self.api.get("/api/smp?path=/api/../x")[0], 400)
+
     def test_jobs_listing(self):
         _, j = self.api.get("/api/jobs")
         ids = [x["id"] for x in j["jobs"]]
