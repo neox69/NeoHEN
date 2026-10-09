@@ -605,6 +605,17 @@ static const api_route_t g_routes[] = {
   {"POST", "/api/sys/menu",         api_sys_menu},
 
   {"GET",  "/api/trophies",         api_trophies},
+  {"GET",  "/api/trophies/set",     api_trophies_set},
+  {"GET",  "/api/trophies/icon",    api_trophies_icon},
+
+  {"GET",  "/api/games/images",     api_games_images},
+  {"POST", "/api/games/fix",        api_games_fix},
+  {"POST", "/api/games/unfix",      api_games_unfix},
+  {"POST", "/api/games/note",       api_games_note},
+  {"POST", "/api/games/move",       api_games_move},
+
+  {"GET",  "/api/cheats/live",      api_cheats_live},
+  {"POST", "/api/cheats/toggle",    api_cheats_toggle},
   {"GET",  "/api/stats/playtime",   api_stats_playtime},
   {"GET",  "/api/library/status",   api_library_status_get},
   {"POST", "/api/library/status",   api_library_status_set},

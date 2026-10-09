@@ -262,6 +262,7 @@ count_thread(void *arg) {
       }
     }
     char closed[16] = "";
+    int opened = tid[0] && strcmp(open_now, tid);
     if(open_now[0] && strcmp(open_now, tid)) {
       snprintf(closed, sizeof(closed), "%s", open_now);
     }
@@ -275,6 +276,9 @@ count_thread(void *arg) {
     pthread_mutex_unlock(&g_lock);
     if(closed[0]) {
       saves_on_game_closed(closed);
+    }
+    if(opened) {
+      games_on_game_open(tid);
     }
   }
   return NULL;

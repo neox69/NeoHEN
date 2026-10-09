@@ -39,6 +39,10 @@ void        plat_proc_each(plat_proc_cb cb, void *ctx);
 /* hand an ELF/BIN file to the console's ELF loader */
 int         plat_payload_launch(const char *local_path);
 
+/* when a process started, the way NeoHEN's services tell one run of a game
+ * from the next: seconds << 32 | microseconds. 0 when it cannot be known. */
+uint64_t    plat_proc_generation(pid_t pid);
+
 /* process memory */
 int         plat_proc_read(pid_t pid, uint64_t addr, void *buf, size_t len);
 int         plat_proc_write(pid_t pid, uint64_t addr, const void *buf, size_t len);

@@ -354,6 +354,11 @@ plat_proc_maps(pid_t pid, plat_map_cb cb, void *ctx) {
   return 0;
 }
 
+uint64_t
+plat_proc_generation(pid_t pid) {
+  return pid > 0 ? 1 : 0;
+}
+
 int
 plat_app_running(char *title_id, size_t size, int *app_id, pid_t *pid) {
   pthread_mutex_lock(&g_lock);
