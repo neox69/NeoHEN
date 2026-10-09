@@ -72,6 +72,17 @@ void api_apps_install_pkg(http_req_t *req);
 void api_apps_uninstall(http_req_t *req);
 
 void api_trophies(http_req_t *req);
+void api_trophies_set(http_req_t *req);
+void api_trophies_icon(http_req_t *req);
+void api_games_images(http_req_t *req);
+void api_games_fix(http_req_t *req);
+void api_games_unfix(http_req_t *req);
+void api_games_note(http_req_t *req);
+void api_games_move(http_req_t *req);
+/* a game has been seen open: keep what its image brings in its fakelib */
+void games_on_game_open(const char *title);
+void api_cheats_live(http_req_t *req);
+void api_cheats_toggle(http_req_t *req);
 void api_stats_init(void);
 void api_stats_playtime(http_req_t *req);
 void api_library_status_get(http_req_t *req);

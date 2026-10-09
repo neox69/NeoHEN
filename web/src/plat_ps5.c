@@ -640,6 +640,32 @@ running_big_app(char *title_id, size_t size, pid_t *pid) {
   return id;
 }
 
+uint64_t
+plat_proc_generation(pid_t pid) {
+  uint64_t gen = 0;
+  size_t size = 0;
+  void *buf;
+
+  /* from the whole list, like the Toolbox does: the console's record of a
+   * process is not the size the headers say, and each one tells its own */
+  if(pid <= 0 || !(buf = proc_list(&size))) {
+    return 0;
+  }
+  for(char *ptr = buf; ptr < (char *)buf + size;) {
+    struct kinfo_proc *ki = (struct kinfo_proc *)ptr;
+    if(ki->ki_structsize <= 0) {
+      break;
+    }
+    ptr += ki->ki_structsize;
+    if(ki->ki_pid == pid) {
+      gen = (uint64_t)ki->ki_start.tv_sec << 32 | (uint64_t)ki->ki_start.tv_usec;
+      break;
+    }
+  }
+  free(buf);
+  return gen;
+}
+
 int
 plat_app_running(char *title_id, size_t size, int *app_id, pid_t *pid) {
   int id = running_big_app(title_id, size, pid);

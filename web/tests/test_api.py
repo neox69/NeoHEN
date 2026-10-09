@@ -65,6 +65,76 @@ def make_sfo(entries):
     return hdr + index + keys + data
 
 
+def make_ucp(files):
+    """A TROPHY.UCP: header, one 64 byte entry per file, the files."""
+    table = b""
+    data = b""
+    at = 0x60 + 0x40 * len(files)
+    for name, body in files:
+        table += name.encode().ljust(32, b"\0") + struct.pack(">QQ", at + len(data), len(body)) + b"\0" * 16
+        data += body
+    head = struct.pack(">IIQII", 0xB228C60A, 1, at + len(data), len(files), 0x40)
+    return head.ljust(0x60, b"\0") + table + data
+
+
+def make_trptitle(trophies):
+    """A TRPTITLE.DAT with the one section NeoWEB reads: (number, unix time
+    earned or 0) per trophy, in blocks of 0x400 that each end in a hash."""
+    recs = b""
+    for num, when in trophies:
+        ticks = (when + 62135596800) * 1000000 if when else 0
+        recs += b"\0" * 16 + struct.pack(">IIIIQ", num, 1 if when else 0, 0x2000 if when else 0, 0, ticks).ljust(0x50, b"\0")
+    off = 0x380 + 13  # not on a block boundary, like the real ones
+    body = b"T2TD" + struct.pack(">II", 0x10000, 2) + b"\0" * 0x24
+    body += struct.pack(">IIIIQQ", 0x100, 0x40, 1, 1, 0x200, 0)
+    body += struct.pack(">IIIIQQ", 0x800, 0x50, 1, len(trophies), off, 0)
+    body = body.ljust(off, b"\0") + recs
+    out = b"T2PD" + struct.pack(">III", 0x10000, 0, 0x420) + b"\0" * 0x30
+    for i in range(0, len(body), 0x400):
+        out += body[i:i + 0x400].ljust(0x400, b"\0") + os.urandom(0x20)
+    return out
+
+
+def fake_cheat_service(path, listing, seen):
+    """NeoHEN's cheat service, as far as NeoWEB talks to it."""
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    srv = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    srv.bind(path)
+    srv.listen(4)
+
+    def run():
+        while True:
+            try:
+                c, _ = srv.accept()
+            except OSError:
+                return
+            buf = b""
+            while len(buf) < 12 + 0x1000:
+                part = c.recv(12 + 0x1000 - len(buf))
+                if not part:
+                    break
+                buf += part
+            if len(buf) == 12 + 0x1000:
+                magic, cmd, _err = struct.unpack("<IIi", buf[:12])
+                ask = json.loads(buf[12:].split(b"\0")[0])
+                seen.append((cmd, ask))
+                if cmd == 0x800000A:
+                    with open(listing["local"], "w") as f:
+                        json.dump(listing["json"], f)
+                    var, err = listing["console"], 0
+                elif ask.get("session_id") == "cheat-1-x":
+                    var, err = "God mode -> " + ("enabled" if ask["enabled"] else "disabled"), 0
+                else:
+                    var, err = "stale", -1
+                msg = json.dumps({"var": var}).encode().ljust(0x1000, b"\0")
+                c.sendall(struct.pack("<IIi", magic, 0x8000002, err) + msg)
+            c.close()
+
+    import threading
+    threading.Thread(target=run, daemon=True).start()
+    return srv
+
+
 class Api:
     def __init__(self, base):
         self.base = base
@@ -175,6 +245,50 @@ class PayloadTest(unittest.TestCase):
         os.makedirs(t)
         with open(f"{t}/20250615_150127_00997366.jxr.jxr", "wb") as f:
             f.write(b"II\xbc\x01" + b"t" * 500)
+
+        # trophies kept by the console itself: one set, two of its three earned
+        conf = {"defaultLanguage": "en-US", "trophies": [
+            {"id": "0000", "grade": "P", "hidden": False},
+            {"id": "0001", "grade": "G", "hidden": False},
+            {"id": "0002", "grade": "B", "hidden": True}]}
+        names = {"metadata": {"titleMetadata": {"name": "Juego de Prueba"}, "trophyMetadata": [
+            {"id": "0000", "name": "Todo", "detail": "Consigue todos"},
+            {"id": "0001", "name": "Oro", "detail": "Haz algo"},
+            {"id": "0002", "name": "Secreto", "detail": "No se dice"}]}}
+        os.makedirs(f"{r}/user/trophy2/nobackup/conf/NPWR11111_00")
+        with open(f"{r}/user/trophy2/nobackup/conf/NPWR11111_00/TROPHY.UCP", "wb") as f:
+            f.write(make_ucp([("icon0_en-US.png", b"\x89PNG\r\n\x1a\nSET"),
+                              ("trop0001.png", b"\x89PNG\r\n\x1a\nGOLD"),
+                              ("tropconf.json", json.dumps(conf).encode()),
+                              ("tropmeta_es-ES.json", json.dumps(names).encode())]))
+        os.makedirs(f"{r}/user/home/1d31cd9c/trophy2/nobackup/data/NPWR11111_00")
+        with open(f"{r}/user/home/1d31cd9c/trophy2/nobackup/data/NPWR11111_00/TRPTITLE.DAT", "wb") as f:
+            f.write(make_trptitle([(0, 0), (1, 1791460000), (2, 1791463600)]))
+        os.makedirs(f"{r}/user/app/PPSA01234/sce_sys/trophy2")
+        with open(f"{r}/user/app/PPSA01234/sce_sys/trophy2/npbind.dat", "wb") as f:
+            f.write(b"\xd2\x94\xa0\x18" + b"\0" * 80 + b"NPWR11111_00\0" + b"\0" * 60)
+
+        # two games served by ShadowMount+ from images; the image of the first
+        # is mounted and brings a library of its own
+        for tid, chunks in (("PPSA01234", 7), ("PPSA05555", 60)):
+            os.makedirs(f"{r}/user/app/{tid}/sce_sys", exist_ok=True)
+            os.makedirs(f"{r}/data/homebrew", exist_ok=True)
+            with open(f"{r}/data/homebrew/{tid} Game.ffpfsc", "wb") as f:
+                f.write(os.urandom(300 * 1024 + 5))
+            with open(f"{r}/user/app/{tid}/mount_img.lnk", "w") as f:
+                f.write(f"/data/homebrew/{tid} Game.ffpfsc\n/mnt/shadowmnt/pfsc/x/{tid}.exfat")
+            with open(f"{r}/user/app/{tid}/mount.lnk", "w") as f:
+                f.write(f"/mnt/shadowmnt/{tid}_abcd")
+            with open(f"{r}/user/app/{tid}/sce_sys/playgo-chunk.dat", "wb") as f:
+                f.write(b"plgx" + b"\0" * 6 + struct.pack("<HHH", chunks, 0, 2) + b"\0" * 64)
+        os.makedirs(f"{r}/mnt/shadowmnt/PPSA01234_abcd/sce_sys")
+        os.makedirs(f"{r}/mnt/shadowmnt/PPSA01234_abcd/fakelib")
+        with open(f"{r}/mnt/shadowmnt/PPSA01234_abcd/fakelib/libSceAmpr.sprx", "wb") as f:
+            f.write(b"\x4f\x15\x3d\x1d" + b"A" * 999)
+        # the stub, as a backport made by hand for some other game left it
+        os.makedirs(f"{r}/data/homebrew/backports/PPSA07777/fakelib")
+        with open(f"{r}/data/homebrew/backports/PPSA07777/fakelib/libScePlayGo.sprx", "wb") as f:
+            f.write(b"\x4f\x15\x3d\x1d" + b"S" * 500)
 
         cls.port = free_port()
         cls.ctl_port = free_port()
@@ -413,7 +527,7 @@ class PayloadTest(unittest.TestCase):
         _, j = self.api.get("/api/trophies")
         me = [u for u in j["users"] if u["id"] == "1d31cd9c"][0]
         self.assertEqual(me["name"], "NeoX ESP")
-        sets = {s["id"]: s for s in me["sets"]}
+        sets = {s["id"]: s for s in me["sets"] if not s["local"]}   # the menu's own count
         self.assertEqual(len(sets), 399)
         one = sets["NPWR00001_00"]
         self.assertEqual((one["platform"], one["name"], one["progress"], one["updated"]),
@@ -807,6 +921,189 @@ class PayloadTest(unittest.TestCase):
         time.sleep(0.3)
         self.assertEqual(val.value, 5)
         self.assertEqual(self.api.post("/api/mem/reset")[0], 200)
+
+    # ------------------------------------------------------------ trophies
+    def test_trophies_local(self):
+        _, j = self.api.get("/api/trophies?lang=es-ES")
+        me = [u for u in j["users"] if u["id"] == "1d31cd9c"][0]
+        s = [x for x in me["sets"] if x["id"] == "NPWR11111_00"][0]
+        self.assertEqual(s["name"], "Juego de Prueba")
+        self.assertTrue(s["local"] and s["localIcon"])
+        self.assertEqual(s["total"], {"platinum": 1, "gold": 1, "silver": 0, "bronze": 1})
+        self.assertEqual(s["got"], {"platinum": 0, "gold": 1, "silver": 0, "bronze": 1})
+        self.assertEqual(s["progress"], 99)
+        self.assertEqual(s["games"], "PPSA01234")
+        self.assertEqual(s["updated"], time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(1791463600)))
+
+        _, j = self.api.get("/api/trophies/set?user=1d31cd9c&id=NPWR11111_00&lang=es-ES")
+        t = {x["id"]: x for x in j["trophies"]}
+        self.assertEqual(len(t), 3)
+        self.assertEqual((t["0001"]["grade"], t["0001"]["name"], t["0001"]["got"]), ("gold", "Oro", True))
+        self.assertEqual(t["0001"]["when"], time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(1791460000)))
+        self.assertTrue(t["0002"]["hidden"])
+        self.assertFalse(t["0000"]["got"])
+        self.assertEqual(t["0000"]["when"], "")
+        # a user who has not played it has the set, with nothing earned
+        _, j = self.api.get("/api/trophies/set?user=1d31cda3&id=NPWR11111_00")
+        self.assertFalse(any(x["got"] for x in j["trophies"]))
+
+        st, body, hdr = self.api.req("GET", "/api/trophies/icon?set=NPWR11111_00&id=0001")
+        self.assertEqual((st, body, hdr["Content-Type"]), (200, b"\x89PNG\r\n\x1a\nGOLD", "image/png"))
+        self.assertEqual(self.api.req("GET", "/api/trophies/icon?set=NPWR11111_00")[1], b"\x89PNG\r\n\x1a\nSET")
+        self.assertEqual(self.api.req("GET", "/api/trophies/icon?set=NPWR11111_00&id=0009")[0], 404)
+        self.assertEqual(self.api.req("GET", "/api/trophies/icon?set=../../etc&id=1")[0], 400)
+        self.assertEqual(self.api.get("/api/trophies/set?user=1d31cd9c&id=NPWR22222_00")[0], 404)
+        self.assertEqual(self.api.get("/api/trophies/set?user=nobody&id=NPWR11111_00")[0], 400)
+
+    # ------------------------------------------------------------ games
+    def game(self, tid):
+        _, j = self.api.get(f"/api/games/images?id={tid}")
+        return j["games"][0]
+
+    def test_games_listing(self):
+        _, j = self.api.get("/api/games/images")
+        ids = {g["id"] for g in j["games"]}
+        self.assertTrue({"PPSA01234", "PPSA05555"} <= ids)
+        self.assertTrue(j["stub"])
+        self.assertEqual({r["path"] for r in j["roots"]}, {"/data/homebrew", "/mnt/usb0"})
+        g = self.game("PPSA05555")
+        self.assertEqual((g["kind"], g["where"], g["size"]), ("image", "internal", 300 * 1024 + 5))
+        self.assertEqual(g["playgo"], {"present": True, "chunks": 60, "scenarios": 2})
+        self.assertFalse(g["backport"]["exists"])
+
+    def test_games_fix(self):
+        r = self.root
+        # nobody has seen what this image brings: refused unless forced
+        st, j = self.api.post("/api/games/fix", {"id": "PPSA05555"})
+        self.assertEqual(st, 409)
+        self.assertFalse(os.path.exists(f"{r}/data/homebrew/backports/PPSA05555"))
+        st, j = self.api.post("/api/games/fix", {"id": "PPSA05555", "force": True})
+        self.assertEqual(st, 200)
+        self.assertTrue(j["game"]["backport"]["playgo"])
+        self.assertEqual(j["game"]["backport"]["values"], "60/2")
+        with open(f"{r}/data/homebrew/backports/PPSA05555/playgo_stub.dat") as f:
+            self.assertEqual(f.read(), "60\n2\n")
+        self.assertEqual(os.listdir(f"{r}/data/homebrew/backports/PPSA05555/fakelib"), ["libScePlayGo.sprx"])
+        # the stub is kept where the next game will find it
+        self.assertTrue(os.path.exists(f"{r}/data/neohen/fixes/libScePlayGo.sprx"))
+
+        # the open game: its image's own library goes into the backport too
+        self.assertEqual(self.api.post("/api/apps/launch", {"titleId": "PPSA01234"})[0], 200)
+        try:
+            st, j = self.api.post("/api/games/fix", {"id": "PPSA01234"})
+            self.assertEqual(st, 200)
+            self.assertEqual(sorted(j["game"]["backport"]["fakelib"]), ["libSceAmpr.sprx", "libScePlayGo.sprx"])
+            self.assertEqual(j["game"]["image"], {"known": True, "fakelib": ["libSceAmpr.sprx"]})
+            with open(f"{r}/data/homebrew/backports/PPSA01234/fakelib/libSceAmpr.sprx", "rb") as f:
+                self.assertEqual(len(f.read()), 1003)
+        finally:
+            self.api.post("/api/apps/kill")
+        # something of the user's in the backport survives taking the fix away
+        with open(f"{r}/data/homebrew/backports/PPSA01234/eboot.bin", "wb") as f:
+            f.write(b"mine")
+        st, j = self.api.post("/api/games/unfix", {"id": "PPSA01234"})
+        self.assertFalse(j["game"]["backport"]["playgo"])
+        self.assertEqual(os.listdir(f"{r}/data/homebrew/backports/PPSA01234"), ["eboot.bin"])
+        os.remove(f"{r}/data/homebrew/backports/PPSA01234/eboot.bin")
+        os.rmdir(f"{r}/data/homebrew/backports/PPSA01234")
+        st, j = self.api.post("/api/games/unfix", {"id": "PPSA05555"})
+        self.assertFalse(os.path.exists(f"{r}/data/homebrew/backports/PPSA05555"))
+        self.assertEqual(self.api.post("/api/games/fix", {"id": "CUSA00001"})[0], 404)
+
+    def test_games_move(self):
+        r = self.root
+        src = f"{r}/data/homebrew/PPSA05555 Game.ffpfsc"
+        dst = f"{r}/mnt/usb0/PPSA05555 Game.ffpfsc"
+        with open(src, "rb") as f:
+            want = f.read()
+        os.makedirs(f"{r}/data/homebrew/backports/PPSA05555.off/fakelib")
+        with open(f"{r}/data/homebrew/backports/PPSA05555.off/fakelib/a.sprx", "wb") as f:
+            f.write(b"lib")
+        self.assertEqual(self.api.post("/api/games/move", {"id": "PPSA05555", "to": "/data"})[0], 400)
+        self.assertEqual(self.api.post("/api/games/move", {"id": "PPSA05555", "to": "/data/homebrew"})[0], 409)
+        self.assertEqual(self.api.post("/api/games/note", {"id": "PPSA05555", "bad": "usb"})[0], 200)
+        self.assertEqual(self.game("PPSA05555")["bad"], "usb")
+        self.assertEqual(self.api.post("/api/games/note", {"id": "PPSA05555", "bad": "moon"})[0], 400)
+
+        st, j = self.api.post("/api/games/move", {"id": "PPSA05555", "to": "/mnt/usb0"})
+        self.assertEqual(st, 200)
+        job = self.api.wait_job(j["job"])
+        self.assertEqual((job["state"], job["result"]), ("done", "/mnt/usb0/PPSA05555 Game.ffpfsc"))
+        self.assertFalse(os.path.exists(src))
+        self.assertFalse(os.path.exists(dst + ".moving"))
+        with open(dst, "rb") as f:
+            self.assertEqual(f.read(), want)
+        # its backport, switched off as it was, went along
+        self.assertFalse(os.path.exists(f"{r}/data/homebrew/backports/PPSA05555.off"))
+        with open(f"{r}/mnt/usb0/backports/PPSA05555.off/fakelib/a.sprx", "rb") as f:
+            self.assertEqual(f.read(), b"lib")
+        # ShadowMount+ would rewrite this when it sees the image in its new place
+        with open(f"{r}/user/app/PPSA05555/mount_img.lnk", "w") as f:
+            f.write("/mnt/usb0/PPSA05555 Game.ffpfsc\n")
+        g = self.game("PPSA05555")
+        self.assertEqual((g["where"], g["backport"]["exists"], g["backport"]["enabled"]), ("usb", True, False))
+        # and back; a file already there is never written over
+        open(src, "wb").close()
+        self.assertEqual(self.api.post("/api/games/move", {"id": "PPSA05555", "to": "/data/homebrew"})[0], 409)
+        os.remove(src)
+        st, j = self.api.post("/api/games/move", {"id": "PPSA05555", "to": "/data/homebrew"})
+        self.assertEqual(self.api.wait_job(j["job"])["state"], "done")
+        with open(src, "rb") as f:
+            self.assertEqual(f.read(), want)
+        with open(f"{r}/user/app/PPSA05555/mount_img.lnk", "w") as f:
+            f.write("/data/homebrew/PPSA05555 Game.ffpfsc\n")
+        shutil.rmtree(f"{r}/data/homebrew/backports/PPSA05555.off")
+        self.api.post("/api/games/note", {"id": "PPSA05555", "bad": ""})
+
+    # ------------------------------------------------------------ cheats
+    def test_cheats_live(self):
+        r = self.root
+        _, j = self.api.get("/api/cheats/live")
+        self.assertFalse(j["running"])
+        self.assertEqual(self.api.post("/api/apps/launch", {"titleId": "PPSA01234"})[0], 200)
+        srv = None
+        try:
+            # no cheat file for the game: the service is not even asked
+            _, j = self.api.get("/api/cheats/live")
+            self.assertEqual((j["running"], j["titleId"], j["files"]), (True, "PPSA01234", 0))
+            self.assertNotIn("list", j)
+            os.makedirs(f"{r}/data/neohen/cheats", exist_ok=True)
+            open(f"{r}/data/neohen/cheats/PPSA01234_01.000.000_abc.json", "w").close()
+            # a file, but nobody listening
+            _, j = self.api.get("/api/cheats/live")
+            self.assertEqual(j["files"], 1)
+            self.assertIn("not answering", j["error"])
+
+            seen = []
+            listing = {"local": f"{r}/user/data/neohen/PPSA01234_cheats_1",
+                       "console": "/user/data/neohen/PPSA01234_cheats_1",
+                       "json": {"mode": "runtime", "sessionId": "cheat-1-x", "canToggle": True, "name": "Test Game",
+                                "authors": ["me"], "cheats": [], "groups": [{"format": "JSON", "sourceId": "abc",
+                                "cheats": [{"key": "abc|/data/neohen/cheats/x.json|0", "name": "God mode",
+                                            "enabled": False, "description": ""}]}]}}
+            os.makedirs(f"{r}/user/data/neohen", exist_ok=True)
+            srv = fake_cheat_service(f"{r}/system_tmp/neohen/ipc/util_service", listing, seen)
+            _, j = self.api.get("/api/cheats/live")
+            self.assertEqual(j["list"]["sessionId"], "cheat-1-x")
+            self.assertEqual(j["list"]["groups"][0]["cheats"][0]["name"], "God mode")
+            self.assertFalse(os.path.exists(listing["local"]))  # read and removed
+            cmd, ask = seen[-1]
+            self.assertEqual(cmd, 0x800000A)
+            self.assertEqual((ask["tid"], ask["mode"]), ("PPSA01234", "runtime"))
+            self.assertTrue(ask["pid"] > 0 and int(ask["generation"]) > 0)
+
+            key = j["list"]["groups"][0]["cheats"][0]["key"]
+            st, j = self.api.post("/api/cheats/toggle", {"session": "cheat-1-x", "key": key, "enabled": True})
+            self.assertEqual((st, j["status"]), (200, "God mode -> enabled"))
+            self.assertEqual(seen[-1], (0x800000B, {"session_id": "cheat-1-x", "cheat_key": key, "enabled": True}))
+            st, j = self.api.post("/api/cheats/toggle", {"session": "old", "key": key, "enabled": True})
+            self.assertEqual((st, j["error"]), (409, "stale"))
+            self.assertEqual(self.api.post("/api/cheats/toggle", {"session": "cheat-1-x", "key": key})[0], 400)
+        finally:
+            self.api.post("/api/apps/kill")
+            if srv:
+                srv.close()
+            shutil.rmtree(f"{r}/data/neohen/cheats", ignore_errors=True)
 
     def test_jobs_listing(self):
         _, j = self.api.get("/api/jobs")

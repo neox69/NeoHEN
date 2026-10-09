@@ -257,6 +257,13 @@ html.plain body::before{display:none}
 .trc .g span{display:inline-flex;align-items:center;gap:5px}.trc .g i{width:9px;height:9px;border-radius:50%;display:inline-block}
 .trc .pc{font:800 20px var(--sans,inherit);min-width:58px;text-align:right}
 .trc.full{border-color:rgba(52,211,153,.45)}
+.trc[data-set]{cursor:pointer}.trc[data-set]:hover{border-color:var(--line2)}
+.trw img{width:52px;height:52px;border-radius:10px;object-fit:cover;background:rgba(132,153,204,.12);flex:none}
+.trw.no img{filter:grayscale(1);opacity:.45}.trw .t small{white-space:normal}
+.gmb{border-top:1px solid var(--line);margin:0 0 16px;padding-top:14px;font-size:13.5px}
+.gmb p{margin:0 0 10px;color:var(--dim)}.gmb .row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center}
+.chl .item:first-child{border-top:0}
+.svbar label.sw{display:inline-flex;font:inherit;font-size:13px;letter-spacing:0;text-transform:none;margin:0;color:var(--dim)}
 .stg{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:18px}
 .stk{padding:16px 18px}.stk label{display:block;font:700 10.5px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--faint);margin-bottom:8px}
 .stk b{font:800 26px var(--sans,inherit);letter-spacing:-.01em}.stk small{display:block;margin-top:4px;color:var(--dim);font-size:12.5px}
@@ -742,9 +749,10 @@ function detail(id){
     '<div style="display:flex;gap:10px;flex-wrap:wrap">'+
     (run?'<button class="btn danger" data-k="close">'+ic("x")+L("Cerrar juego","Close game")+'</button>':'<button class="btn pri" data-k="launch">'+ic("play")+L("Lanzar","Launch")+'</button>')+
     (S.full&&loc?'<button class="btn" data-k="open">'+ic("files")+L("Ver ficheros","Browse files")+'</button>':"")+
-    '<button class="btn" data-k="copy">'+ic("copy")+L("Copiar ID","Copy ID")+'</button></div></div>';
-  $("drawer").className="drawer on";
+    '<button class="btn" data-k="copy">'+ic("copy")+L("Copiar ID","Copy ID")+'</button></div>'+(S.full?'<div class="gmb" id="gmb" style="margin-top:18px"></div>':"")+'</div>';
+  $("drawer").className="drawer on";S.gmId=id;if(S.full)gameBox(id);
   $("drawer-p").onclick=function(ev){var b=ev.target.closest("button");if(!b)return;var k=b.getAttribute("data-k");
+    if(b.hasAttribute("data-g")){gameAct(id,b.getAttribute("data-g"),b.getAttribute("data-v"));return}
     if(b.hasAttribute("data-st")){var v=b.getAttribute("data-st");setStatus(id,S.status[id]===v?"":v);detail(id);return}
     if(b.hasAttribute("data-x")){}else if(k==="launch")launch(id);else if(k==="close")closeGame();
     else if(k==="open"){S.cwd=loc.path;show("files",true)}
@@ -752,6 +760,45 @@ function detail(id){
     $("drawer").className="drawer"};
 }
 $("drawer").onclick=function(e){if(e.target===this)this.className="drawer"};
+/* where the game is kept, moving it, and the fix for "wait for the content to install" */
+S.gm={};
+function whereName(w){return w==="usb"?L("USB externo","USB drive"):w==="m2"?"SSD M.2":L("disco interno","internal drive")}
+function gameBox(id,quiet){
+  if(!quiet&&$("gmb"))$("gmb").innerHTML="";
+  return api("/api/games/images?id="+id).then(function(j){S.gm={roots:j.roots||[],stub:j.stub,stubFolder:j.stubFolder,g:(j.games||[])[0]||null};if(S.gmId===id)paintGame(id)}).catch(function(){})}
+function paintGame(id){
+  var box=$("gmb"),m=S.gm,g=m.g;if(!box)return;if(!g){box.innerHTML="";return}
+  var run=S.running===id,h='<h3 class="h">'+L("Dónde está","Where it is")+'</h3><p>'+(g.kind==="image"?L("Imagen en el ","Image on the "):L("Carpeta en el ","Folder on the "))+whereName(g.where)+(g.size?" · "+size(g.size):"")+'<br><small style="color:var(--faint);font-family:var(--mono)">'+esc(g.source)+'</small></p>';
+  if(g.kind==="image"){
+    var mv=S.jobs.filter(function(x){return x.type==="move-game"&&x.state==="running"&&x.title.indexOf(g.source)===0})[0];
+    h+='<div class="row">'+(mv?'<span class="chip warn">'+L("Moviéndose: ","Moving: ")+(mv.bytesTotal?Math.round(mv.bytesDone/mv.bytesTotal*100):0)+'%</span>'
+      :m.roots.filter(function(r){return g.source.indexOf(r.path+"/")!==0}).map(function(r){var room=r.free>g.size+7e7;
+        return '<button class="btn sm" data-g="move" data-v="'+esc(r.path)+'"'+(run||!room||S.ro?" disabled":"")+' title="'+esc(r.path)+" · "+size(r.free)+" "+L("libres","free")+'">'+ic("move")+L("Mover al ","Move to the ")+whereName(r.where)+(room?"":" ("+L("no cabe","no room")+")")+'</button>'}).join(""))+
+      '<button class="btn sm ghost" data-g="bad" data-v="'+(g.bad===g.where?"":g.where)+'">'+(g.bad===g.where?L("Quitar la marca «no funciona desde aquí»","Unmark “does not work from here”"):L("Marcar: no funciona desde aquí","Mark: does not work from here"))+'</button></div>'+
+      (g.bad?'<p><span class="chip bad">'+L("Anotado: no funciona desde el ","Noted: does not work from the ")+whereName(g.bad)+'</span></p>':"")+(run?'<p>'+L("Cierra el juego para poder moverlo.","Close the game to be able to move it.")+'</p>':"");
+  }
+  if(g.playgo.present){
+    var on=g.backport.playgo&&g.backport.enabled;
+    h+='<h3 class="h" style="margin-top:6px">'+L("Arreglo de instalación","Install fix")+'</h3>';
+    if(on)h+='<p><span class="chip ok">'+L("Aplicado","Applied")+" · "+esc(g.backport.values)+'</span> '+L("El juego ya no espera a que «se instale el contenido».","The game no longer waits for the content “to install”.")+(g.backport.fakelib.length>1?" "+L("Librerías: ","Libraries: ")+esc(g.backport.fakelib.join(", ")):"")+'</p><div class="row"><button class="btn sm danger" data-g="unfix"'+(S.ro?" disabled":"")+'>'+L("Quitar el arreglo","Remove the fix")+'</button></div>';
+    else if(!m.stub)h+='<p>'+L("Si este juego se queda en «espera a que se instale el contenido», se arregla con un clic. Falta una pieza que NeoWEB no trae: copia libScePlayGo.sprx (pgo_stub) a ","If this game stays at “wait for the content to install”, one click fixes it. A piece NeoWEB does not ship is missing: copy libScePlayGo.sprx (pgo_stub) to ")+esc(m.stubFolder)+'.</p>';
+    else if(!g.image.known&&!g.running)h+='<p>'+L("Si este juego se queda en «espera a que se instale el contenido», se arregla con un clic. Antes ábrelo una vez (aunque se quede en esa pantalla) y vuelve aquí: NeoWEB necesita ver qué librerías trae su imagen para no dejarlo sin ellas.","If this game stays at “wait for the content to install”, one click fixes it. First open it once (even if it stays on that screen) and come back: NeoWEB needs to see which libraries its image brings so as not to leave it without them.")+'</p><div class="row"><button class="btn sm ghost" data-g="fix" data-v="force"'+(S.ro?" disabled":"")+'>'+L("Aplicar sin mirar","Apply without looking")+'</button></div>';
+    else h+='<p>'+L("Si este juego se queda en «espera a que se instale el contenido», pulsa aquí y después ciérralo y vuelve a abrirlo.","If this game stays at “wait for the content to install”, click here, then close it and open it again.")+(g.image.fakelib.length?" "+L("Su imagen trae: ","Its image brings: ")+esc(g.image.fakelib.join(", ")):"")+'</p><div class="row"><button class="btn sm pri" data-g="fix"'+(S.ro?" disabled":"")+'>'+L("Arreglar la instalación","Fix the install")+" ("+g.playgo.chunks+"/"+g.playgo.scenarios+')</button></div>';
+  }
+  box.innerHTML=h;
+}
+function gameAct(id,k,v){
+  var g=S.gm.g;if(!g)return;
+  function done(j){if(j.game)S.gm.g=j.game;if(S.gmId===id)paintGame(id)}
+  if(k==="fix")api("/api/games/fix",{id:id,force:v==="force"}).then(function(j){done(j);toast(L("Arreglo aplicado. Cierra el juego y vuelve a abrirlo.","Fix applied. Close the game and open it again."))}).catch(fail);
+  else if(k==="unfix")ask(L("Quitar el arreglo","Remove the fix"),L("Se quita solo lo que puso el arreglo; lo demás del backport se queda.","Only what the fix put is removed; the rest of the backport stays."),L("Quitar","Remove"),true).then(function(ok){if(ok)api("/api/games/unfix",{id:id}).then(done).catch(fail)});
+  else if(k==="bad")api("/api/games/note",{id:id,bad:v}).then(done).catch(fail);
+  else if(k==="move"){var r=S.gm.roots.filter(function(x){return x.path===v})[0];if(!r)return;
+    ask(L("Mover ","Move ")+title(id),(g.bad===r.where?L("OJO: tienes anotado que este juego no funciona desde el ","WARNING: you noted that this game does not work from the ")+whereName(r.where)+". ":"")+
+      L("Se copian ","This copies ")+size(g.size)+L(" al "," to the ")+whereName(r.where)+L(" y, solo cuando la copia está completa, se borra el original. Su backport va con él. Puede tardar un buen rato; no apagues la consola."," and, only once the copy is complete, deletes the original. Its backport goes along. It can take a good while; do not turn the console off."),L("Mover","Move"),g.bad===r.where).then(function(ok){if(!ok)return;
+      api("/api/games/move",{id:id,to:v}).then(function(j){toast(L("Moviendo. El progreso está en Transferencias.","Moving. Progress is under Transfers."));loadJobs().then(function(){if(S.gmId===id)paintGame(id)});
+        watchJob(j.job,function(job){toast(job.state==="done"?title(id)+L(" ya está en el "," is now on the ")+whereName(r.where):L("No se pudo mover: ","Could not move: ")+(job.error||job.state),job.state!=="done");if(S.gmId===id)gameBox(id,true)})}).catch(fail)})}
+}
 
 /* ------------------------------------------------------------ files */
 var TXT=/\.(txt|ini|json|cfg|conf|log|lst|xml|md|sh|py|yaml|yml|csv|html?|js|css|plist|sfv|nfo|bak)$/i;
@@ -1217,9 +1264,30 @@ $("v-captures").addEventListener("change",function(e){
 
 /* ------------------------------------------------------------ cheats */
 var CDIR="/data/neohen/cheats";
-S.ch={files:[],by:{},loaded:false,open:{},info:{},q:""};
+S.ch={files:[],by:{},loaded:false,open:{},info:{},q:"",live:null,busy:{}};
+/* the cheats of the game that is open: NeoHEN's own service lists and applies them */
+function loadLive(){return api("/api/cheats/live").then(function(j){S.ch.live=j},function(){S.ch.live=null}).then(function(){if(S.view==="cheats")paintCheats()})}
+function chLive(){
+  var lv=S.ch.live;if(!lv)return "";
+  var hd='<h3 class="h">'+L("Juego abierto","Open game")+'</h3>';
+  if(!lv.running)return hd+'<div class="card"><div class="empty">'+L("Abre un juego en la consola y pulsa «Releer»: sus trucos se podrán encender y apagar desde aquí.","Open a game on the console and click “Read again”: its cheats can be switched on and off from here.")+'</div></div>';
+  var a=app(lv.titleId),top='<div class="svh" style="cursor:default">'+(a&&a.hasIcon?'<img class="svi" style="width:38px;height:38px" alt="" src="/apps/icon?id='+lv.titleId+'">':'<div class="av">'+lv.titleId.slice(0,1)+'</div>')+'<div><b>'+esc(title(lv.titleId))+'</b><small>'+lv.titleId+(a&&a.version?" · v"+esc(a.version):"")+'</small></div></div>';
+  if(!lv.files)return hd+'<div class="card svu">'+top+'<div class="empty">'+L("No hay ningún fichero de trucos para este juego. Súbelo aquí abajo o descarga el catálogo desde la Toolbox.","There is no cheat file for this game. Upload one below or download the catalogue from the Toolbox.")+'</div></div>';
+  if(!lv.list)return hd+'<div class="card svu">'+top+'<div class="empty">'+L("El servicio de trucos de NeoHEN no ha podido preparar los de este juego. Lo normal es que los ficheros sean de otra versión del juego.","NeoHEN’s cheat service could not prepare the ones for this game. Usually the files are for another version of the game.")+'<br><small>'+esc(lv.error||"")+'</small></div></div>';
+  var n=0,on=0,many=(lv.list.groups||[]).length>1,rows=(lv.list.groups||[]).map(function(g){return (g.cheats||[]).map(function(c){n++;if(c.enabled)on++;
+    return '<div class="item"><div class="t"><b>'+esc(c.name)+'</b>'+(c.description?'<small style="white-space:normal">'+esc(c.description)+'</small>':"")+'</div><div class="acts"><span class="chip" title="'+esc(g.sourceId||"")+'">'+esc(g.format||"")+(many?" · "+esc((g.sourceId||"").slice(0,4)):"")+'</span>'+
+      '<label class="sw"><input type="checkbox" data-chk="'+esc(c.key)+'"'+(c.enabled?" checked":"")+(lv.list.canToggle&&!S.ro&&!S.ch.busy[c.key]?"":" disabled")+'><i></i></label></div></div>'}).join("")}).join("");
+  return hd+'<div class="card svu chl">'+top.replace("</small>"," · "+on+" / "+n+" "+L("activos","on")+(lv.list.authors&&lv.list.authors.length?" · "+esc(lv.list.authors.join(", ")):"")+"</small>")+(rows||'<div class="empty">'+L("El fichero no trae trucos.","The file has no cheats.")+'</div>')+'</div>';
+}
+function chToggle(key,onNow){
+  var ch=S.ch,lv=ch.live;if(!lv||!lv.list)return;ch.busy[key]=1;
+  api("/api/cheats/toggle",{session:lv.list.sessionId,key:key,enabled:onNow}).then(function(j){toast(j.status||L("Hecho","Done"));
+    (lv.list.groups||[]).forEach(function(g){(g.cheats||[]).forEach(function(c){if(c.key===key)c.enabled=onNow})});delete ch.busy[key];if(S.view==="cheats")paintCheats()},
+    function(e){delete ch.busy[key];fail(e);loadLive()});
+}
 function loadCheats(){
   if(!S.full)return Promise.resolve();
+  loadLive();
   return api("/api/fs/list?path="+enc(CDIR)).then(function(j){var ch=S.ch;ch.files=(j.entries||[]).filter(function(e){return e.type==="file"&&/^[A-Z]{4}\d{5}_.*\.(json|shn|mc4)$/i.test(e.name)});
     ch.by={};ch.files.forEach(function(e){var id=e.name.slice(0,9);(ch.by[id]=ch.by[id]||[]).push(e)});ch.loaded=true;if(S.view==="cheats")paintCheats()},
     function(){S.ch.files=[];S.ch.by={};S.ch.loaded=true;if(S.view==="cheats")paintCheats()});
@@ -1255,7 +1323,7 @@ function paintCheats(){
   var keep=document.activeElement&&document.activeElement.id==="ch-q";
   $("v-cheats").innerHTML='<div class="card svbar"><div style="flex:1;min-width:240px"><label>'+L("Trucos en la consola","Cheats on the console")+'</label><b style="font-size:17px">'+ch.files.length+'</b> <span style="color:var(--dim)">'+L("ficheros para","files for")+" "+ids.length+" "+L("juegos","games")+" · "+mine.length+" "+L("de ellos instalados","of them installed")+'</span></div>'+
     '<button class="btn" id="ch-re">'+ic("refresh")+L("Releer","Read again")+'</button><button class="btn pri" id="ch-up"'+(S.ro?" disabled":"")+'>'+ic("upload")+L("Subir ficheros de trucos","Upload cheat files")+'</button></div>'+
-    '<div class="note" style="border-color:rgba(77,163,255,.4);background:rgba(77,163,255,.08);color:#CFE4FF">'+L("Aquí se ven, se suben y se borran los ficheros de trucos. Activarlos se hace en la consola, con el juego abierto: botón Opciones sobre el juego, «Trucos». Un fichero solo sirve para la versión del juego que indica.","Cheat files are seen, uploaded and deleted here. Turning them on is done on the console, with the game open: Options button on the game, \u201cCheats\u201d. A file only works for the game version it names.")+'</div>'+
+    '<div class="note" style="border-color:rgba(77,163,255,.4);background:rgba(77,163,255,.08);color:#CFE4FF">'+L("Con un juego abierto, sus trucos se encienden y se apagan aquí o en la consola (botón Opciones sobre el juego, «Trucos»): es el mismo interruptor en los dos sitios. Un fichero solo sirve para la versión del juego que indica.","With a game open, its cheats are switched on and off here or on the console (Options button on the game, “Cheats”): it is the same switch in both places. A file only works for the game version it names.")+'</div>'+chLive()+'<div style="height:22px"></div>'+
     '<h3 class="h">'+L("Para tus juegos","For your games")+' <em>'+mine.length+'</em></h3>'+(mine.length?mine.map(function(id){return chGroup(id,true)}).join(""):'<div class="card"><div class="empty">'+L("Ninguno de los juegos instalados tiene trucos en la consola.","None of the installed games has cheats on the console.")+'</div></div>')+
     '<h3 class="h" style="margin-top:26px">'+L("De otros juegos","For other games")+' <em>'+(ids.length-mine.length)+'</em></h3><div class="card svbar"><div style="flex:1"><label>'+L("Buscar por identificador","Look up by title ID")+'</label><input class="in" id="ch-q" style="width:100%;max-width:340px" maxlength="9" placeholder="CUSA03173, PPSA…" value="'+esc(ch.q)+'"></div></div>'+
     (q.length>=4?(other.length?other.map(function(id){return chGroup(id,false)}).join(""):'<div class="card"><div class="empty">'+L("No hay trucos para ese identificador.","No cheats for that title ID.")+'</div></div>'):"");
@@ -1267,6 +1335,7 @@ function paintCheats(){
 $("pick-ch").onchange=function(){var l=[].map.call(this.files,function(f){return{file:f,rel:f.name}}).filter(function(x){return /^[A-Z]{4}\d{5}_.*\.(json|shn|mc4)$/i.test(x.rel)}),n=this.files.length;this.value="";
   if(l.length<n)toast(L("Solo valen ficheros con nombre de truco: CUSA12345_01.00_xxxx.json, .shn o .mc4","Only files named like a cheat are taken: CUSA12345_01.00_xxxx.json, .shn or .mc4"),true);
   if(l.length){enqueue(l,CDIR);setTimeout(loadCheats,2500)}};
+$("v-cheats").addEventListener("change",function(e){var k=e.target.getAttribute&&e.target.getAttribute("data-chk");if(k)chToggle(k,e.target.checked)});
 $("v-cheats").addEventListener("click",function(e){
   var ch=S.ch,b=e.target.closest("button"),hd=e.target.closest("[data-ch]"),v;
   if(b&&(v=b.getAttribute("data-chdel"))){ask(L("Borrar este fichero de trucos","Delete this cheat file"),v,L("Borrar","Delete"),true).then(function(ok){
@@ -1387,11 +1456,33 @@ $("pick-cfg").onchange=function(){var f=this.files[0];this.value="";if(!f)return
 cfgApply();
 
 /* ------------------------------------------------------------ trophies */
-S.tr={users:[],user:"",show:"all",sort:"recent",q:"",loaded:false};
+S.tr={users:[],user:"",show:"all",sort:"recent",q:"",loaded:false,open:"",one:{},oshow:"all",secret:false};
+var TLANG=ES?"es-ES":"en-US";
+function trIcon(s){return s.localIcon?"/api/trophies/icon?set="+s.id:s.icon}
+function trOne(){var tr=S.tr,k=tr.user+"/"+tr.open;if(!tr.open||tr.one[k])return;tr.one[k]={busy:true};
+  api("/api/trophies/set?user="+tr.user+"&id="+tr.open+"&lang="+TLANG).then(function(j){tr.one[k]=j},function(e){tr.one[k]={bad:e.message}}).then(function(){if(S.view==="trophies")paintTrophies()})}
+function paintTrophy(u,s){
+  var tr=S.tr,o=tr.one[tr.user+"/"+s.id]||{busy:true},list=o.trophies||[],got=list.filter(function(t){return t.got}).length;
+  function seg(k,v,t){return '<button data-tk="'+k+'" data-tv="'+v+'" class="'+(tr[k]===v?"on":"")+'">'+t+'</button>'}
+  var shown=list.filter(function(t){return tr.oshow==="all"||(tr.oshow==="got")===t.got});
+  if(tr.oshow==="got")shown.sort(function(a,b){return a.when<b.when?1:-1});
+  $("v-trophies").innerHTML='<div class="card trc'+(s.progress>=100?" full":"")+'" style="cursor:default;margin-bottom:16px"><button class="btn" data-tk="open" data-tv="">'+ic("move")+L("Volver","Back")+'</button>'+
+    (trIcon(s)?'<img alt="" referrerpolicy="no-referrer" src="'+esc(trIcon(s))+'" onerror="this.style.visibility=\'hidden\'">':'<div class="ph"></div>')+
+    '<div class="t"><b>'+esc(s.name||s.id)+'</b><small>'+esc(u.name)+" · "+s.id+(list.length?" · "+got+" / "+list.length:"")+'</small><div class="prog'+(s.progress>=100?" ok":"")+'"><i style="width:'+Math.max(1,s.progress)+'%"></i></div>'+
+    '<div class="g">'+TG.map(function(g){return s.total[g[0]]?'<span title="'+g[2]+'"><i style="background:'+g[1]+'"></i>'+(s.got[g[0]]||0)+"/"+s.total[g[0]]+'</span>':""}).join("")+'</div></div><div class="pc">'+s.progress+'%</div></div>'+
+    '<div class="card svbar"><div><label>'+L("Mostrar","Show")+'</label><div class="seg">'+seg("oshow","all",L("Todos","All"))+seg("oshow","got",L("Conseguidos","Earned"))+seg("oshow","left",L("Por conseguir","Left"))+'</div></div>'+
+      '<span class="sp"></span><label class="sw"><input type="checkbox" id="tr-secret"'+(tr.secret?" checked":"")+'><i></i>'+L("Descubrir los ocultos","Reveal hidden ones")+'</label></div>'+
+    '<div class="card">'+(o.busy?'<div class="empty">'+L("Leyendo los trofeos…","Reading the trophies…")+'</div>':o.bad?'<div class="empty">'+L("La consola no tiene guardados los trofeos de este juego: solo hay el recuento de PlayStation Network.","The console does not hold the trophies of this game: there is only the PlayStation Network count.")+'</div>'
+      :shown.length?shown.map(function(t){var g=TG.filter(function(x){return x[0]===t.grade})[0]||TG[3],veil=t.hidden&&!t.got&&!tr.secret;
+        return '<div class="item trw'+(t.got?"":" no")+'"><img loading="lazy" alt="" src="/api/trophies/icon?set='+s.id+"&id="+t.id+'"><div class="t"><b>'+(veil?L("Trofeo oculto","Hidden trophy"):esc(t.name||t.id))+'</b><small>'+(veil?L("Sigue jugando para descubrirlo","Keep playing to find out"):esc(t.detail||""))+'</small></div>'+
+          '<div class="acts"><span class="chip" style="border-color:'+g[1]+';color:'+g[1]+'">'+g[2]+'</span>'+(t.got?'<span class="chip ok">'+(t.when?new Date(t.when).toLocaleDateString(undefined,{day:"2-digit",month:"short",year:"numeric"})+" "+new Date(t.when).toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit"}):"OK")+'</span>':"")+'</div></div>'}).join("")
+      :'<div class="empty">'+L("Ninguno.","None.")+'</div>')+'</div>';
+  $("tr-secret").onchange=function(){tr.secret=this.checked;paintTrophies()};
+}
 var TG=[["platinum","#B9D4F0",L("Platino","Platinum")],["gold","#E8B84A",L("Oro","Gold")],["silver","#C0C6D2",L("Plata","Silver")],["bronze","#C98A5E",L("Bronce","Bronze")]];
 function loadTrophies(){
   if(!S.full)return Promise.resolve();
-  return api("/api/trophies").then(function(j){var tr=S.tr;tr.users=(j.users||[]).filter(function(u){return u.sets.length}).sort(function(a,b){return b.sets.length-a.sets.length});
+  return api("/api/trophies?lang="+TLANG).then(function(j){var tr=S.tr;tr.one={};tr.users=(j.users||[]).filter(function(u){return u.sets.length}).sort(function(a,b){return b.sets.length-a.sets.length});
     if(!tr.users.some(function(u){return u.id===tr.user}))tr.user=tr.users.length?tr.users[0].id:"";tr.loaded=true;if(S.view==="trophies")paintTrophies()}).catch(fail);
 }
 function paintTrophies(){
@@ -1399,6 +1490,8 @@ function paintTrophies(){
   if(!tr.loaded){$("v-trophies").innerHTML='<div class="empty">'+L("Leyendo los trofeos de la consola…","Reading the console trophies…")+'</div>';return}
   var u=tr.users.filter(function(x){return x.id===tr.user})[0];
   if(!u){$("v-trophies").innerHTML='<div class="card"><div class="empty">'+ic("trophies")+'<div>'+L("La consola no tiene trofeos anotados para ningún usuario.","The console has no trophies recorded for any user.")+'</div></div></div>';return}
+  var one=tr.open&&u.sets.filter(function(x){return x.id===tr.open})[0];
+  if(one){trOne();paintTrophy(u,one);return}
   function sum(s,k){return TG.reduce(function(n,g){return n+(s[k][g[0]]||0)},0)}
   var all=u.sets,tot={},got={};TG.forEach(function(g){tot[g[0]]=0;got[g[0]]=0});
   all.forEach(function(s){TG.forEach(function(g){tot[g[0]]+=s.total[g[0]]||0;got[g[0]]+=s.got[g[0]]||0})});
@@ -1419,18 +1512,19 @@ function paintTrophies(){
       '<div><label>'+L("Orden","Order")+'</label><div class="seg">'+seg("sort","recent",L("Reciente","Recent"))+seg("sort","progress","%")+seg("sort","left",L("Menos por sacar","Fewest left"))+seg("sort","name","A–Z")+'</div></div>'+
       '<span class="sp"></span><div class="srch">'+ic("search")+'<input class="in" id="tr-q" type="search" style="width:190px" placeholder="'+L("Buscar juego…","Search game…")+'" value="'+esc(tr.q)+'"></div></div>'+
     (list.length?'<div class="tro">'+list.map(function(s){var left=sum(s,"total")-sum(s,"got"),own=(s.games||"").split(" ").filter(function(g){return app(g)})[0];
-      return '<div class="card trc'+(s.progress>=100?" full":"")+'">'+(s.icon?'<img loading="lazy" referrerpolicy="no-referrer" alt="" src="'+esc(s.icon)+'" onerror="this.style.visibility=\'hidden\'">':'<div class="ph"></div>')+
+      return '<div class="card trc'+(s.progress>=100?" full":"")+'" data-set="'+s.id+'" tabindex="0">'+(trIcon(s)?'<img loading="lazy" referrerpolicy="no-referrer" alt="" src="'+esc(trIcon(s))+'" onerror="this.style.visibility=\'hidden\'">':'<div class="ph"></div>')+
         '<div class="t"><b title="'+esc(s.name)+'">'+esc(s.name||s.id)+'</b><small>'+s.platform.toUpperCase()+(s.updated?" · "+new Date(s.updated).toLocaleDateString(undefined,{day:"2-digit",month:"short",year:"numeric"}):"")+(own?" · "+L("instalado","installed"):"")+" · "+(left?L("faltan ","left: ")+left:L("completo","complete"))+'</small>'+
         '<div class="prog'+(s.progress>=100?" ok":"")+'"><i style="width:'+Math.max(1,s.progress)+'%"></i></div>'+
         '<div class="g">'+TG.map(function(g){return s.total[g[0]]?'<span title="'+g[2]+'"><i style="background:'+g[1]+'"></i>'+(s.got[g[0]]||0)+"/"+s.total[g[0]]+'</span>':""}).join("")+'</div></div>'+
         '<div class="pc">'+s.progress+'%</div></div>'}).join("")+'</div>'
       :'<div class="card"><div class="empty">'+L("Ningún juego coincide.","No game matches.")+'</div></div>')+
-    '<p style="margin:14px 2px 0;font:500 11.5px var(--mono);color:var(--faint)">'+L("Son las cuentas que lleva la propia consola para cada usuario, y las pone al día cuando sincroniza con PlayStation Network: lo conseguido sin conexión no aparece hasta entonces. Los iconos se cargan de PlayStation Network; sin conexión no salen. El nombre de cada trofeo suelto todavía no se muestra.","These are the counts the console itself keeps for each user, brought up to date when it syncs with PlayStation Network: what is earned offline does not show until then. Icons load from PlayStation Network; offline they do not show. The name of each single trophy is not shown yet.")+'</p>';
+    '<p style="margin:14px 2px 0;font:500 11.5px var(--mono);color:var(--faint)">'+L("Se leen de la propia consola, sin PlayStation Network: lo que consigues sin conexión aparece aquí al momento. Pulsa un juego para ver sus trofeos uno a uno. De los juegos que ya no están instalados solo queda el recuento que la consola guardó la última vez que sincronizó, y su icono se carga de PlayStation Network.","They are read from the console itself, without PlayStation Network: what you earn offline shows here right away. Click a game to see its trophies one by one. For games no longer installed only the count the console kept at its last sync is left, and their icon loads from PlayStation Network.")+'</p>';
   $("tr-q").oninput=function(){tr.q=this.value;paintTrophies()};
   if(keep){var e=$("tr-q");e.focus();e.setSelectionRange(e.value.length,e.value.length)}
   if($("tr-user"))$("tr-user").onchange=function(){tr.user=this.value;paintTrophies()};
 }
-$("v-trophies").addEventListener("click",function(e){var b=e.target.closest("button[data-tk]");if(!b)return;S.tr[b.getAttribute("data-tk")]=b.getAttribute("data-tv");paintTrophies()});
+$("v-trophies").addEventListener("click",function(e){var b=e.target.closest("button[data-tk]"),c=e.target.closest("[data-set]");
+  if(b)S.tr[b.getAttribute("data-tk")]=b.getAttribute("data-tv");else if(c){S.tr.open=c.getAttribute("data-set");$("view").scrollTop=0}else return;paintTrophies()});
 
 /* ------------------------------------------------------------ themes */
 var TDIR="/data/neohen/themes";
