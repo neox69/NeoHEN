@@ -16,9 +16,9 @@
 #include <time.h>
 #include <unistd.h>
 
-#if defined(__APPLE__)
-/* flock(2) lives in <sys/file.h> on the host build; FreeBSD exposes it via
- * <fcntl.h>, which is what the PS5 target uses. */
+#if defined(__APPLE__) || defined(__linux__)
+/* flock(2) lives in <sys/file.h> on the host builds (macOS, Linux); FreeBSD
+ * exposes it via <fcntl.h>, which is what the PS5 target uses. */
 #include <sys/file.h>
 #endif
 

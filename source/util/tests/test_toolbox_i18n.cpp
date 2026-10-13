@@ -101,7 +101,7 @@ static int test_en(void) {
   TEST_ASSERT_TRUE(std::strcmp(tr("log.level"), "Log output level") == 0);
   TEST_ASSERT_TRUE(std::strcmp(tr("log.max_bytes"), "Log file size limit") == 0);
   TEST_ASSERT_TRUE(std::strcmp(tr("boot.thanks"),
-                               "Special thanks notification") == 0);
+                               "NeoWEB notice") == 0);
   TEST_ASSERT_TRUE(std::strcmp(tr("log.info"),
                                "Information (recommended)") == 0);
   TEST_ASSERT_TRUE(std::strcmp(tr("log.trace"), "Trace") == 0);
