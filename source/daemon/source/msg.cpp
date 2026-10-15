@@ -188,7 +188,7 @@ void *control_tcp_loop(void *args) {
     onion::ipc_release_listen_fd(&g_ctrl_fd);
     if (!is_handler_enabled)
       break;
-    LOG_WARN("control_tcp: accept failed; re-listening");
+    LOG_INFO("control_tcp: listener closed; re-listening");
     usleep(500000);
   }
   return nullptr;

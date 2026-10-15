@@ -1149,13 +1149,13 @@ function upPay(files){
 $("pick-p").onchange=function(){upPay(this.files);this.value=""};
 
 /* ------------------------------------------------------------ saves */
-S.sv={users:[],places:[],backups:[],dest:"",sel:{},open:{},job:null,busy:false,loaded:false,auto:{enabled:false,keep:5,usb:false}};
+S.sv={users:[],places:[],backups:[],dest:"",sel:{},open:{},job:null,busy:false,loaded:false};
 function svKey(u,s){return u.id+":"+s.kind+":"+s.titleId}
 function svPlaceName(p){return p.usb?L("USB ","USB ")+(+p.id.slice(3)+1):L("Disco de la consola","Console disk")}
 function loadSaves(){
   if(!S.full)return Promise.resolve();
-  return Promise.all([api("/api/saves/list"),api("/api/saves/backups").catch(function(){return{backups:[]}}),api("/api/saves/auto").catch(function(){return null})]).then(function(x){
-    var sv=S.sv;if(x[2])sv.auto={enabled:!!x[2].enabled,keep:x[2].keep||5,usb:!!x[2].usb};sv.users=(x[0].users||[]).filter(function(u){return u.saves.length});sv.places=x[0].places||[];sv.backups=x[1].backups||[];sv.loaded=true;
+  return Promise.all([api("/api/saves/list"),api("/api/saves/backups").catch(function(){return{backups:[]}})]).then(function(x){
+    var sv=S.sv;sv.users=(x[0].users||[]).filter(function(u){return u.saves.length});sv.places=x[0].places||[];sv.backups=x[1].backups||[];sv.loaded=true;
     sv.users.forEach(function(u){u.saves.sort(function(a,b){return b.mtime-a.mtime});u.bytes=u.saves.reduce(function(n,s){return n+s.bytes},0)});
     sv.users.sort(function(a,b){return b.saves.length-a.saves.length});
     var ids=["pc"].concat(sv.places.map(function(p){return p.id}));
@@ -1177,10 +1177,6 @@ function paintSaves(){
     (job?'<div class="svjob"><p>'+esc(job.msg)+'</p><div class="prog'+(job.state==="done"?" ok":job.state==="failed"?" bad":"")+'"><i style="width:'+(job.state==="running"?pct:100)+'%"></i></div></div>':"")+'</div>'+
     (hasUsb?"":'<div class="note">'+L("No hay ningún USB conectado a la consola. Puedes copiar al PC o al disco de la consola; conecta un USB y pulsa actualizar para usarlo.","No USB drive is plugged into the console. You can copy to the PC or to the console disk; plug a drive in and press refresh to use it.")+'</div>')+
     '<div class="note" style="border-color:rgba(77,163,255,.4);background:rgba(77,163,255,.08);color:#CFE4FF">'+L("Las copias se guardan por usuario: una carpeta por cada uno, con sus juegos dentro. Son los ficheros de la propia consola, cifrados para ella: sirven para devolverlos a esta misma PS5.","Copies are kept by user: one folder each, with their games inside. They are the console own files, encrypted for it: they are for putting back on this same PS5.")+'</div>'+
-    '<div class="card svbar"><div style="flex:1;min-width:260px"><label>'+L("Copia automática","Automatic copy")+'</label><b>'+L("Al cerrar un juego, copiar sus partidas al USB","When a game is closed, copy its saves to the USB drive")+'</b>'+
-      '<p style="margin:4px 0 0;color:var(--dim);font-size:13px">'+(sv.auto.usb?L("Se guardan las últimas ","The newest ")+sv.auto.keep+L(" copias automáticas de cada juego."," automatic copies of each game are kept."):L("Ahora no hay USB conectado: sin USB no se hace ninguna copia.","No USB drive is plugged in right now: with no drive no copy is made."))+'</p></div>'+
-      '<select class="in" id="sv-keep" title="'+L("Cuántas copias automáticas guardar de cada juego","How many automatic copies of each game to keep")+'">'+[2,3,5,10,20].map(function(n){return '<option value="'+n+'"'+(sv.auto.keep===n?" selected":"")+'>'+n+" "+L("copias","copies")+'</option>'}).join("")+'</select>'+
-      '<label class="sw"><input type="checkbox" id="sv-auto"'+(sv.auto.enabled?" checked":"")+'><i></i>'+(sv.auto.enabled?L("Activada","On"):L("Desactivada","Off"))+'</label></div>'+
     '<h3 class="h">'+L("Partidas en la consola","Saves on the console")+' <em>'+total+" · "+size(tbytes)+'</em></h3>';
   h+=sv.users.length?sv.users.map(function(u){
     var open=!!sv.open[u.id],all=u.saves.every(function(s){return sv.sel[svKey(u,s)]});
@@ -1249,9 +1245,6 @@ $("pick-sz").onchange=function(){
 };
 $("v-saves").addEventListener("change",function(e){
   var sv=S.sv,t=e.target,v;
-  if(t.id==="sv-auto"||t.id==="sv-keep"){var on=$("sv-auto").checked,keep=+$("sv-keep").value;
-    api("/api/saves/auto",{enabled:on,keep:keep}).then(function(){sv.auto.enabled=on;sv.auto.keep=keep;paintSaves();
-      toast(on?L("Copia automática activada","Automatic copy on"):L("Copia automática desactivada","Automatic copy off"))}).catch(function(er){fail(er);paintSaves()});return}
   if((v=t.getAttribute("data-k"))){if(t.checked)sv.sel[v]=1;else delete sv.sel[v];paintSaves()}
   else if((v=t.getAttribute("data-allu"))){sv.users.forEach(function(u){if(u.id===v)u.saves.forEach(function(s){if(t.checked)sv.sel[svKey(u,s)]=1;else delete sv.sel[svKey(u,s)]})});paintSaves()}});
 

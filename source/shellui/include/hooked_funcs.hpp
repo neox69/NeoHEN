@@ -147,6 +147,8 @@ void generate_toolbox_xml(std::string& new_xml);
 void Patch_Main_thread_Check(MonoImage * image_core);
 uint64_t Get_Address_of_Method(MonoImage* Assembly_Image, const char* Name_Space, const char* Class_Name, const char* Method_Name, int Param_Count);
 uint64_t Get_Address_of_Method(MonoImage* Assembly_Image, MonoClass* klass, const char* Method_Name, int Param_Count);
+/* Same lookup without the error lines: for methods some firmwares do not have. */
+uint64_t Find_Method_Address_Quiet(MonoImage* Assembly_Image, const char* Name_Space, const char* Class_Name, const char* Method_Name, int Param_Count);
 uint64_t GetManifestResourceStream_Hook(uint64_t inst, MonoString* FileName);
 void DebugSettings_GetModel_Hook(MonoObject* instance, MonoObject* param, MonoObject* promise);
 void ReactNavigatorManager_UpdateNavigationState_Hook(MonoObject* instance, MonoObject* state);

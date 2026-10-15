@@ -112,7 +112,11 @@ void append_payload_entry(const std::string& directory,
       g_ui.payloads_list.begin(), g_ui.payloads_list.end(),
       [&](const PayloadEntry& item) { return item.id == entry.id; });
   if (existing != g_ui.payloads_list.end()) {
-    LOG_ERROR("Skipping Payload with colliding identity: %s", path.c_str());
+    /* /data/... and /user/data/... are the same folder: same file, no news. */
+    if (existing->path == entry.path)
+      LOG_DEBUG("Payload already listed: %s", path.c_str());
+    else
+      LOG_ERROR("Skipping Payload with colliding identity: %s", path.c_str());
     return;
   }
 

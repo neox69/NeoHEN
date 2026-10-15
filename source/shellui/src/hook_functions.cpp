@@ -232,6 +232,10 @@ void Patch_Main_thread_Check(MonoImage * image_core) {
     LOG_DEBUG("changing permissions on (0x%llx).", (unsigned long long)real_addr);
     
     if (!DetourFunction(real_addr, (void*)&CheckRunningOnMainThread)) {
+        if (DetourLastFailureWasAlreadyPatched()) {
+            LOG_DEBUG("Main thread check already patched");
+            return;
+        }
         LOG_ERROR("Main thread check detour failed");
         return;
     }

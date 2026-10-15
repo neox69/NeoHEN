@@ -186,13 +186,20 @@ int CheatService::ensureRuntimeLocked(const CheatRequest &request) {
     return 0;
   }
 
+  /* Same game process: keep the session id so a list another client (the
+   * Toolbox, NeoWEB) already holds stays valid when the files are reloaded.
+   * Keys name file path + source id + index, which a toggle re-checks. */
+  const std::string kept_session = same ? runtime_->session_id : std::string();
   clearRuntimeLocked();
   auto next = std::make_unique<RuntimeState>();
   next->game = request.game;
   next->process = requested;
-  next->session_id = "cheat-" + std::to_string(next_session_id_++) + "-" +
-                     std::to_string(static_cast<int>(requested.pid)) + "-" +
-                     std::to_string(requested.session_generation);
+  next->session_id =
+      !kept_session.empty()
+          ? kept_session
+          : "cheat-" + std::to_string(next_session_id_++) + "-" +
+                std::to_string(static_cast<int>(requested.pid)) + "-" +
+                std::to_string(requested.session_generation);
   CheatRequest bound = request;
   bound.process = next->process;
   fill_context(bound, next->context);
@@ -355,11 +362,14 @@ int CheatService::toggle(const std::string &session_id,
   std::lock_guard<std::mutex> lock(mu_);
   status.clear();
   if (!runtime_ || session_id.empty() || runtime_->session_id != session_id) {
+    LOG_WARN("[service] toggle rejected: session '%s' is not the live one '%s'",
+             session_id.c_str(), runtime_ ? runtime_->session_id.c_str() : "-");
     status = status_tr("notify.cheats.invalid_mapping");
     return -1;
   }
   CheatKey key;
   if (!parse_key(serialized_key, key)) {
+    LOG_WARN("[service] toggle rejected: bad key '%s'", serialized_key.c_str());
     status = status_tr("notify.cheats.invalid_mapping");
     return -1;
   }
@@ -385,6 +395,8 @@ int CheatService::toggle(const std::string &session_id,
                                     static_cast<int>(key.local_index), status,
                                     loaded->path);
   }
+  LOG_WARN("[service] toggle rejected: key '%s' matches no loaded cheat",
+           serialized_key.c_str());
   status = status_tr("notify.cheats.invalid_mapping");
   return -1;
 }

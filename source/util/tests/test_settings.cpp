@@ -78,7 +78,7 @@ static int test_defaults_and_serialize_keys(void) {
                    std::string::npos);
   TEST_ASSERT_TRUE(text.find("stable_seconds=30\n") != std::string::npos);
   TEST_ASSERT_TRUE(text.find("[shadowmount]\n") != std::string::npos);
-  TEST_ASSERT_TRUE(text.find("watchdog=notify\n") != std::string::npos);
+  TEST_ASSERT_TRUE(text.find("watchdog=relaunch\n") != std::string::npos);
   TEST_ASSERT_TRUE(text.find("kstuff_tables=false\n") != std::string::npos);
   TEST_ASSERT_TRUE(text.find("wait_for_tracer=true\n") != std::string::npos);
   TEST_ASSERT_TRUE(text.find("edge=top") != std::string::npos);

@@ -77,7 +77,7 @@ void __stack_chk_fail(void) {
 bool LoadSettings() {
     onion::Settings s{};
     if (!onion::settings_load(&s)) {
-        LOG_ERROR("config.ini missing; using defaults (path primary=%s)",
+        LOG_INFO("config.ini missing; using defaults (path primary=%s)",
                      onion::kConfigPathPrimary);
     } else {
         LOG_INFO("Loaded settings from %s", onion::settings_last_loaded_path());
