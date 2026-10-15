@@ -91,6 +91,7 @@ int  smp_call(const char *path, const char *json_body, jval_t **out, char *err, 
 void api_games_autofix(http_req_t *req);
 void api_usb_eject(http_req_t *req);
 void api_launcher(http_req_t *req);
+void api_remoteplay(http_req_t *req);
 void api_launcher_install(http_req_t *req);
 void api_launcher_remove(http_req_t *req);
 void api_store(http_req_t *req);

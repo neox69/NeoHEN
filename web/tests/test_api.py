@@ -528,6 +528,14 @@ class PayloadTest(unittest.TestCase):
         st, j = self.api.post("/api/usb/eject", {"drive": "usb0"})
         self.assertEqual((st, j["drive"]), (200, "/mnt/usb0"))
 
+    def test_remoteplay(self):
+        _, j = self.api.get("/api/remoteplay")
+        self.assertFalse(j["known"])
+        with open(f"{self.root}/data/neohen/web/remoteplay.json", "w") as f:
+            f.write('{"accountId":"AAECAwQFBgc=","accountIdDecimal":"506097522914230528","pin":"12345678","time":1792100000}\n')
+        _, j = self.api.get("/api/remoteplay")
+        self.assertEqual((j["known"], j["accountId"], j["pin"]), (True, "AAECAwQFBgc=", "12345678"))
+
     def test_launcher(self):
         # the NeoWEB icon in Media: a web based media app pointing at this page
         _, j = self.api.get("/api/launcher")
