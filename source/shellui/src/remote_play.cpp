@@ -3,6 +3,8 @@
  * Remote Play pairing page backed by the native PS5 Remote Play service.
  */
 
+#include <onion/brand.h>
+#include <ctime>
 #include "account_activator.h"
 #include "external_symbols.hpp"
 #include "hooked_funcs.hpp"
@@ -253,6 +255,15 @@ void generate_remote_play_xml(std::string &xml_buffer) {
           << "\n"
           << pin_text;
   g_remote_play_info = details.str();
+  /* NeoHEN: NeoWEB shows these on the PC, to paste into Chiaki or PXPlay. */
+  if (FILE *f = fopen(ONION_USER_DATA_DIR "/web/remoteplay.json", "wb")) {
+    fprintf(f,
+            "{\"accountId\":\"%s\",\"accountIdDecimal\":\"%llu\","
+            "\"pin\":\"%04u%04u\",\"time\":%lld}\n",
+            account_id, static_cast<unsigned long long>(decoded_account_id),
+            pin / 10000, pin % 10000, static_cast<long long>(time(nullptr)));
+    fclose(f);
+  }
 
   page.label("id_remote_play_pin", pin_text, ps5ui::Style::Center)
       .label("id_remote_play_account",

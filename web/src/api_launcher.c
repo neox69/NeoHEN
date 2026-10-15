@@ -167,6 +167,32 @@ api_launcher_install(http_req_t *req) {
   http_send_ok(req);
 }
 
+/* GET /api/remoteplay
+ * the account ID and the PIN the Toolbox showed last (Remote Play page), so
+ * they can be pasted into Chiaki or PXPlay on the PC */
+void
+api_remoteplay(http_req_t *req) {
+  char local[PATH_MAX], *text = NULL;
+  size_t len = 0;
+  jval_t *v = NULL;
+  jw_t w;
+
+  plat_path(PS5AIO_DATA_DIR "/remoteplay.json", local, sizeof(local));
+  api_begin(&w);
+  if(!fs_read_file(local, &text, &len, 4096) && (v = json_parse(text, len))) {
+    jw_kbool(&w, "known", 1);
+    jw_kstr(&w, "accountId", json_get_str(v, "accountId", ""));
+    jw_kstr(&w, "accountIdDecimal", json_get_str(v, "accountIdDecimal", ""));
+    jw_kstr(&w, "pin", json_get_str(v, "pin", ""));
+    jw_kint(&w, "time", json_get_int(v, "time", 0));
+    json_free(v);
+  } else {
+    jw_kbool(&w, "known", 0);
+  }
+  free(text);
+  api_finish(req, &w);
+}
+
 /* POST /api/launcher/remove */
 void
 api_launcher_remove(http_req_t *req) {

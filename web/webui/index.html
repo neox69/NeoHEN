@@ -2096,14 +2096,24 @@ function paintSys(){
 }
 /* the NeoWEB icon in Media on the PS5 home screen */
 S.ln=null;
-function loadLnch(){if(!S.full)return Promise.resolve();return api("/api/launcher").then(function(j){S.ln=j;paintLnch()}).catch(function(){})}
+function loadLnch(){if(!S.full)return Promise.resolve();return Promise.all([api("/api/launcher"),api("/api/remoteplay").catch(function(){return null})]).then(function(x){S.ln=x[0];S.rp=x[1];paintLnch()}).catch(function(){})}
+/* Remote Play: what the Toolbox showed last, to paste into Chiaki or PXPlay */
+function rpHtml(){var rp=S.rp;if(!rp)return "";
+  function row(k,v){return '<div class="item"><div class="t"><b style="font-family:var(--mono)">'+esc(v)+'</b><small>'+k+'</small></div><div class="acts"><button class="btn sm" data-cp="'+esc(v)+'">'+ic("copy")+L("Copiar","Copy")+'</button></div></div>'}
+  return '<div class="card pad" style="margin-top:16px"><h3 class="h">Remote Play</h3><p style="margin:0 0 12px;color:var(--dim)">'+
+    L("En la PS5: Toolbox › Cuenta y juego remoto › Juego remoto. Si la cuenta no tiene PSN, actívala antes en la misma sección. El PIN vale mientras esa página siga abierta en la tele; aquí sale el último que se mostró.","On the PS5: Toolbox › Account and remote play › Remote play. If the account has no PSN, activate it first in the same section. The PIN is valid while that page stays open on the TV; the last one shown appears here.")+'</p>'+
+    (rp.known?'<div class="card">'+row(L("ID de cuenta (Chiaki, PXPlay)","Account ID (Chiaki, PXPlay)"),rp.accountId)+row(L("ID de cuenta en decimal","Account ID in decimal"),rp.accountIdDecimal)+row(L("PIN de vinculación · ","Pairing PIN · ")+new Date(rp.time*1000).toLocaleString(),rp.pin.slice(0,4)+" "+rp.pin.slice(4))+'</div>'
+      :'<div class="empty">'+L("Todavía no se ha abierto la página de juego remoto en la Toolbox.","The remote play page has not been opened in the Toolbox yet.")+'</div>')+
+    '<div class="row" style="margin-top:12px"><button class="btn sm ghost" id="rp-re">'+ic("refresh")+L("Releer","Read again")+'</button></div></div>'}
 function paintLnch(){
   var b=$("lnch"),ln=S.ln;if(!b)return;if(!ln){b.innerHTML="";return}
   b.innerHTML='<div class="card pad" style="margin-top:16px"><h3 class="h">'+L("Icono de NeoWEB en la PS5","NeoWEB icon on the PS5")+' <em>'+(ln.installed?L("instalado","installed"):L("sin instalar","not installed"))+'</em></h3>'+
     '<p style="margin:0 0 12px;color:var(--dim)">'+L("Pone un icono «NeoWEB» en la pantalla de inicio de la PS5, en Contenido multimedia. Al abrirlo, la consola muestra esta página a pantalla completa en la tele.","Puts a “NeoWEB” icon on the PS5 home screen, under Media. Opening it shows this page full screen on the TV.")+'</p>'+
     '<div style="display:flex;gap:10px;flex-wrap:wrap"><input class="in" id="ln-u" style="flex:1;min-width:240px" value="'+esc(ln.uri||ln.defaultUri)+'" title="'+L("La dirección que abre el icono","The address the icon opens")+'">'+
     '<button class="btn pri" id="ln-i"'+(S.ro?" disabled":"")+'>'+ic("plus")+(ln.installed?L("Volver a instalar","Install again"):L("Instalar el icono","Install the icon"))+'</button>'+
-    (ln.installed?'<button class="btn danger" id="ln-r"'+(S.ro?" disabled":"")+'>'+L("Quitar","Remove")+'</button>':"")+'</div></div>';
+    (ln.installed?'<button class="btn danger" id="ln-r"'+(S.ro?" disabled":"")+'>'+L("Quitar","Remove")+'</button>':"")+'</div></div>'+rpHtml();
+  if($("rp-re"))$("rp-re").onclick=loadLnch;
+  b.querySelectorAll("[data-cp]").forEach(function(x){x.onclick=function(){var v=x.getAttribute("data-cp").replace(/ /g,"");(navigator.clipboard?navigator.clipboard.writeText(v):Promise.reject()).then(function(){toast(L("Copiado","Copied"))},function(){toast(v)})}});
   $("ln-i").onclick=function(){var u=$("ln-u").value.trim();api("/api/launcher/install",{uri:u}).then(function(){toast(L("Icono instalado: búscalo en Contenido multimedia","Icon installed: look for it under Media"));loadLnch()}).catch(fail)};
   if($("ln-r"))$("ln-r").onclick=function(){ask(L("Quitar el icono de NeoWEB","Remove the NeoWEB icon"),L("Desaparece de la pantalla de inicio. NeoWEB sigue funcionando desde el PC o el móvil.","It goes from the home screen. NeoWEB keeps working from the PC or the phone."),L("Quitar","Remove"),true).then(function(ok){if(ok)api("/api/launcher/remove",{}).then(function(){toast(L("Icono quitado","Icon removed"));loadLnch()}).catch(fail)})};
 }

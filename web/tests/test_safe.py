@@ -35,6 +35,7 @@ FORBIDDEN = [
     "/api/dump/sources", "/api/dump/start", "/api/backup/start",
     "/api/launcher", "/api/launcher/install", "/api/launcher/remove",
     "/api/usb/eject", "/api/games/autofix",
+    "/api/remoteplay",
 ]
 
 
