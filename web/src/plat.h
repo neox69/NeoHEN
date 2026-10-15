@@ -60,6 +60,8 @@ int         plat_app_uninstall(const char *title_id);
 /* power / misc */
 int         plat_power(const char *action); /* "rest" | "reboot" | "poweroff" */
 int         plat_open_browser(const char *url);
+/* /system_ex writable, for the files of a title registered from /user/app */
+int         plat_remount_system_ex(void);
 int         plat_eject_disc(void);
 
 /* human readable reason for the last failing plat_* call (thread-local) */

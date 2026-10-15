@@ -20,7 +20,7 @@ COMMON_SRCS := src/main.c src/http.c src/json.c src/log.c src/jobs.c \
 # installer and power. SAFE=1 builds the restricted variant, which only reads
 # state, launches or closes games and manages NeoHEN's own payloads.
 ifndef SAFE
-COMMON_SRCS += src/api_mem.c src/api_dump.c src/api_saves.c src/api_captures.c src/api_stats.c src/api_trophies.c src/api_games.c src/api_cheats.c src/api_smp.c src/api_store.c src/sqlite_ro.c src/zipstream.c src/discovery.c
+COMMON_SRCS += src/api_mem.c src/api_dump.c src/api_saves.c src/api_captures.c src/api_stats.c src/api_trophies.c src/api_games.c src/api_cheats.c src/api_smp.c src/api_store.c src/api_launcher.c src/sqlite_ro.c src/zipstream.c src/discovery.c
 FULLDEF     := -DNEOWEB_FULL
 else
 # the handlers of the routes that are compiled out stay in the sources
@@ -28,10 +28,11 @@ FULLDEF     := -Wno-unused-function
 endif
 HEADERS     := $(wildcard src/*.h)
 WEBUI       := webui/index.html
+LAUNCHER    := launcher/icon0.png launcher/pic1.png
 JXRJS       := jxr/jxr.js
 
 WARN   := -Wall -Wextra -Wno-unused-parameter -Wno-sign-compare -Wno-format-truncation -Werror
-DEFS   := -DWEBUI_PATH=\"$(CURDIR)/$(WEBUI)\" -DJXRJS_PATH=\"$(CURDIR)/$(JXRJS)\" $(FULLDEF)
+DEFS   := -DLAUNCHER_DIR=\"$(CURDIR)/launcher\" -DWEBUI_PATH=\"$(CURDIR)/$(WEBUI)\" -DJXRJS_PATH=\"$(CURDIR)/$(JXRJS)\" $(FULLDEF)
 
 .PHONY: all host clean test
 
@@ -48,7 +49,7 @@ endif
 
 all: $(ELF)
 
-$(ELF): $(COMMON_SRCS) src/plat_ps5.c $(HEADERS) $(WEBUI) $(JXRJS)
+$(ELF): $(COMMON_SRCS) src/plat_ps5.c $(HEADERS) $(WEBUI) $(JXRJS) $(LAUNCHER)
 	$(CC) -O2 -g $(WARN) -Isrc $(DEFS) -o $@ $(COMMON_SRCS) src/plat_ps5.c \
 	  -lkernel_sys -lSceSystemService -lSceUserService -lSceAppInstUtil
 
@@ -60,7 +61,7 @@ HOST_CC ?= cc
 
 host: $(HOST_BIN)
 
-$(HOST_BIN): $(COMMON_SRCS) src/plat_host.c $(HEADERS) $(WEBUI) $(JXRJS)
+$(HOST_BIN): $(COMMON_SRCS) src/plat_host.c $(HEADERS) $(WEBUI) $(JXRJS) $(LAUNCHER)
 	@mkdir -p build
 	$(HOST_CC) -O1 -g $(WARN) -D_GNU_SOURCE -Isrc $(DEFS) -o $@ \
 	  $(COMMON_SRCS) src/plat_host.c -lpthread -lm

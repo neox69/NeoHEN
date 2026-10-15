@@ -85,6 +85,9 @@ void games_on_game_open(const char *title);
 void api_smp(http_req_t *req);
 /* ask NeoHEN's util service: 0 it said yes, 1 it said no, -1 no answer */
 int  neohen_util_call(uint32_t cmd, const jw_t *request, char *var, size_t size, int timeout_s);
+void api_launcher(http_req_t *req);
+void api_launcher_install(http_req_t *req);
+void api_launcher_remove(http_req_t *req);
 void api_store(http_req_t *req);
 void api_store_fetch(http_req_t *req);
 void api_cheats_live(http_req_t *req);

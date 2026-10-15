@@ -470,6 +470,11 @@ plat_app_install_pkg(const char *url, const char *name, const char *icon_url,
 }
 
 int
+plat_remount_system_ex(void) {
+  return 0; /* the emulator's /system_ex is an ordinary folder */
+}
+
+int
 plat_app_uninstall(const char *title_id) {
   char p[PATH_MAX], lp[64];
   struct stat st;

@@ -630,6 +630,9 @@ static const api_route_t g_routes[] = {
   {"POST", "/api/games/peek",       api_games_peek},
 
   {NULL,   "/api/smp",              api_smp},
+  {"GET",  "/api/launcher",         api_launcher},
+  {"POST", "/api/launcher/install", api_launcher_install},
+  {"POST", "/api/launcher/remove",  api_launcher_remove},
   {"GET",  "/api/store",            api_store},
   {"POST", "/api/store/fetch",      api_store_fetch},
   {"GET",  "/api/cheats/live",      api_cheats_live},
