@@ -80,9 +80,10 @@ Otros modos en /data/neohen/config.ini, sección [rest_mode]:
 Los cambios en config.ini se aplican sin reiniciar NeoHEN.
 
 ShadowMount+: NeoHEN comprueba tras el reposo y cada minuto que sigue
-vivo y que su log no indica que perdió el hook ([shadowmount]
-watchdog=notify, avisa). Con watchdog=relaunch lo relanza solo (máximo 3
-veces por arranque).
+vivo y que su log no indica que perdió el hook. Por defecto
+([shadowmount] watchdog=relaunch) lo relanza solo cuando no hay juego
+abierto (máximo 3 veces por arranque); con watchdog=notify solo avisa,
+una vez por fallo.
 
 
 5. Desactivado u oculto en esta versión (no probado en 13.42)

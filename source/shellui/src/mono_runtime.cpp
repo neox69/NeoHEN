@@ -113,6 +113,13 @@ void Widget_Append_Child(MonoObject* widget, MonoObject* child)
     mono_runtime_invoke(appendChild, widget, args, nullptr);
 }
 
+uint64_t Find_Method_Address_Quiet(MonoImage *Assembly_Image, const char *Name_Space, const char *Class_Name, const char *Method_Name, int Param_Count)
+{
+  MonoClass *klass = mono_class_from_name(Assembly_Image, Name_Space, Class_Name);
+  MonoMethod *Method = klass ? mono_class_get_method_from_name(klass, Method_Name, Param_Count) : nullptr;
+  return Method ? mono_compile_method(Method) : 0;
+}
+
 uint64_t Get_Address_of_Method(MonoImage *Assembly_Image, const char *Name_Space, const char *Class_Name, const char *Method_Name, int Param_Count)
 {
   MonoClass *klass = mono_class_from_name(Assembly_Image, Name_Space, Class_Name);

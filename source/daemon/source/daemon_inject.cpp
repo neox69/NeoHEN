@@ -402,6 +402,12 @@ void *toolbox_stable_worker(void *arg) {
     } else {
       const pid_t live = toolbox_live_pid();
       if (live > 1 && live != job.pid) {
+        if (toolbox_already_ready(live)) {
+          LOG_DEBUG("rest: stable wait ends, pid=%d already has the Toolbox",
+                    static_cast<int>(live));
+          toolbox_remember_pid(live);
+          return nullptr;
+        }
         LOG_INFO("rest: SceShellUI changed %d -> %d during stable wait",
                  static_cast<int>(job.pid), static_cast<int>(live));
         job.pid = live;
@@ -469,6 +475,20 @@ void toolbox_note_boot_injection() {
 }
 
 void toolbox_on_new_shellui(pid_t pid) {
+  /*
+   * Short-lived helpers exec with the SceShellUI title id (NPXS40087) while
+   * the real SceShellUI keeps running.  When the live SceShellUI is another
+   * pid and already has the Toolbox, this EXEC is not a new home screen:
+   * clearing the ready marker here re-injected the Toolbox into the same
+   * process and broke the hooks whose prologues were already patched.
+   */
+  const pid_t live = toolbox_live_pid();
+  if (live > 1 && live != pid && isProcessAlive(live) &&
+      toolbox_already_ready(live)) {
+    LOG_DEBUG("rest: ignore EXEC pid=%d, SceShellUI pid=%d keeps the Toolbox",
+              static_cast<int>(pid), static_cast<int>(live));
+    return;
+  }
   /* NOTE_EXEC denotes a new image, even when the kernel reuses the PID. */
   onion_ready_clear(ONION_READY_TOOLBOX);
   if (daemon_power_state_is_sleeping()) {

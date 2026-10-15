@@ -173,7 +173,7 @@ toolbox_after_resume=stable   ; stable, manual, original
 stable_seconds=30
 
 [shadowmount]
-watchdog=notify               ; off, notify, relaunch
+watchdog=relaunch             ; off, notify, relaunch
 watchdog_interval_seconds=60
 
 [shellui]

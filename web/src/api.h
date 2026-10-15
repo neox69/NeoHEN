@@ -101,10 +101,6 @@ void api_saves_zip(http_req_t *req);
 void api_saves_backups(http_req_t *req);
 void api_saves_restore(http_req_t *req);
 void api_saves_import(http_req_t *req);
-void api_saves_auto_get(http_req_t *req);
-void api_saves_auto_set(http_req_t *req);
-/* the game that was open has been closed: copy its saves if the user asked */
-void saves_on_game_closed(const char *title);
 void api_payloads_list(http_req_t *req);
 void api_payloads_upload(http_req_t *req);
 void api_payloads_start(http_req_t *req);

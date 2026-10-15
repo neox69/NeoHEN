@@ -312,7 +312,7 @@ extern "C" pid_t onion_find_pid_ex(const char *name, bool needle,
     }
 
     if (success) {
-      LOG_DEBUG("[proc] matched bigapp pid=%d appid=%d process='%s' "
+      LOG_TRACE("[proc] matched bigapp pid=%d appid=%d process='%s' "
                 "comm='%s'", (int)ki->ki_pid, app_id, proc_name,
                 ki->ki_comm);
       found = ki->ki_pid;

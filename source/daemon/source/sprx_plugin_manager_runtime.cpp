@@ -8,6 +8,8 @@
 
 #include <ps5/kernel.h>
 
+#include <cerrno>
+#include <cstring>
 #include <mutex>
 #include <string>
 #include <vector>
@@ -65,10 +67,20 @@ Runtime &runtime() {
   return value;
 }
 
+/* No manifest just means no plugins are installed: normal, not a warning. */
+bool missing_manifest(const onion::sprx::SprxCatalogIssue &issue) {
+  return issue.line == 0 &&
+         issue.message.rfind("cannot open manifest: ", 0) == 0 &&
+         issue.message.find(std::strerror(ENOENT)) != std::string::npos;
+}
+
 void log_report(const char *operation,
                 const onion::sprx::SprxStartupReport &report) {
   for (const auto &issue : report.issues)
-    LOG_WARN("[sprx-manager] line=%zu plugin=%s: %s", issue.line,
+    if (missing_manifest(issue))
+      LOG_DEBUG("[sprx-manager] %s", issue.message.c_str());
+    else
+      LOG_WARN("[sprx-manager] line=%zu plugin=%s: %s", issue.line,
              issue.plugin_id.empty() ? "-" : issue.plugin_id.c_str(),
              issue.message.c_str());
   size_t loaded = 0;
@@ -94,7 +106,11 @@ void run(const char *operation, bool reload) {
     std::vector<onion::sprx::SprxCatalogIssue> issues;
     if (!current.manager.load_catalog(kCatalogPath, &issues)) {
       for (const auto &issue : issues)
-        LOG_WARN("[sprx-manager] line=%zu: %s", issue.line, issue.message.c_str());
+        if (missing_manifest(issue))
+          LOG_DEBUG("[sprx-manager] %s", issue.message.c_str());
+        else
+          LOG_WARN("[sprx-manager] line=%zu: %s", issue.line,
+                   issue.message.c_str());
       return;
     }
   }

@@ -44,7 +44,7 @@ bool LoadSettings()
   const bool from_file = onion::settings_load(&s);
   const onion_log_level effective = onion::apply_log_settings(s);
   if (!from_file) {
-    LOG_ERROR("config.ini missing; using defaults");
+    LOG_INFO("config.ini missing; using defaults");
   } else {
     LOG_DEBUG("Loaded settings from %s", onion::settings_last_loaded_path());
   }

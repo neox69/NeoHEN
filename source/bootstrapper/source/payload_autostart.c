@@ -114,14 +114,14 @@ static void scan_payload_directory(PayloadList *list, const char *directory) {
     }
 
     if (!if_exists(marker_path)) {
-      LOG_WARN("skipping auto start for payload: %s", path);
+      LOG_DEBUG("skipping auto start for payload: %s", path);
       continue;
     }
     char canonical[ONION_PAYLOAD_PATH_SIZE];
     if (!onion_payload_canonical_path(path, canonical, sizeof(canonical)))
       continue;
     if (payload_list_contains_path(list, canonical)) {
-      LOG_WARN("skipping duplicate payload path: %s", path);
+      LOG_DEBUG("skipping duplicate payload path: %s", path);
       continue;
     }
     if (!payload_list_append(list, canonical, entry->d_name)) {

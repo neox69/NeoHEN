@@ -92,7 +92,6 @@ bool relaunch() {
 void *watchdog_thread(void *) {
   Problem last = Problem::None;
   bool reported_ok = false;
-  bool waiting_for_game = false;
   int relaunches = 0;
   time_t last_relaunch = 0;
   int countdown = kFirstCheckSeconds;
@@ -129,10 +128,11 @@ void *watchdog_thread(void *) {
       continue;
     }
     const char *what = problem == Problem::HookLost ? "hook lost" : "not running";
-    if (problem != last || !waiting_for_game)
+    /* Once per problem (and after Rest Mode), not on every check: in notify
+     * mode a lost hook used to log a warning every minute for an hour. */
+    if (problem != last || resume_check)
       LOG_WARN("smp watchdog: ShadowMount+ %s%s", what,
                resume_check ? " (after Rest Mode)" : "");
-    waiting_for_game = false;
     if (settings.smp_watchdog == onion::kSmpWatchdogRelaunch) {
       const time_t now = time(nullptr);
       if (get_game_pid() > 1) {
@@ -143,7 +143,6 @@ void *watchdog_thread(void *) {
           onion_notify(true, "notify.smp.relaunch_waits");
         }
         countdown = kGameRecheckSeconds;
-        waiting_for_game = true;
       } else if (relaunches >= kRelaunchMaxPerBoot ||
           (last_relaunch && now - last_relaunch < kRelaunchMinGapSeconds)) {
         if (problem != last)

@@ -130,7 +130,18 @@ bool compare_exchange_patch(uintptr_t address,
   return exchanged != 0;
 }
 
+thread_local bool t_last_already_patched = false;
+
+/* onion_x64_build_atomic_patch writes jmp qword [rip+0] followed by abs64. */
+bool starts_with_our_jump(uintptr_t address) {
+  static constexpr uint8_t prefix[] = {0xff, 0x25, 0, 0, 0, 0};
+  return std::memcmp(reinterpret_cast<const void *>(address), prefix,
+                     sizeof(prefix)) == 0;
+}
+
 } // namespace
+
+bool DetourLastFailureWasAlreadyPatched() { return t_last_already_patched; }
 
 void ReadMemory(uint64_t address, void *buffer, int length) {
   memcpy(buffer, reinterpret_cast<void *>(address), length);
@@ -153,6 +164,7 @@ bool PrepareDetour(uint64_t address, void *destination, DetourHandle *handle) {
   }
 
   *handle = DetourHandle{};
+  t_last_already_patched = false;
   LOG_DEBUG("Hooking %#02lx => %p", address, destination);
 
   if ((address % ONION_X64_ATOMIC_PATCH_SIZE) != 0) {
@@ -175,6 +187,16 @@ bool PrepareDetour(uint64_t address, void *destination, DetourHandle *handle) {
   /* PS5 xotext is execute-only. Never decode/copy it before this succeeds. */
   if (mprotect_range_rwx(address, kRelocationReadLength) < 0) {
     LOG_ERROR("DetourFunction: failed to mprotect target decoder window");
+    return false;
+  }
+
+  if (starts_with_our_jump(address)) {
+    uint64_t current = 0;
+    std::memcpy(&current, reinterpret_cast<const void *>(address + 6),
+                sizeof(current));
+    LOG_DEBUG("DetourFunction: %#02lx already jumps to %#02lx; not hooking "
+              "twice", address, current);
+    t_last_already_patched = true;
     return false;
   }
 

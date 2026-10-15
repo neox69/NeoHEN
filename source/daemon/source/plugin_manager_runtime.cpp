@@ -114,9 +114,22 @@ PluginDirectoryWatcher &watcher() {
 void log_report(const char *operation, const plugin::ReconcileReport &report) {
   for (const plugin::DiscoveryIssue &issue : report.issues)
     LOG_WARN("[plugins] %s: %s", issue.path.c_str(), issue.message.c_str());
-  LOG_INFO("[plugins] %s: discovered=%zu running=%zu started=%zu failed=%zu",
-           operation, report.discovered, report.running, report.started,
-           report.failed);
+  /* The periodic reconcile runs every 30 s: log it only when something
+   * happened or the counts moved, or it buries the rest of the log. */
+  static size_t last_discovered = static_cast<size_t>(-1);
+  static size_t last_running = static_cast<size_t>(-1);
+  const bool news = report.started || report.failed ||
+                    !report.issues.empty() ||
+                    report.discovered != last_discovered ||
+                    report.running != last_running;
+  last_discovered = report.discovered;
+  last_running = report.running;
+  if (news)
+    LOG_INFO("[plugins] %s: discovered=%zu running=%zu started=%zu failed=%zu",
+             operation, report.discovered, report.running, report.started,
+             report.failed);
+  else
+    LOG_TRACE("[plugins] %s: no change", operation);
 }
 
 } // namespace

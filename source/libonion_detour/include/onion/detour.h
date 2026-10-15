@@ -44,6 +44,12 @@ struct DetourHandle {
 bool PrepareDetour(uint64_t address, void *destination, DetourHandle *handle);
 bool CommitDetour(DetourHandle *handle);
 void AbortDetour(DetourHandle *handle);
+/*
+ * True when the last PrepareDetour/InstallDetour/DetourFunction on this thread
+ * failed because the target already starts with our absolute jump (an earlier
+ * Toolbox in the same SceShellUI hooked it).  Callers log that as a warning.
+ */
+bool DetourLastFailureWasAlreadyPatched();
 bool InstallDetour(uint64_t address, void *destination,
                    void **original_storage);
 

@@ -310,7 +310,7 @@ struct Settings {
 
   // [shadowmount]
   // Watch the ShadowMount+ hook after resume and periodically.
-  int smp_watchdog = kSmpWatchdogNotify;
+  int smp_watchdog = kSmpWatchdogRelaunch;
   int smp_watchdog_interval_seconds = kSmpWatchdogDefaultSeconds;
 
   // [diagnostics]

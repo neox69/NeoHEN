@@ -148,6 +148,10 @@ bool install_detour(const char* name, uint64_t target, void* hook, Fn& out_orig,
   }
 
   if (!InstallDetour(target, hook, reinterpret_cast<void**>(&out_orig))) {
+    if (DetourLastFailureWasAlreadyPatched()) {
+      LOG_WARN("Hook %s already installed by an earlier Toolbox; kept", name);
+      return true;
+    }
     LOG_ERROR("Detour failed: %s", name);
     if (required)
       notify("notify.hook.install");
@@ -502,6 +506,11 @@ bool install_mono_hook(const MonoHookSpec& h) {
   LOG_DEBUG("Installing mono hook: %s target=%#02lx hook=%p", h.name, addr,
               h.hook);
   if (!InstallDetour(addr, h.hook, h.orig)) {
+    if (DetourLastFailureWasAlreadyPatched()) {
+      LOG_WARN("Hook %s already installed by an earlier Toolbox; kept",
+               h.name);
+      return true;
+    }
     LOG_ERROR("Detour failed: %s", h.name);
     if (h.required)
       notify("notify.hook.install");
@@ -513,9 +522,9 @@ bool install_mono_hook(const MonoHookSpec& h) {
 bool install_optional_diag(const char* tag, MonoImage* image, const char* ns,
                            const char* klass, const char* method, int argc,
                            void* hook, void** orig) {
-  const uint64_t addr = Get_Address_of_Method(image, ns, klass, method, argc);
+  const uint64_t addr = Find_Method_Address_Quiet(image, ns, klass, method, argc);
   if (!addr) {
-    LOG_ERROR("%s not found", tag);
+    LOG_DEBUG("%s not present in this firmware", tag);
     return false;
   }
   const bool installed = InstallDetour(addr, hook, orig);
@@ -641,13 +650,10 @@ bool install_hooks(const ShellImages& img) {
       notify("notify.hook.boot");
   }
 
-  // --- CaptureScreen: 4-arg then 5-arg ---
-  if (!install_mono_hook(
-          {"CaptureScreen(4)", img.capture_menu, "Sce.Vsh.ShellUI.CaptureMenu",
-           "CaptureController", "CaptureScreen", 4,
-           reinterpret_cast<void*>(&CaptureScreen_old),
-           reinterpret_cast<void**>(&CaptureScreen_orig_old), false}) ||
-      !CaptureScreen_orig_old) {
+  // --- CaptureScreen: 5-arg (newer firmwares) or 4-arg; probe quietly so
+  // the one this firmware lacks does not log an error on every injection ---
+  if (Find_Method_Address_Quiet(img.capture_menu, "Sce.Vsh.ShellUI.CaptureMenu",
+                                "CaptureController", "CaptureScreen", 5)) {
     if (!install_mono_hook(
             {"CaptureScreen(5)", img.capture_menu, "Sce.Vsh.ShellUI.CaptureMenu",
              "CaptureController", "CaptureScreen", 5,
@@ -655,6 +661,13 @@ bool install_hooks(const ShellImages& img) {
              reinterpret_cast<void**>(&CaptureScreen_orig_new), false}) ||
         !CaptureScreen_orig_new)
       notify("notify.hook.capture");
+  } else if (!install_mono_hook(
+                 {"CaptureScreen(4)", img.capture_menu,
+                  "Sce.Vsh.ShellUI.CaptureMenu", "CaptureController",
+                  "CaptureScreen", 4, reinterpret_cast<void*>(&CaptureScreen_old),
+                  reinterpret_cast<void**>(&CaptureScreen_orig_old), false}) ||
+             !CaptureScreen_orig_old) {
+    notify("notify.hook.capture");
   }
 
   // --- GetManifestResourceStream (class name differs on 3.xx) ---

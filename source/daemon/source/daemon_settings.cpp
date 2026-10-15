@@ -37,7 +37,7 @@ bool LoadSettings(bool force) {
   }
 
   if (newest == 0) {
-    LOG_ERROR("[Daemon] Config file not found. Creating default schema...");
+    LOG_INFO("[Daemon] Config file not found. Creating default schema...");
     if (onion::settings_ensure_default()) {
       onion_notify(true, "notify.settings.created");
     }
