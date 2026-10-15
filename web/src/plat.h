@@ -62,6 +62,8 @@ int         plat_power(const char *action); /* "rest" | "reboot" | "poweroff" */
 int         plat_open_browser(const char *url);
 /* /system_ex writable, for the files of a title registered from /user/app */
 int         plat_remount_system_ex(void);
+/* lets go of a mounted volume; fails (and forces nothing) while it is in use */
+int         plat_unmount(const char *path);
 int         plat_eject_disc(void);
 
 /* human readable reason for the last failing plat_* call (thread-local) */

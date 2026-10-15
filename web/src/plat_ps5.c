@@ -848,6 +848,15 @@ plat_power(const char *action) {
 }
 
 int
+plat_unmount(const char *path) {
+  if(unmount(path, 0)) {
+    plat_set_error("%s", strerror(errno));
+    return -1;
+  }
+  return 0;
+}
+
+int
 plat_remount_system_ex(void) {
   struct iovec iov[] = {
 #define IOV(x) {(void *)(x), (x) ? strlen(x) + 1 : 0}

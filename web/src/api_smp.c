@@ -74,24 +74,18 @@ send_all(int fd, const char *p, size_t len) {
   return 0;
 }
 
-void
-api_smp(http_req_t *req) {
+/* One request to ShadowMount+. On success *reply holds the whole HTTP
+ * answer (NUL-terminated, free it), *body points at its body and the HTTP
+ * status is returned; -1 if it did not answer, with why in err. */
+static int
+smp_exchange(const char *method, const char *path, const char *body, size_t blen,
+             char **reply_out, char **body_out, size_t *body_len, char *err, size_t esize) {
   struct timeval tv = {SMP_TIMEOUT, 0};
-  char path[2048], head[2400], ctype[128] = "application/json";
   struct sockaddr_in addr;
-  char *body = NULL, *reply = NULL, *sep, *line;
-  size_t blen = 0, rlen = 0, cap = 65536;
-  int fd, status = 0, post = !strcmp(req->method, "POST");
+  char head[2400], *reply = NULL, *sep;
+  size_t rlen = 0, cap = 65536;
+  int fd, status = 0;
 
-  if(!http_query(req, "path", path, sizeof(path)) || strncmp(path, "/api/", 5) ||
-     strpbrk(path, " \r\n") || strstr(path, "..")) {
-    http_send_error(req, 400, "path must be under /api/");
-    return;
-  }
-  if(post && !(body = http_read_body_all(req, 1 << 20, &blen))) {
-    http_send_error(req, 400, "the body could not be read");
-    return;
-  }
   memset(&addr, 0, sizeof(addr));
   addr.sin_family = AF_INET;
   addr.sin_port = htons((uint16_t)smp_port());
@@ -102,23 +96,20 @@ api_smp(http_req_t *req) {
     if(fd >= 0) {
       close(fd);
     }
-    free(body);
-    http_send_error(req, 502, "ShadowMount+ is not answering on port %d", smp_port());
-    return;
+    snprintf(err, esize, "ShadowMount+ is not answering on port %d", smp_port());
+    return -1;
   }
   snprintf(head, sizeof(head),
            "%s %s HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n"
            "Content-Type: application/json\r\nContent-Length: %zu\r\n\r\n",
-           post ? "POST" : "GET", path, blen);
+           method, path, blen);
   if(send_all(fd, head, strlen(head)) || (blen && send_all(fd, body, blen)) ||
      !(reply = malloc(cap))) {
     close(fd);
-    free(body);
     free(reply);
-    http_send_error(req, 502, "ShadowMount+ did not take the request");
-    return;
+    snprintf(err, esize, "ShadowMount+ did not take the request");
+    return -1;
   }
-  free(body);
   for(;;) {
     ssize_t n;
     if(rlen + 1 >= cap) {
@@ -140,19 +131,81 @@ api_smp(http_req_t *req) {
   }
   close(fd);
   reply[rlen] = 0;
-
   if(sscanf(reply, "HTTP/%*s %d", &status) != 1 || !(sep = strstr(reply, "\r\n\r\n"))) {
     free(reply);
-    http_send_error(req, 502, "ShadowMount+ gave an answer that is not HTTP");
-    return;
+    snprintf(err, esize, "ShadowMount+ gave an answer that is not HTTP");
+    return -1;
   }
   *sep = 0;
+  *reply_out = reply;
+  *body_out = sep + 4;
+  *body_len = rlen - (size_t)(sep + 4 - reply);
+  return status;
+}
+
+int
+smp_call(const char *path, const char *json_body, jval_t **out, char *err, size_t esize) {
+  char *reply = NULL, *body = NULL;
+  size_t len = 0;
+  int status;
+  jval_t *v;
+
+  if(out) {
+    *out = NULL;
+  }
+  status = smp_exchange("POST", path, json_body ? json_body : "{}",
+                        strlen(json_body ? json_body : "{}"), &reply, &body, &len, err, esize);
+  if(status < 0) {
+    return -1;
+  }
+  v = json_parse(body, len);
+  free(reply);
+  if(!v) {
+    snprintf(err, esize, "ShadowMount+ answered %d with no JSON", status);
+    return -1;
+  }
+  /* its API says how it went in "status": 0 is fine */
+  if(status != 200 || json_get_int(v, "status", 0)) {
+    snprintf(err, esize, "%s", json_get_str(v, "error", "ShadowMount+ said no"));
+    json_free(v);
+    return -1;
+  }
+  if(out) {
+    *out = v;
+  } else {
+    json_free(v);
+  }
+  return 0;
+}
+
+void
+api_smp(http_req_t *req) {
+  char path[2048], ctype[128] = "application/json", err[160];
+  char *body = NULL, *reply = NULL, *rbody, *line;
+  size_t blen = 0, rblen = 0;
+  int status, post = !strcmp(req->method, "POST");
+
+  if(!http_query(req, "path", path, sizeof(path)) || strncmp(path, "/api/", 5) ||
+     strpbrk(path, " \r\n") || strstr(path, "..")) {
+    http_send_error(req, 400, "path must be under /api/");
+    return;
+  }
+  if(post && !(body = http_read_body_all(req, 1 << 20, &blen))) {
+    http_send_error(req, 400, "the body could not be read");
+    return;
+  }
+  status = smp_exchange(post ? "POST" : "GET", path, body, blen, &reply, &rbody, &rblen,
+                        err, sizeof(err));
+  free(body);
+  if(status < 0) {
+    http_send_error(req, 502, "%s", err);
+    return;
+  }
   for(line = strstr(reply, "\r\n"); line; line = strstr(line + 2, "\r\n")) {
     if(!strncasecmp(line + 2, "Content-Type:", 13)) {
       sscanf(line + 15, " %127[^\r\n]", ctype);
     }
   }
-  sep += 4;
-  http_send_buf(req, status, ctype, sep, rlen - (size_t)(sep - reply));
+  http_send_buf(req, status, ctype, rbody, rblen);
   free(reply);
 }

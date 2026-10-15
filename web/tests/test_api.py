@@ -290,10 +290,38 @@ class PayloadTest(unittest.TestCase):
         with open(f"{r}/data/homebrew/backports/PPSA07777/fakelib/libScePlayGo.sprx", "wb") as f:
             f.write(b"\x4f\x15\x3d\x1d" + b"S" * 500)
 
+        # a stand-in for ShadowMount+'s API: mounting a game makes its
+        # mount point real, unmounting takes it away
+        import http.server, threading
+        root = r
+        class Smp(http.server.BaseHTTPRequestHandler):
+            calls = []
+            def log_message(self, *a):
+                pass
+            def do_POST(self):
+                body = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))) or b"{}")
+                Smp.calls.append((self.path, body))
+                tid = body.get("title_id", "")
+                mnt = f"{root}/mnt/shadowmnt/{tid}_abcd"
+                if self.path == "/api/v1/games/mount":
+                    os.makedirs(f"{mnt}/sce_sys", exist_ok=True)
+                elif self.path == "/api/v1/games/unmount":
+                    shutil.rmtree(mnt, ignore_errors=True)
+                out = json.dumps({"status": 0}).encode()
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(out)))
+                self.end_headers()
+                self.wfile.write(out)
+        cls.smp_calls = Smp.calls
+        cls.smp = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Smp)
+        threading.Thread(target=cls.smp.serve_forever, daemon=True).start()
+
         cls.port = free_port()
         cls.ctl_port = free_port()
         env = dict(os.environ, PS5AIO_ROOT=cls.root, NEOWEB_CTL_PORT=str(cls.ctl_port),
-                   NEOWEB_TEST_USB="1", NEOWEB_PLAY_TICK_MS="100")
+                   NEOWEB_TEST_USB="1", NEOWEB_PLAY_TICK_MS="100",
+                   NEOWEB_SMP_PORT=str(cls.smp.server_address[1]))
         cls.proc = subprocess.Popen([BIN, str(cls.port)], env=env,
                                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         cls.api = Api(f"http://127.0.0.1:{cls.port}")
@@ -460,6 +488,45 @@ class PayloadTest(unittest.TestCase):
         self.assertGreater(g["last"], 1700000000)
         with open(f"{self.root}/data/neohen/web/playtime.json") as f:
             self.assertIn("PPSA01234", json.load(f)["games"])
+
+    def test_zz_autofix(self):
+        # the Toolbox's one-step PlayGo fix: an image never seen is mounted
+        # through ShadowMount+ for a moment, looked at, unmounted, then fixed
+        r = self.root
+        shutil.rmtree(f"{r}/data/neohen/web/fakelib/PPSA05555", ignore_errors=True)
+        self.api.post("/api/games/unfix", {"id": "PPSA05555"})
+        del self.smp_calls[:]
+        st, j = self.api.post("/api/games/autofix", {"id": "PPSA05555"})
+        self.assertEqual(st, 200, j)
+        self.assertEqual([c[0] for c in self.smp_calls], ["/api/v1/games/mount", "/api/v1/games/unmount"])
+        self.assertTrue(j["game"]["image"]["known"])
+        self.assertTrue(j["game"]["backport"]["playgo"])
+        self.assertFalse(os.path.exists(f"{r}/mnt/shadowmnt/PPSA05555_abcd"))
+        # seen now: a second time does not mount again
+        del self.smp_calls[:]
+        st, j = self.api.post("/api/games/autofix", {"id": "PPSA05555"})
+        self.assertEqual((st, self.smp_calls), (200, []))
+        self.api.post("/api/games/unfix", {"id": "PPSA05555"})
+
+    def test_usb_eject(self):
+        r = self.root
+        st, body, _ = self.api.req("POST", "/api/usb/eject", body={"drive": "sda1"})
+        self.assertEqual(st, 400, body)
+        st, body, _ = self.api.req("POST", "/api/usb/eject", body={"drive": "usb3"})
+        self.assertEqual(st, 404, body)
+        # an app is open: it is only closed when asked to
+        self.api.post("/api/apps/launch", {"titleId": "PPSA01234"})
+        st, body, _ = self.api.req("POST", "/api/usb/eject", body={"drive": "usb0"})
+        self.assertEqual(st, 409, body)
+        # something still holds the drive: nothing is forced
+        open(f"{r}/mnt/usb0/.busy", "w").close()
+        st, body, _ = self.api.req("POST", "/api/usb/eject", body={"drive": "usb0", "closeApp": True})
+        self.assertEqual(st, 409, body)
+        os.unlink(f"{r}/mnt/usb0/.busy")
+        _, j = self.api.get("/api/apps/running")
+        self.assertFalse(j["running"])
+        st, j = self.api.post("/api/usb/eject", {"drive": "usb0"})
+        self.assertEqual((st, j["drive"]), (200, "/mnt/usb0"))
 
     def test_launcher(self):
         # the NeoWEB icon in Media: a web based media app pointing at this page
@@ -1132,8 +1199,10 @@ class PayloadTest(unittest.TestCase):
         finally:
             shutil.rmtree(f"{r}/mnt/shadowmnt/PPSA05555_abcd")
             shutil.rmtree(f"{r}/data/neohen/web/fakelib/PPSA05555", ignore_errors=True)
-        # ShadowMount+ is not there in the tests: its door says so, and takes no other path
-        self.assertEqual(self.api.post("/api/smp?path=/api/v1/version", {})[0], 502)
+        # its door takes only paths under /api/
+        # the stand-in answers, and its answer comes back as it is
+        st, j = self.api.post("/api/smp?path=/api/v1/version", {})
+        self.assertEqual((st, j["status"]), (200, 0))
         self.assertEqual(self.api.get("/api/smp?path=/etc/passwd")[0], 400)
         self.assertEqual(self.api.get("/api/smp?path=/api/../x")[0], 400)
 
