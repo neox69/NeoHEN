@@ -624,12 +624,14 @@ static const api_route_t g_routes[] = {
 
   {"GET",  "/api/games/images",     api_games_images},
   {"POST", "/api/games/fix",        api_games_fix},
+  {"POST", "/api/games/autofix",    api_games_autofix},
   {"POST", "/api/games/unfix",      api_games_unfix},
   {"POST", "/api/games/note",       api_games_note},
   {"POST", "/api/games/move",       api_games_move},
   {"POST", "/api/games/peek",       api_games_peek},
 
   {NULL,   "/api/smp",              api_smp},
+  {"POST", "/api/usb/eject",        api_usb_eject},
   {"GET",  "/api/launcher",         api_launcher},
   {"POST", "/api/launcher/install", api_launcher_install},
   {"POST", "/api/launcher/remove",  api_launcher_remove},

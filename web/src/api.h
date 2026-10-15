@@ -85,6 +85,11 @@ void games_on_game_open(const char *title);
 void api_smp(http_req_t *req);
 /* ask NeoHEN's util service: 0 it said yes, 1 it said no, -1 no answer */
 int  neohen_util_call(uint32_t cmd, const jw_t *request, char *var, size_t size, int timeout_s);
+/* POST path to ShadowMount+'s own API; 0 when it said status 0, *out its
+ * answer (json_free it) */
+int  smp_call(const char *path, const char *json_body, jval_t **out, char *err, size_t esize);
+void api_games_autofix(http_req_t *req);
+void api_usb_eject(http_req_t *req);
 void api_launcher(http_req_t *req);
 void api_launcher_install(http_req_t *req);
 void api_launcher_remove(http_req_t *req);

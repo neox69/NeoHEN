@@ -470,6 +470,21 @@ plat_app_install_pkg(const char *url, const char *name, const char *icon_url,
 }
 
 int
+plat_unmount(const char *path) {
+  /* the emulator's drives are folders: a "busy" file inside one says no */
+  char p[PATH_MAX], busy[PATH_MAX];
+  struct stat st;
+  plat_path(path, p, sizeof(p));
+  snprintf(busy, sizeof(busy), "%s/.busy", p);
+  if(!stat(busy, &st)) {
+    plat_set_error("Device busy");
+    return -1;
+  }
+  LOG_INFO("[emu] unmount %s (simulated)", path);
+  return 0;
+}
+
+int
 plat_remount_system_ex(void) {
   return 0; /* the emulator's /system_ex is an ordinary folder */
 }

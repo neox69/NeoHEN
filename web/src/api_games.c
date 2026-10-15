@@ -511,13 +511,12 @@ copy_missing(const char *from_console, const char *to_console) {
 
 /* POST /api/games/fix {"id": "PPSA01234"[, "force": true]}
  * "force" applies it without knowing what the image brings in its fakelib */
+static void fix_game(http_req_t *req, game_t g, int force);
+
 void
 api_games_fix(http_req_t *req) {
-  char path[PATH_MAX], other[PATH_MAX], local[PATH_MAX], stub[PATH_MAX], text[64];
-  struct dirent *e;
   jval_t *b;
   game_t g;
-  DIR *dir;
   int force;
 
   if(body_game(req, &b, &g)) {
@@ -525,6 +524,51 @@ api_games_fix(http_req_t *req) {
   }
   force = json_get_bool(b, "force", 0);
   json_free(b);
+  fix_game(req, g, force);
+}
+
+/* POST /api/games/autofix {"id": "PPSA01234"}
+ * the whole fix in one go, for the Toolbox: when the image has not been seen
+ * yet it is mounted through ShadowMount+ for a moment to see what it brings */
+void
+api_games_autofix(http_req_t *req) {
+  char body[64], err[160], path[PATH_MAX];
+  jval_t *b;
+  game_t g;
+
+  if(body_game(req, &b, &g)) {
+    return;
+  }
+  json_free(b);
+  if(g.has_playgo && g.is_image && !seen(g.id) && !is_running(g.id)) {
+    snprintf(body, sizeof(body), "{\"title_id\":\"%s\"}", g.id);
+    if(smp_call("/api/v1/games/mount", body, NULL, err, sizeof(err))) {
+      http_send_error(req, 502, "the image could not be mounted to look at it: %s", err);
+      return;
+    }
+    games_on_game_open(g.id);
+    if(smp_call("/api/v1/games/unmount", body, NULL, err, sizeof(err))) {
+      LOG_WARN("games: %s stays mounted: %s", g.id, err);
+    }
+    if(!seen(g.id)) {
+      http_send_error(req, 409, "the image of %s was mounted but could not be read", g.id);
+      return;
+    }
+  }
+  snprintf(path, sizeof(path), SEEN "/%s/" STUB, g.id);
+  if(exists(path, NULL)) {
+    http_send_error(req, 409, "the image of %s already brings its own fix", g.id);
+    return;
+  }
+  fix_game(req, g, 0);
+}
+
+static void
+fix_game(http_req_t *req, game_t g, int force) {
+  char path[PATH_MAX], other[PATH_MAX], local[PATH_MAX], stub[PATH_MAX], text[64];
+  struct dirent *e;
+  DIR *dir;
+
   if(!g.has_playgo) {
     http_send_error(req, 409, "%s has no PlayGo data: this fix is not for it", g.id);
     return;
