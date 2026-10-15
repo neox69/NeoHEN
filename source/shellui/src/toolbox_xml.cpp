@@ -21,6 +21,7 @@
 #include "external_plugin_ui.hpp"
 #include "external_sprx_ui.hpp"
 #include "onion_cjson.hpp"
+#include "neo_web.hpp"
 
 #include <dirent.h>
 #include <algorithm>
@@ -828,6 +829,9 @@ void append_toolbox_account_group(ps5ui::Group& g) {
 }
 
 void append_toolbox_system_group(ps5ui::Group& g) {
+  /* NeoHEN: what NeoWEB knows of the console, and the safe USB eject */
+  neo_append_status_group(g);
+  neo_append_usb_group(g);
   g.group(
        "id_group_fan", toolbox_i18n::tr("fan.group"),
        [](ps5ui::Group& f) {

@@ -1,6 +1,7 @@
 /* Copyright (C) 2025 OnionHEN / LightningMods — P0 split. */
 
 
+#include "neo_web.hpp"
 #include "hooked_funcs.hpp"
 #include "ipc.hpp"
 #include "external_symbols.hpp"
@@ -143,6 +144,7 @@ void createJson_hook(MonoObject* inst, MonoObject* array, MonoString* id, MonoSt
         static const struct { const char *id, *label, *uri; } kNeo[] = {
             {"MENU_ID_NEO_SAVES", "game_menu.saves", kNeoActionSaves},
             {"MENU_ID_NEO_BACKPORT", "game_menu.backport", kNeoActionBackport},
+            {"MENU_ID_NEO_DISK", "game_menu.disk", kNeoActionDisk},
         };
         for (const auto &item : kNeo)
             createJson(inst, array, mono_string_new(Root_Domain, item.id),

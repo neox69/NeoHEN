@@ -1,6 +1,7 @@
 /* Copyright (C) 2025 OnionHEN / LightningMods
  * Extracted from hook_functions.cpp — hook_boot
  */
+#include "neo_web.hpp"
 #include "hooked_funcs.hpp"
 #include "debug_settings_route_runtime.hpp"
 #include "detour.h"
@@ -67,7 +68,8 @@ bool handle_uri_boot_common(MonoString* uri, int opt, MonoString* titleIdForBoot
     const std::string neo_tid =
         titleIdForBootAction ? Mono_to_String(titleIdForBootAction) : "";
     /* The save data page is a Toolbox page: open the Toolbox, which shows it. */
-    if (neo_saves_page_request(neo_uri, neo_tid))
+    if (neo_saves_page_request(neo_uri, neo_tid) ||
+        neo_disk_page_request(neo_uri, neo_tid))
       return boot_orig(
           mono_string_new(Root_Domain, shellui_debug_settings_toolbox_uri()), opt,
           titleIdForBootAction);
@@ -99,7 +101,8 @@ bool handle_uri_boot_common(MonoString* uri, int opt, MonoString* titleIdForBoot
 
     const std::string original_uri = Mono_to_String(uri);
     LOG_DEBUG("uri_boot_hook_2: %s, opt: %i", original_uri.c_str(), opt);
-    if (neo_saves_page_request(original_uri, ""))
+    if (neo_saves_page_request(original_uri, "") ||
+        neo_disk_page_request(original_uri, ""))
       return boot_orig_2(
           mono_string_new(Root_Domain,
                           shellui_debug_settings_toolbox_uri_simple()),
