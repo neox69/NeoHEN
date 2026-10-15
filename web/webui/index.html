@@ -595,7 +595,7 @@ function show(v,push){
   $("vt").textContent=def[1];$("vs").textContent=def[2];
   if(push)history.replaceState(null,"","#"+(v==="game"?"game="+S.gp.id:v));
   $("side").className="side";paintNav();render();$("view").scrollTop=0;
-  if(v==="files")loadDir(S.cwd);if(v==="procs")loadProcs();if(v==="system"){loadLog();S.fanEdit=null;loadFan()}if(v==="transfers")loadJobs();if(v==="payloads"){loadPay();loadStore()}if(v==="themes")loadThemes();if(v==="saves")loadSaves();if(v==="captures")loadCaps();if(v==="cheats")loadCheats();if(v==="stats")loadStats();if(v==="trophies")loadTrophies();if(v==="smp")loadSmp();if(v==="fixes")loadFixes();if(v==="game")loadGame();
+  if(v==="files")loadDir(S.cwd);if(v==="procs")loadProcs();if(v==="system"){loadLog();S.fanEdit=null;loadFan();loadLnch()}if(v==="transfers")loadJobs();if(v==="payloads"){loadPay();loadStore()}if(v==="themes")loadThemes();if(v==="saves")loadSaves();if(v==="captures")loadCaps();if(v==="cheats")loadCheats();if(v==="stats")loadStats();if(v==="trophies")loadTrophies();if(v==="smp")loadSmp();if(v==="fixes")loadFixes();if(v==="game")loadGame();
 }
 $("nav").onclick=function(e){var b=e.target.closest("button[data-v]");if(b)show(b.getAttribute("data-v"),true)};
 window.addEventListener("hashchange",function(){var h=location.hash.slice(1);if(h!==S.view&&h!=="game="+S.gp.id)show(h)});
@@ -2079,6 +2079,7 @@ function paintSys(){
       '<div class="card pad"><h3 class="h">'+L("Energía","Power")+'</h3><p style="margin:0 0 12px;color:var(--dim)">'+L("El reposo conserva NeoHEN. Reiniciar o apagar no: la consola vuelve de fábrica y hay que lanzar el exploit otra vez.","Rest Mode keeps NeoHEN. A restart or a power off does not: the console comes back stock and the exploit has to be run again.")+'</p>'+
       '<div class="row"><button class="btn pri" data-pw="rest">'+L("Poner en reposo","Rest Mode")+'</button><button class="btn danger" data-pw="reboot">'+L("Reiniciar","Restart")+'</button><button class="btn danger" data-pw="poweroff">'+L("Apagar","Power off")+'</button><span class="sp"></span><button class="btn" id="ej">'+L("Expulsar disco","Eject disc")+'</button></div>'+
       (i.socSensors&&i.socSensors.length?'<p style="margin:14px 0 0;font:500 11.5px var(--mono);color:var(--faint)">'+L("Sensores del SoC: ","SoC sensors: ")+i.socSensors.join(" · ")+' °C</p>':"")+'</div></div>':"")+
+    (S.full?'<div id="lnch"></div>':"")+
     '<h3 class="h" style="margin-top:24px">'+L("Volúmenes montados","Mounted volumes")+' <em>'+mounts.length+'</em></h3><div class="card tw" style="max-height:340px"><table class="t"><thead><tr><th>'+L("Ruta","Path")+'</th><th class="hide-m">'+L("Tipo","Type")+'</th><th class="r">'+L("Tamaño","Size")+'</th><th class="r">'+L("Libre","Free")+'</th><th>'+L("Uso","Used")+'</th></tr></thead><tbody>'+
     mounts.map(function(m){var pct=Math.round((m.total-m.free)/m.total*100);
       return '<tr><td class="n"><a '+(S.full?'data-open="'+esc(m.path)+'"':'style="cursor:default"')+'>'+ic("disk")+'<span>'+esc(m.path)+'</span></a></td><td class="m hide-m">'+esc(m.fs)+(m.readonly?" · ro":"")+'</td><td class="m r">'+size(m.total)+'</td><td class="m r">'+size(m.free)+
@@ -2091,6 +2092,20 @@ function paintSys(){
   $("nb").onclick=function(){var t=$("nt").value.trim();if(t)api("/api/sys/notify",{text:t}).then(function(){toast(L("Enviado","Sent"));$("nt").value=""}).catch(fail)};
   $("nt").onkeydown=function(e){if(e.key==="Enter")$("nb").click()};
   $("lr").onclick=loadLog;
+  paintLnch();
+}
+/* the NeoWEB icon in Media on the PS5 home screen */
+S.ln=null;
+function loadLnch(){if(!S.full)return Promise.resolve();return api("/api/launcher").then(function(j){S.ln=j;paintLnch()}).catch(function(){})}
+function paintLnch(){
+  var b=$("lnch"),ln=S.ln;if(!b)return;if(!ln){b.innerHTML="";return}
+  b.innerHTML='<div class="card pad" style="margin-top:16px"><h3 class="h">'+L("Icono de NeoWEB en la PS5","NeoWEB icon on the PS5")+' <em>'+(ln.installed?L("instalado","installed"):L("sin instalar","not installed"))+'</em></h3>'+
+    '<p style="margin:0 0 12px;color:var(--dim)">'+L("Pone un icono «NeoWEB» en la pantalla de inicio de la PS5, en Contenido multimedia. Al abrirlo, la consola muestra esta página a pantalla completa en la tele.","Puts a “NeoWEB” icon on the PS5 home screen, under Media. Opening it shows this page full screen on the TV.")+'</p>'+
+    '<div style="display:flex;gap:10px;flex-wrap:wrap"><input class="in" id="ln-u" style="flex:1;min-width:240px" value="'+esc(ln.uri||ln.defaultUri)+'" title="'+L("La dirección que abre el icono","The address the icon opens")+'">'+
+    '<button class="btn pri" id="ln-i"'+(S.ro?" disabled":"")+'>'+ic("plus")+(ln.installed?L("Volver a instalar","Install again"):L("Instalar el icono","Install the icon"))+'</button>'+
+    (ln.installed?'<button class="btn danger" id="ln-r"'+(S.ro?" disabled":"")+'>'+L("Quitar","Remove")+'</button>':"")+'</div></div>';
+  $("ln-i").onclick=function(){var u=$("ln-u").value.trim();api("/api/launcher/install",{uri:u}).then(function(){toast(L("Icono instalado: búscalo en Contenido multimedia","Icon installed: look for it under Media"));loadLnch()}).catch(fail)};
+  if($("ln-r"))$("ln-r").onclick=function(){ask(L("Quitar el icono de NeoWEB","Remove the NeoWEB icon"),L("Desaparece de la pantalla de inicio. NeoWEB sigue funcionando desde el PC o el móvil.","It goes from the home screen. NeoWEB keeps working from the PC or the phone."),L("Quitar","Remove"),true).then(function(ok){if(ok)api("/api/launcher/remove",{}).then(function(){toast(L("Icono quitado","Icon removed"));loadLnch()}).catch(fail)})};
 }
 $("v-system").addEventListener("click",function(e){var a=e.target.closest("[data-open]");if(a){S.cwd=a.getAttribute("data-open");show("files",true)}});
 
@@ -2135,7 +2150,7 @@ function fast(){
 function slow(){
   return Promise.all([api("/api/apps/list"),api("/api/sys/mounts")]).then(function(x){
     S.apps=x[0].apps||[];S.mounts=x[1].mounts||[];paintNav();loadStatus();if(S.full)api("/api/stats/playtime").then(function(j){S.play={games:j.games||{},today:j.today||""}}).catch(function(){});
-    if(S.view==="panel")paintPanel();else if(S.view==="library")paintGrid();else if(S.view==="system"&&!/^(fan-r|nt)$/.test((document.activeElement||{}).id||""))paintSys();
+    if(S.view==="panel")paintPanel();else if(S.view==="library")paintGrid();else if(S.view==="system"&&!/^(fan-r|nt|ln-u)$/.test((document.activeElement||{}).id||""))paintSys();
     else if(S.view==="fixes"&&S.fx.loaded&&(document.activeElement||{}).tagName!=="SELECT")paintFixes();
   }).catch(function(){});
 }

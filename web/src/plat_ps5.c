@@ -20,6 +20,7 @@
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/user.h>
+#include <sys/uio.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -841,6 +842,26 @@ plat_power(const char *action) {
   }
   if(r) {
     plat_set_error("the console refused to %s (0x%x)", action, r);
+    return -1;
+  }
+  return 0;
+}
+
+int
+plat_remount_system_ex(void) {
+  struct iovec iov[] = {
+#define IOV(x) {(void *)(x), (x) ? strlen(x) + 1 : 0}
+    IOV("from"),      IOV("/dev/ssd0.system_ex"),
+    IOV("fspath"),    IOV("/system_ex"),
+    IOV("fstype"),    IOV("exfatfs"),
+    IOV("large"),     IOV("yes"),
+    IOV("timezone"),  IOV("static"),
+    IOV("async"),     IOV(NULL),
+    IOV("ignoreacl"), IOV(NULL),
+#undef IOV
+  };
+  if(nmount(iov, sizeof(iov) / sizeof(iov[0]), MNT_UPDATE)) {
+    plat_set_error("remount /system_ex: %s", strerror(errno));
     return -1;
   }
   return 0;
