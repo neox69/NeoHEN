@@ -129,6 +129,20 @@ api_sys_info(http_req_t *req) {
   jw_t w;
   api_begin(&w);
   jw_kstr(&w, "version", PS5AIO_VERSION);
+  {
+    /* NeoHEN writes its own version there at start (0.1.0-rc6 onwards) */
+    char local[PATH_MAX], *text = NULL;
+    size_t len = 0;
+
+    plat_path("/data/neohen/version.txt", local, sizeof(local));
+    if(!fs_read_file(local, &text, &len, 128)) {
+      while(len && (text[len - 1] == '\n' || text[len - 1] == '\r' || text[len - 1] == ' ')) {
+        text[--len] = 0;
+      }
+      jw_kstr(&w, "neohen", text);
+      free(text);
+    }
+  }
   plat_sysinfo(&w);
   {
     char tid[16] = "";
