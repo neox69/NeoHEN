@@ -461,6 +461,14 @@ class PayloadTest(unittest.TestCase):
         with open(f"{self.root}/data/neohen/web/playtime.json") as f:
             self.assertIn("PPSA01234", json.load(f)["games"])
 
+    def test_neohen_version(self):
+        # NeoHEN writes its version at start; the page compares it with GitHub
+        os.makedirs(f"{self.root}/data/neohen", exist_ok=True)
+        with open(f"{self.root}/data/neohen/version.txt", "w") as f:
+            f.write("0.1.0-rc6+2382\n")
+        _, j = self.api.get("/api/sys/info")
+        self.assertEqual(j["neohen"], "0.1.0-rc6+2382")
+
     def test_zz_no_autosave(self):
         # the automatic save copy was taken out in 0.1.0-rc6: closing a game copies nothing
         base = f"{self.root}/mnt/usb0/NeoHEN/saves/users/NeoX_ESP (1d31cd9c)/PPSA01234"

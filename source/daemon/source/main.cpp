@@ -26,6 +26,7 @@ along with this program; see the file COPYING. If not, see
 #include <onion/platform.h>
 #include "daemon_ops.hpp"
 #include "smp_watchdog.hpp"
+#include <onion/version.h>
 #include <stdio.h>
 #include <stdarg.h>
 #include <stddef.h>
@@ -294,6 +295,11 @@ int main() {
 
   LOG_INFO("=========== starting " ONION_BRAND_NAME " (0x%X) ... ===========",
            fw_ver);
+  /* NeoWEB reads it to say when a newer release is out. */
+  if (FILE *vf = fopen(ONION_DATA_DIR "/version.txt", "w")) {
+    fputs(ONIONHEN_VERSION "\n", vf);
+    fclose(vf);
+  }
   (void)sceKernelMprotect(&buz[0], 100, 0x7); // probe mprotect / kstuff state
   const bool toolbox_only = (fw_ver >= 0x10000);
   is_800 = (fw_ver >= 0x800);

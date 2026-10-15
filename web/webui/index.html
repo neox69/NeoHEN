@@ -425,6 +425,7 @@ dialog textarea{width:100%;height:min(60vh,560px);resize:vertical;font:500 12.5p
       <section id="v-payloads" hidden></section>
       <section id="v-smp" hidden></section>
       <section id="v-game" hidden></section>
+      <section id="v-fixes" hidden></section>
       <section id="v-themes" hidden></section>
       <section id="v-saves" hidden></section>
       <section id="v-captures" hidden></section>
@@ -515,6 +516,7 @@ var P={
  settings:"M4 7h10M18 7h2M4 12h4M12 12h8M4 17h12M20 17h0M14 5v4M8 10v4M16 15v4",
  cheats:"M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6-5.3-3-5.3 3 1.2-6L3.4 9.3l6-.7z",
  captures:"M4 7h3l2-2h6l2 2h3v12H4zM12 10a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7z",
+ fixes:"M14.7 6.3a4 4 0 0 0-5.4 5.4L4 17l3 3 5.3-5.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z",
  themes:"M12 3a9 9 0 1 0 0 18c1.2 0 2-.9 2-2 0-1.3 1-2 2.2-2H18a3 3 0 0 0 3-3c0-5-4-9-9-9zM7.5 12h.01M9.5 8h.01M14.5 8h.01"
 };
 function ic(n,cls){return '<svg class="i'+(cls?" "+cls:"")+'" viewBox="0 0 24 24"><path d="'+P[n]+'"/></svg>'}
@@ -563,6 +565,7 @@ var VIEWS=[
  ["payloads","Payloads",L("Lo que NeoHEN arranca y lo que puedes lanzar","What NeoHEN starts and what you can launch")],
  ["smp","ShadowMount+",L("Los juegos que monta y cómo le va","The games it mounts, and how it is doing"),1],
  ["game","","",0,1],
+ ["fixes","FIXES",L("Arreglos para juegos que no arrancan o se quedan parados","Fixes for games that do not start or get stuck"),1],
  ["themes",L("Temas","Themes"),L("Fondo y música del menú de la PS5","Background and music of the PS5 menu"),1],
  ["saves",L("Partidas","Saves"),L("Copias de seguridad de las partidas, por usuario","Backups of save data, by user"),1],
  ["captures",L("Capturas","Captures"),L("Capturas de pantalla y vídeos de la consola","Screenshots and clips on the console"),1],
@@ -592,7 +595,7 @@ function show(v,push){
   $("vt").textContent=def[1];$("vs").textContent=def[2];
   if(push)history.replaceState(null,"","#"+(v==="game"?"game="+S.gp.id:v));
   $("side").className="side";paintNav();render();$("view").scrollTop=0;
-  if(v==="files")loadDir(S.cwd);if(v==="procs")loadProcs();if(v==="system"){loadLog();S.fanEdit=null;loadFan()}if(v==="transfers")loadJobs();if(v==="payloads"){loadPay();loadStore()}if(v==="themes")loadThemes();if(v==="saves")loadSaves();if(v==="captures")loadCaps();if(v==="cheats")loadCheats();if(v==="stats")loadStats();if(v==="trophies")loadTrophies();if(v==="smp")loadSmp();if(v==="game")loadGame();
+  if(v==="files")loadDir(S.cwd);if(v==="procs")loadProcs();if(v==="system"){loadLog();S.fanEdit=null;loadFan()}if(v==="transfers")loadJobs();if(v==="payloads"){loadPay();loadStore()}if(v==="themes")loadThemes();if(v==="saves")loadSaves();if(v==="captures")loadCaps();if(v==="cheats")loadCheats();if(v==="stats")loadStats();if(v==="trophies")loadTrophies();if(v==="smp")loadSmp();if(v==="fixes")loadFixes();if(v==="game")loadGame();
 }
 $("nav").onclick=function(e){var b=e.target.closest("button[data-v]");if(b)show(b.getAttribute("data-v"),true)};
 window.addEventListener("hashchange",function(){var h=location.hash.slice(1);if(h!==S.view&&h!=="game="+S.gp.id)show(h)});
@@ -600,7 +603,7 @@ $("burger").innerHTML=ic("menu");$("reload").innerHTML=ic("refresh");
 $("burger").onclick=function(){$("side").className="side open"};
 $("view").addEventListener("click",function(){$("side").className="side"});
 $("reload").onclick=function(){fast();slow();show(S.view);toast(L("Actualizado","Refreshed"))};
-function render(){({panel:paintPanel,library:paintLib,files:paintFiles,payloads:paintPay,themes:paintThemes,saves:paintSaves,captures:paintCaps,cheats:paintCheats,stats:paintStats,trophies:paintTrophies,smp:paintSmp,game:paintGameView,transfers:paintTr,procs:paintProcs,system:paintSys,settings:paintCfg})[S.view]()}
+function render(){({panel:paintPanel,library:paintLib,files:paintFiles,payloads:paintPay,themes:paintThemes,saves:paintSaves,captures:paintCaps,cheats:paintCheats,stats:paintStats,trophies:paintTrophies,smp:paintSmp,fixes:paintFixes,game:paintGameView,transfers:paintTr,procs:paintProcs,system:paintSys,settings:paintCfg})[S.view]()}
 
 /* ------------------------------------------------------------ dashboard */
 function tcol(v){return v>=88?"var(--bad)":v>=78?"var(--warn)":"var(--ok)"}
@@ -650,7 +653,7 @@ function paintPanel(){
   var pay=S.pay.map(function(p){return '<div class="rowl"><i class="dot'+(p.running?" on":"")+'"></i><div class="t"><b>'+esc(p.name)+'</b><small>'+(p.running?L("en marcha","running")+" · pid "+p.pid:L("parado","stopped"))+'</small></div></div>'}).join("");
   var act=S.ups.slice(-3).reverse().map(function(u){return '<div class="rowl"><i class="dot'+(u.st==="run"?" on":"")+'"></i><div class="t"><b>'+esc(u.name)+'</b><small>'+upState(u)+'</small></div></div>'}).join("")+
     S.jobs.slice(-3).reverse().map(function(j){return '<div class="rowl"><i class="dot'+(j.state==="running"?" on":"")+'"></i><div class="t"><b>'+esc(j.title)+'</b><small>'+esc(j.state)+'</small></div></div>'}).join("");
-  $("v-panel").innerHTML=hero+k+
+  $("v-panel").innerHTML=updNote()+hero+k+
     '<div class="g2"><div class="card pad chart"><h3 class="h">'+L("Temperatura","Temperature")+' <em>'+L("últimos 10 min","last 10 min")+'</em><span class="sp"></span><span class="lg"><b style="--c:#4DA3FF">CPU</b><b style="--c:#8E7BFF">SoC</b></span></h3>'+chart()+'</div>'+
     '<div class="card pad"><h3 class="h">'+L("Almacenamiento","Storage")+'</h3>'+(st||'<div class="empty">–</div>')+'</div></div>'+
     '<div class="g3"><div class="card pad"><h3 class="h">'+L("Accesos rápidos","Quick actions")+'</h3><div class="qa">'+
@@ -704,7 +707,9 @@ $("pick-pkg").onchange=function(){var f=this.files[0];this.value="";if(!f)return
   toast(L("Subiendo el PKG; al terminar te pregunto para instalarlo. Progreso en Transferencias.","Uploading the PKG; when it is done you are asked to install it. Progress under Transfers."));paintNav();pump()};
 /* add a game: an image from this PC to the drive ShadowMount+ watches */
 S.add={open:false,f:null,name:"",to:"",roots:[]};
-function addRoots(){return api("/api/games/images?id=-").then(function(j){S.add.roots=j.roots||[];if(!S.add.roots.some(function(r){return r.path===S.add.to}))S.add.to="";paintAdd()}).catch(function(){})}
+function addRoots(){return api("/api/games/images?id=-").then(function(j){var A=S.add;A.roots=j.roots||[];if(!A.roots.some(function(r){return r.path===A.to}))A.to="";
+  /* by default the drive with the most room */
+  if(!A.to&&A.roots.length)A.to=A.roots.slice().sort(function(a,b){return (b.free||0)-(a.free||0)})[0].path;paintAdd()}).catch(function(){})}
 function imgName(n){var dot=n.lastIndexOf("."),ext=dot>0?n.slice(dot):"",b=dot>0?n.slice(0,dot):n;
   b=b.normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/['’`´]/g,"").replace(/\s*:\s*/g," - ").replace(/[\\\/*?"<>|™®]/g,"").replace(/[_.]+/g," ").replace(/\s+/g," ").trim();
   return b+ext.toLowerCase()}
@@ -715,13 +720,15 @@ function paintAdd(){
     '<p style="margin:0 0 14px;color:var(--dim)">'+L("Elige la imagen del juego en este PC (.ffpfsc, .exfat…) y a qué disco va. Se sube a la misma velocidad que por FTP; si se corta, vuelve a elegir el mismo fichero y continúa donde iba. ShadowMount+ lo registra solo al terminar.","Pick the game image on this PC (.ffpfsc, .exfat…) and the drive it goes to. It uploads as fast as FTP; if it is cut, pick the same file again and it carries on where it was. ShadowMount+ registers it by itself when it is done.")+'</p>'+
     (busy?'<div class="note">'+L("Subiendo ","Uploading ")+esc(busy.name)+" · "+esc(upState(busy))+'</div>':"")+
     '<div class="row" style="margin-bottom:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center"><button class="btn" id="add-pick">'+ic("files")+(f?L("Elegir otra imagen","Pick another image"):L("Elegir la imagen","Pick the image"))+'</button>'+(f?'<span class="chip">'+size(f.size)+'</span>':"")+'</div>'+
+    '<label style="display:block;margin:0 0 6px;color:var(--dim);font-size:13px">'+L("Dónde se guarda","Where it goes")+' <button class="btn sm ghost" id="add-re" title="'+L("Volver a mirar los discos conectados","Look at the plugged-in drives again")+'">'+ic("refresh")+'</button></label>'+
+    '<div class="row" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">'+(A.roots.length?A.roots.map(function(r){var room=!f||r.free>f.size+7e7;
+        return '<button class="btn'+(A.to===r.path?" pri":"")+'" data-to="'+esc(r.path)+'"'+(room?"":" disabled")+' title="'+esc(r.path)+'">'+ic("disk")+rootName(r)+" · "+size(r.free)+" "+L("libres","free")+(room?"":" · "+L("no cabe","no room"))+'</button>'}).join(""):'<span class="chip">'+L("Mirando los discos…","Looking at the drives…")+'</span>')+'</div>'+
     (f?'<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px"><input class="in" id="add-name" style="flex:1;min-width:280px" value="'+esc(A.name)+'" title="'+L("Nombre que tendrá en la consola","Name it will have on the console")+'"></div>'+
-      '<div class="row" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">'+A.roots.map(function(r){var room=r.free>f.size+7e7;
-        return '<button class="btn'+(A.to===r.path?" pri":"")+'" data-to="'+esc(r.path)+'"'+(room?"":" disabled")+'>'+ic("disk")+whereName(r.where).replace(/^./,function(c){return c.toUpperCase()})+" · "+size(r.free)+" "+L("libres","free")+(room?"":" · "+L("no cabe","no room"))+'</button>'}).join("")+'</div>'+
-      '<button class="btn pri" id="add-go"'+(A.to&&!S.ro?"":" disabled")+'>'+ic("upload")+L("Subir a la consola","Upload to the console")+'</button>':"")+'</div>';
+      '<button class="btn pri" id="add-go"'+(A.to&&!S.ro&&A.roots.some(function(r){return r.path===A.to&&r.free>f.size+7e7})?"":" disabled")+'>'+ic("upload")+L("Subir a ","Upload to ")+esc(A.roots.filter(function(r){return r.path===A.to}).map(rootName)[0]||L("la consola","the console"))+'</button>':"")+'</div>';
   $("add-pick").onclick=function(){$("pick-img").click()};
+  $("add-re").onclick=addRoots;
+  b.onclick=function(e){var t=e.target.closest("button[data-to]");if(t){A.to=t.getAttribute("data-to");paintAdd()}};
   if(f){$("add-name").oninput=function(){A.name=this.value};
-    b.onclick=function(e){var t=e.target.closest("button[data-to]");if(t){A.to=t.getAttribute("data-to");paintAdd()}};
     $("add-go").onclick=addGo}
 }
 $("pick-img").onchange=function(){var f=this.files[0];this.value="";if(!f)return;S.add.f=f;S.add.name=imgName(f.name);addRoots();paintAdd()};
@@ -807,6 +814,8 @@ $("drawer").onclick=function(e){if(e.target===this)this.className="drawer"};
 /* where the game is kept, moving it, and the fix for "wait for the content to install" */
 S.gm={};
 function whereName(w){return w==="usb"?L("USB externo","USB drive"):w==="m2"?"SSD M.2":L("disco interno","internal drive")}
+/* a drive by its own name: two USB drives must not read the same */
+function rootName(r){var m=/^\/mnt\/usb(\d)/.exec(r.path||"");return m?"USB "+(+m[1]+1):r.where==="m2"?"SSD M.2":L("Disco interno","Internal drive")}
 function gameBox(id,quiet){
   if(!quiet&&$("gmb"))$("gmb").innerHTML="";
   return api("/api/games/images?id="+id).then(function(j){S.gm={roots:j.roots||[],stub:j.stub,stubFolder:j.stubFolder,g:(j.games||[])[0]||null};if(S.gmId===id)paintGame(id)}).catch(function(){})}
@@ -817,24 +826,21 @@ function paintGame(id){
     var mv=S.jobs.filter(function(x){return x.type==="move-game"&&x.state==="running"&&x.title.indexOf(g.source)===0})[0];
     h+='<div class="row">'+(mv?'<span class="chip warn">'+L("Moviéndose: ","Moving: ")+(mv.bytesTotal?Math.round(mv.bytesDone/mv.bytesTotal*100):0)+'%</span>'
       :m.roots.filter(function(r){return g.source.indexOf(r.path+"/")!==0}).map(function(r){var room=r.free>g.size+7e7;
-        return '<button class="btn sm" data-g="move" data-v="'+esc(r.path)+'"'+(run||!room||S.ro?" disabled":"")+' title="'+esc(r.path)+" · "+size(r.free)+" "+L("libres","free")+'">'+ic("move")+L("Mover al ","Move to the ")+whereName(r.where)+(room?"":" ("+L("no cabe","no room")+")")+'</button>'}).join(""))+
+        return '<button class="btn sm" data-g="move" data-v="'+esc(r.path)+'"'+(run||!room||S.ro?" disabled":"")+' title="'+esc(r.path)+" · "+size(r.free)+" "+L("libres","free")+'">'+ic("move")+L("Mover a: ","Move to: ")+rootName(r)+(room?"":" ("+L("no cabe","no room")+")")+'</button>'}).join(""))+
       '<button class="btn sm ghost" data-g="bad" data-v="'+(g.bad===g.where?"":g.where)+'">'+(g.bad===g.where?L("Quitar la marca «no funciona desde aquí»","Unmark “does not work from here”"):L("Marcar: no funciona desde aquí","Mark: does not work from here"))+'</button></div>'+
       (g.bad?'<p><span class="chip bad">'+L("Anotado: no funciona desde el ","Noted: does not work from the ")+whereName(g.bad)+'</span></p>':"")+(run?'<p>'+L("Cierra el juego para poder moverlo.","Close the game to be able to move it.")+'</p>':"");
   }
   if(g.playgo.present){
-    var on=g.backport.playgo&&g.backport.enabled;
-    h+='<h3 class="h" style="margin-top:6px">'+L("Arreglo de instalación","Install fix")+'</h3>';
-    if(on)h+='<p><span class="chip ok">'+L("Aplicado","Applied")+" · "+esc(g.backport.values)+'</span> '+L("El juego ya no espera a que «se instale el contenido».","The game no longer waits for the content “to install”.")+(g.backport.fakelib.length>1?" "+L("Librerías: ","Libraries: ")+esc(g.backport.fakelib.join(", ")):"")+'</p><div class="row"><button class="btn sm danger" data-g="unfix"'+(S.ro?" disabled":"")+'>'+L("Quitar el arreglo","Remove the fix")+'</button></div>';
-    else if(g.image.fakelib.indexOf("libScePlayGo.sprx")>=0)h+='<p>'+L("La imagen de este juego ya trae su propio arreglo de instalación (libScePlayGo.sprx): no necesita este.","The image of this game already brings its own install fix (libScePlayGo.sprx): it does not need this one.")+'</p>';
-    else if(!m.stub)h+='<p>'+L("Si este juego se queda en «espera a que se instale el contenido», se arregla con un clic. Falta una pieza que NeoWEB no trae: copia libScePlayGo.sprx (pgo_stub) a ","If this game stays at “wait for the content to install”, one click fixes it. A piece NeoWEB does not ship is missing: copy libScePlayGo.sprx (pgo_stub) to ")+esc(m.stubFolder)+'.</p>';
-    else if(!g.image.known&&!g.running)h+='<p>'+L("Si este juego se queda en «espera a que se instale el contenido», se arregla con un clic. Antes ábrelo una vez (aunque se quede en esa pantalla) y vuelve aquí: NeoWEB necesita ver qué librerías trae su imagen para no dejarlo sin ellas.","If this game stays at “wait for the content to install”, one click fixes it. First open it once (even if it stays on that screen) and come back: NeoWEB needs to see which libraries its image brings so as not to leave it without them.")+'</p><div class="row"><button class="btn sm pri" data-g="peek"'+(S.ro||S.running?" disabled":"")+'>'+L("Mirarlo ahora sin abrir el juego","Look now without opening the game")+'</button><button class="btn sm ghost" data-g="fix" data-v="force"'+(S.ro?" disabled":"")+'>'+L("Aplicar sin mirar","Apply without looking")+'</button></div>';
-    else h+='<p>'+L("Si este juego se queda en «espera a que se instale el contenido», pulsa aquí y después ciérralo y vuelve a abrirlo.","If this game stays at “wait for the content to install”, click here, then close it and open it again.")+(g.image.fakelib.length?" "+L("Su imagen trae: ","Its image brings: ")+esc(g.image.fakelib.join(", ")):"")+'</p><div class="row"><button class="btn sm pri" data-g="fix"'+(S.ro?" disabled":"")+'>'+L("Arreglar la instalación","Fix the install")+" ("+g.playgo.chunks+"/"+g.playgo.scenarios+')</button></div>';
+    /* the fix itself lives in FIXES; here only where it stands */
+    var pst=pgState(g);
+    h+='<h3 class="h" style="margin-top:6px">'+L("Arreglo PlayGo","PlayGo fix")+'</h3><p><span class="chip '+pst[1]+'">'+esc(pst[2])+'</span> '+L("Se aplica y se quita desde FIXES.","It is applied and removed from FIXES.")+'</p><div class="row"><button class="btn sm" data-g="fixes">'+ic("fixes")+L("Ir a FIXES","Go to FIXES")+'</button></div>';
   }
   box.innerHTML=h;
 }
 function gameAct(id,k,v){
   var g=S.gm.g;if(!g)return;
   function done(j){if(j.game)S.gm.g=j.game;if(S.gmId===id)paintGame(id)}
+  if(k==="fixes"){show("fixes",true);return}
   if(k==="fix")api("/api/games/fix",{id:id,force:v==="force"}).then(function(j){done(j);toast(L("Arreglo aplicado. Cierra el juego y vuelve a abrirlo.","Fix applied. Close the game and open it again."))}).catch(fail);
   else if(k==="unfix")ask(L("Quitar el arreglo","Remove the fix"),L("Se quita solo lo que puso el arreglo; lo demás del backport se queda.","Only what the fix put is removed; the rest of the backport stays."),L("Quitar","Remove"),true).then(function(ok){if(ok)api("/api/games/unfix",{id:id}).then(done).catch(fail)});
   else if(k==="bad")api("/api/games/note",{id:id,bad:v}).then(done).catch(fail);
@@ -847,6 +853,86 @@ function gameAct(id,k,v){
       api("/api/games/move",{id:id,to:v}).then(function(j){toast(L("Moviendo. El progreso está en Transferencias.","Moving. Progress is under Transfers."));loadJobs().then(function(){if(S.gmId===id)paintGame(id)});
         watchJob(j.job,function(job){toast(job.state==="done"?title(id)+L(" ya está en el "," is now on the ")+whereName(r.where):L("No se pudo mover: ","Could not move: ")+(job.error||job.state),job.state!=="done");if(S.gmId===id)gameBox(id,true)})}).catch(fail)})}
 }
+
+/* ------------------------------------------------------------ fixes
+ * One place for the fixes a game can need. Today: PlayGo, for games that stay
+ * at "wait for the content to install". More fixes go here as they come. */
+S.fx={games:[],stub:true,stubFolder:"",loaded:false,busy:{},all:false};
+function loadFixes(){
+  if(!S.full)return Promise.resolve();
+  loadSmp().then(function(){if(S.view==="fixes")paintFixes()});
+  return api("/api/games/images").then(function(j){var fx=S.fx;fx.games=j.games||[];fx.stub=j.stub;fx.stubFolder=j.stubFolder;fx.roots=j.roots||[];fx.loaded=true;if(S.view==="fixes")paintFixes()})
+    .catch(function(e){S.fx.loaded=true;S.fx.err=e.message;if(S.view==="fixes")paintFixes()});
+}
+/* what the PlayGo fix can do for one game: [state, chip class, text] */
+function pgState(g){
+  if(g.backport.playgo&&g.backport.enabled)return ["on","ok",L("Aplicado","Applied")+(g.backport.values?" · "+g.backport.values:"")];
+  if(g.image.fakelib.indexOf("libScePlayGo.sprx")>=0)return ["own","",L("Trae el suyo","Brings its own")];
+  if(!S.fx.stub)return ["nostub","warn",L("Falta pgo_stub","pgo_stub missing")];
+  if(g.kind==="image"&&!g.image.known&&!g.running)return ["peek","warn",L("Hay que mirarlo antes","Needs a look first")];
+  return ["can","",L("Sin aplicar","Not applied")]}
+function paintFixes(){
+  var fx=S.fx,box=$("v-fixes");
+  if(!fx.loaded){box.innerHTML='<div class="empty">'+L("Mirando los juegos…","Looking at the games…")+'</div>';return}
+  var pg=fx.games.filter(function(g){return g.playgo&&g.playgo.present}),rest=fx.games.length-pg.length;
+  var on=pg.filter(function(g){return pgState(g)[0]==="on"}).length;
+  var h='<div class="card pad" style="margin-bottom:16px"><h3 class="h">'+L("Arreglo PlayGo","PlayGo fix")+' <em>'+on+" / "+pg.length+'</em></h3>'+
+    '<p style="margin:0;color:var(--dim)">'+L("Para los juegos que se quedan en «espera a que se instale el contenido». Mete en su backport una librería que dice que todo está instalado. Después de aplicarlo, cierra el juego y vuelve a abrirlo. Quitarlo deja el backport como estaba.","For games that stay at “wait for the content to install”. It puts a library in the game’s backport that says everything is installed. After applying it, close the game and open it again. Removing it leaves the backport as it was.")+'</p></div>'+
+    (fx.err?'<div class="note">'+esc(fx.err)+'</div>':"")+
+    (!fx.stub?'<div class="note">'+L("Falta una pieza que NeoWEB no trae: copia libScePlayGo.sprx (pgo_stub) a ","A piece NeoWEB does not ship is missing: copy libScePlayGo.sprx (pgo_stub) to ")+esc(fx.stubFolder)+'.</div>':"");
+  h+='<div class="card">'+(pg.length?pg.map(function(g){var st=pgState(g),a=app(g.id),b=fx.busy[g.id],dis=S.ro||b?" disabled":"";
+    var r=(fx.roots||[]).filter(function(x){return g.source.indexOf(x.path+"/")===0})[0];
+    var acts=st[0]==="on"?'<button class="btn sm danger" data-fx="unfix" data-id="'+g.id+'"'+dis+'>'+L("Quitar","Remove")+'</button>'
+      :st[0]==="can"?'<button class="btn sm pri" data-fx="fix" data-id="'+g.id+'"'+dis+'>'+L("Aplicar","Apply")+" ("+g.playgo.chunks+"/"+g.playgo.scenarios+')</button>'
+      :st[0]==="peek"?'<button class="btn sm pri" data-fx="peek" data-id="'+g.id+'"'+(dis||(S.running?" disabled":""))+' title="'+L("Monta la imagen un momento para ver qué librerías trae","Mounts the image for a moment to see which libraries it brings")+'">'+L("Mirar y aplicar","Look and apply")+'</button><button class="btn sm ghost" data-fx="force" data-id="'+g.id+'"'+dis+'>'+L("Aplicar sin mirar","Apply without looking")+'</button>':"";
+    return '<div class="item">'+(a&&a.hasIcon?'<img class="svi" style="width:38px;height:38px" alt="" src="/apps/icon?id='+g.id+'">':'<div class="av">'+g.id.slice(0,1)+'</div>')+
+      '<div class="t"><b>'+esc(title(g.id))+'</b><small>'+g.id+" · "+(r?rootName(r):whereName(g.where))+(g.running?" · "+L("abierto ahora","open now"):"")+'</small></div>'+
+      '<div class="acts"><span class="chip '+st[1]+'">'+(b?L("Trabajando…","Working…"):esc(st[2]))+'</span>'+acts+'<button class="btn sm ghost" data-fx="page" data-id="'+g.id+'" title="'+L("Página del juego","Game page")+'">'+ic("game")+'</button></div></div>'}).join("")
+    :'<div class="empty">'+L("Ningún juego de ShadowMount+ usa PlayGo: no hay nada que arreglar aquí.","No ShadowMount+ game uses PlayGo: nothing to fix here.")+'</div>')+'</div>'+
+    (rest?'<p style="color:var(--faint);font-size:13px;margin-top:10px">'+rest+L(" juegos más no usan PlayGo y no lo necesitan."," more games do not use PlayGo and do not need it.")+'</p>':"");
+  h+=fixSmp();
+  box.innerHTML=h;
+}
+/* the fixes that go through ShadowMount+: fakelib per game, games that do not show up */
+function fixSmp(){
+  var m=S.sm;
+  if(!m.loaded)return '<h3 class="h" style="margin-top:28px">ShadowMount+</h3><div class="card"><div class="empty">'+L("Preguntando a ShadowMount+…","Asking ShadowMount+…")+'</div></div>';
+  if(m.err)return '<h3 class="h" style="margin-top:28px">ShadowMount+</h3><div class="note">'+L("ShadowMount+ no responde: los arreglos de fakelib y de juegos que no aparecen necesitan que esté en marcha. ","ShadowMount+ is not answering: the fakelib and missing-game fixes need it running. ")+'<small>'+esc(m.err)+'</small></div>';
+  var fl=m.games.filter(function(x){return x.can_toggle_fakelib}).sort(function(a,b){return (a.title_name||"").localeCompare(b.title_name||"")});
+  var gone=m.games.filter(function(x){return !x.source_available});
+  var h='<div class="card pad" style="margin:28px 0 16px"><h3 class="h">'+L("Fakelib por juego","Fakelib per game")+' <em>'+fl.length+'</em></h3>'+
+    '<p style="margin:0;color:var(--dim)">'+L("Las librerías de reemplazo (backport y fakelib) hacen que muchos juegos funcionen, pero alguno se cierra al abrirlo o se queda en negro por culpa de ellas. Si te pasa, prueba «Solo emuladores» y, si sigue igual, «Desactivado». «Por defecto» sigue el ajuste general de ShadowMount+.","Replacement libraries (backport and fakelib) make many games work, but some close on launch or stay black because of them. If that happens, try “Emulators only” and, if it still fails, “Disabled”. “Default” follows ShadowMount+’s general setting.")+'</p></div>'+
+    '<div class="card">'+(fl.length?fl.map(function(x){var id=esc(x.title_id),a=app(x.title_id);
+      return '<div class="item">'+(a&&a.hasIcon?'<img class="svi" style="width:38px;height:38px" alt="" src="/apps/icon?id='+id+'">':'<div class="av">'+id.slice(0,1)+'</div>')+
+        '<div class="t"><b>'+esc(x.title_name||x.title_id)+'</b><small>'+id+(x.fakelib_mode?" · "+L("ahora: ","now: ")+esc(x.fakelib_mode):"")+'</small></div><div class="acts">'+smFlSel(x,id)+'</div></div>'}).join("")
+      :'<div class="empty">'+L("Ningún juego tiene fakelib que se pueda cambiar.","No game has a fakelib that can be changed.")+'</div>')+'</div>';
+  h+='<div class="card pad" style="margin:28px 0 16px"><h3 class="h">'+L("Juegos que no aparecen","Games that do not show up")+(gone.length?' <em>'+gone.length+" "+L("sin origen","without source")+'</em>':"")+'</h3>'+
+    '<p style="margin:0 0 12px;color:var(--dim)">'+L("Si copiaste un juego y no sale en la pantalla de inicio, pide a ShadowMount+ que busque otra vez. Los que fallaron al registrarse no se reintentan solos: «Reintentar los que fallaron» les da otra oportunidad.","If you copied a game and it does not show on the home screen, ask ShadowMount+ to look again. The ones that failed to register are not retried by themselves: “Retry the ones that failed” gives them another go.")+'</p>'+
+    '<div class="row" style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn pri" data-fxs="scan"'+(S.ro?" disabled":"")+'>'+ic("search")+L("Buscar juegos ahora","Scan for games now")+'</button><button class="btn" data-fxs="rescan"'+(S.ro?" disabled":"")+'>'+ic("refresh")+L("Reintentar los que fallaron","Retry the ones that failed")+'</button></div>'+
+    (gone.length?'<p style="margin:14px 0 0">'+L("Registrados pero sin su imagen o carpeta (¿USB desconectado?): ","Registered but without their image or folder (USB unplugged?): ")+esc(gone.map(function(x){return x.title_name||x.title_id}).join(", "))+'</p>':"")+'</div>';
+  return h;
+}
+$("v-fixes").addEventListener("change",function(e){var k=e.target.getAttribute("data-smfl");
+  if(k)smp("/games/fakelib",{title_id:k,mode:e.target.value}).then(function(){toast(L("Hecho. Vale desde la próxima vez que abras el juego.","Done. It applies the next time you open the game."));return loadSmp()}).catch(function(er){fail(er);loadSmp()}).then(function(){if(S.view==="fixes")paintFixes()})});
+$("v-fixes").addEventListener("click",function(e){
+  var bs=e.target.closest("button[data-fxs]");
+  if(bs&&!bs.disabled){var k2=bs.getAttribute("data-fxs");smp("/scan",{reset_attempts:k2==="rescan"}).then(function(){toast(L("Búsqueda pedida a ShadowMount+","Scan requested from ShadowMount+"));return wait(1500)}).then(loadSmp).catch(fail).then(function(){if(S.view==="fixes")paintFixes()});return}
+  var b=e.target.closest("button[data-fx]");if(!b||b.disabled)return;
+  var k=b.getAttribute("data-fx"),id=b.getAttribute("data-id"),fx=S.fx;
+  if(k==="page"){show("game="+id,true);return}
+  function busy(on){if(on)fx.busy[id]=1;else delete fx.busy[id];paintFixes()}
+  function done(j){if(j&&j.game)fx.games=fx.games.map(function(g){return g.id===id?j.game:g});busy(false)}
+  function fix(force){return api("/api/games/fix",{id:id,force:!!force}).then(function(j){done(j);toast(title(id)+": "+L("arreglo aplicado. Cierra el juego y vuelve a abrirlo.","fix applied. Close the game and open it again."))})}
+  if(k==="fix"||k==="force"){busy(true);fix(k==="force").catch(function(er){busy(false);fail(er)})}
+  else if(k==="unfix")ask(L("Quitar el arreglo de ","Remove the fix from ")+title(id),L("Se quita solo lo que puso el arreglo; lo demás del backport se queda.","Only what the fix put is removed; the rest of the backport stays."),L("Quitar","Remove"),true).then(function(ok){if(!ok)return;busy(true);
+    api("/api/games/unfix",{id:id}).then(done).catch(function(er){busy(false);fail(er)})});
+  else if(k==="peek"){busy(true);toast(L("Montando la imagen un momento…","Mounting the image for a moment…"));
+    smp("/games/mount",{title_id:id}).then(function(){return api("/api/games/peek",{id:id})}).then(function(j){done(j);busy(true);return smp("/games/unmount",{title_id:id})})
+      .then(function(){var g=fx.games.filter(function(x){return x.id===id})[0];
+        if(g&&g.image.fakelib.indexOf("libScePlayGo.sprx")>=0){busy(false);toast(title(id)+": "+L("su imagen ya trae su propio arreglo; no hace falta este.","its image already brings its own fix; this one is not needed."));return}
+        return fix(false)})
+      .catch(function(er){busy(false);fail(er);smp("/games/unmount",{title_id:id}).catch(function(){})})}
+});
 
 /* ------------------------------------------------------------ files */
 var TXT=/\.(txt|ini|json|cfg|conf|log|lst|xml|md|sh|py|yaml|yml|csv|html?|js|css|plist|sfv|nfo|bak)$/i;
@@ -1648,7 +1734,7 @@ function paintSmp(){
       return '<tr><td class="n"><a data-smg="'+id+'" style="cursor:pointer">'+(a&&a.hasIcon?'<img class="svi" loading="lazy" alt="" src="/apps/icon?id='+id+'">':'<span class="svi"></span>')+esc(x.title_name||x.title_id)+'</a><small>'+id+'</small></td>'+
         '<td><span class="chip">'+esc((x.image_backed?x.image_type:x.source_type)||"")+'</span></td><td style="white-space:normal;font:500 11.5px var(--mono);color:var(--faint)">'+esc(x.path||"")+'</td>'+
         '<td>'+(x.mounted?'<span class="chip ok">'+L("montado","mounted")+'</span>':!x.source_available?'<span class="chip warn">'+L("sin origen","source missing")+'</span>':'<span class="chip">'+L("en espera","idle")+'</span>')+'</td>'+
-        '<td>'+(x.can_toggle_fakelib?'<label class="sw"><input type="checkbox" data-smfl="'+id+'"'+(x.fakelib_enabled?" checked":"")+(S.ro?" disabled":"")+'><i></i></label>':"")+'</td>'+
+        '<td>'+(x.can_toggle_fakelib?smFlSel(x,id):"")+'</td>'+
         '<td>'+(x.image_backed&&x.source_available?'<button class="btn sm'+(x.mounted?" danger":"")+'" data-sm="'+(x.mounted?"unmount":"mount")+'" data-v="'+id+'"'+(S.ro||S.running===x.title_id?" disabled":"")+'>'+(x.mounted?L("Desmontar","Unmount"):L("Montar","Mount"))+'</button>':"")+'</td></tr>'}).join("")+'</tbody></table></div>'+
     '<p style="margin:14px 2px 0;font:500 11.5px var(--mono);color:var(--faint)">'+L("Esto es lo que ShadowMount+ dice de sí mismo; NeoWEB solo pregunta en tu nombre. Una imagen se monta sola al abrir su juego: montarla a mano sirve para mirar dentro desde Ficheros.","This is what ShadowMount+ says about itself; NeoWEB only asks on your behalf. An image mounts by itself when its game is opened: mounting it by hand is for looking inside from Files.")+'</p>';
   $("sm-q").oninput=function(){m.q=this.value;paintSmp()};
@@ -1671,7 +1757,11 @@ $("v-smp").addEventListener("click",function(e){
 $("v-smp").addEventListener("change",function(e){var m=S.sm,t=e.target,k;
   if((k=t.getAttribute("data-smset"))){var o={};["debug","quiet_mode","update_emulators","auto_update_ampr","auto_remove_missing_games","auto_remove_missing_delay_seconds","allow_lan_access","fan_target_temperature"].forEach(function(x){o[x]=m.set[x]});
     o.scan_paths=m.set.scan_paths||[];o[k]=t.checked;m.busy=true;smp("/settings/update",o).then(function(){toast(L("Guardado","Saved"));return wait(1200)}).then(function(){m.busy=false;return loadSmp()},function(er){m.busy=false;fail(er);loadSmp()})}
-  else if((k=t.getAttribute("data-smfl")))smDo(smp("/games/fakelib",{title_id:k,enabled:t.checked}),L("Hecho","Done"))});
+  else if((k=t.getAttribute("data-smfl")))smDo(smp("/games/fakelib",{title_id:k,mode:t.value}),L("Hecho","Done"))});
+/* ShadowMount+ 1.7beta5: fakelib has modes per game (default follows its global setting) */
+function smFlSel(x,id){var cur=x.fakelib_mode_override||(x.fakelib_mode?"default":x.fakelib_enabled?"full":"disabled");
+  return '<select class="in" style="padding:4px 8px;font-size:12.5px" data-smfl="'+id+'"'+(S.ro?" disabled":"")+' title="'+L("Ahora: ","Now: ")+esc(x.fakelib_mode||(x.fakelib_enabled?"full":"disabled"))+'">'+
+    [["default",L("Por defecto","Default")],["full",L("Completo","Full")],["emulators",L("Solo emuladores","Emulators only")],["disabled",L("Desactivado","Disabled")]].map(function(o){return '<option value="'+o[0]+'"'+(cur===o[0]?" selected":"")+'>'+o[1]+'</option>'}).join("")+'</select>'}
 
 /* ------------------------------------------------------------ one game, everything */
 function loadGame(){
@@ -2004,6 +2094,26 @@ function paintSys(){
 }
 $("v-system").addEventListener("click",function(e){var a=e.target.closest("[data-open]");if(a){S.cwd=a.getAttribute("data-open");show("files",true)}});
 
+/* ------------------------------------------------------------ new version
+ * Only a notice: GitHub lists the releases (pre-releases too), the page
+ * compares them with the NeoHEN that is loaded and links the newest one. */
+function verKey(v){var m=/^v?(\d+)\.(\d+)\.(\d+)(?:-rc(\d+))?/.exec(v||"");if(!m)return null;
+  return [+m[1],+m[2],+m[3],m[4]==null?1e6:+m[4]]} /* a final release ranks above its rcs */
+function verCmp(a,b){for(var i=0;i<4;i++)if(a[i]!==b[i])return a[i]<b[i]?-1:1;return 0}
+function checkUpd(cur){
+  S.upd={cur:cur};var mine=verKey(cur);if(!mine)return;
+  var c=null;try{c=JSON.parse(sessionStorage.getItem("nw-upd")||"null")}catch(_){}
+  (c&&Date.now()-c.t<6*36e5?Promise.resolve(c.rel):fetch("https://api.github.com/repos/neox69/NeoHEN/releases?per_page=10").then(function(r){if(!r.ok)throw new Error(r.status);return r.json()}).then(function(j){
+    var rel=j.filter(function(x){return !x.draft&&verKey(x.tag_name)}).map(function(x){return {tag:x.tag_name,url:x.html_url,date:(x.published_at||"").slice(0,10)}});
+    try{sessionStorage.setItem("nw-upd",JSON.stringify({t:Date.now(),rel:rel}))}catch(_){}return rel}))
+  .then(function(rel){var best=null;rel.forEach(function(x){if(!best||verCmp(verKey(x.tag),verKey(best.tag))>0)best=x});
+    if(best&&verCmp(verKey(best.tag),mine)>0){S.upd.new=best;
+      if(S.view==="panel")paintPanel()}})
+  .catch(function(){});
+}
+function updNote(){var u=S.upd;if(!u||!u.new)return "";
+  return '<div class="note" style="border-color:rgba(77,163,255,.4);background:rgba(77,163,255,.08);color:#CFE4FF;margin-bottom:16px"><span style="flex:1">'+L("Hay una versión nueva de NeoHEN: ","A new NeoHEN version is out: ")+'<b>'+esc(u.new.tag.replace(/^v/,""))+'</b>'+(u.new.date?" ("+esc(u.new.date)+")":"")+L(". Tienes cargada la ",". You have ")+esc(u.cur)+L("."," loaded.")+'</span><a class="btn sm" href="'+esc(u.new.url)+'" target="_blank" rel="noopener">'+L("Ver en GitHub","See it on GitHub")+'</a></div>'}
+
 /* ------------------------------------------------------------ data */
 function online(v){
   if(S.online===v&&v)return;S.online=v;
@@ -2012,8 +2122,10 @@ function online(v){
 function fast(){
   return api("/api/sys/info").then(function(i){
     S.info=i;online(true);
-    $("ps-m").innerHTML=[i.model,i.firmware&&"FW "+i.firmware,i.ips&&i.ips[0]&&i.ips[0].ip].filter(Boolean).map(esc).join("<br>");
+    $("ps-m").innerHTML=[i.model,i.firmware&&"FW "+i.firmware,i.ips&&i.ips[0]&&i.ips[0].ip].filter(Boolean).map(esc).join("<br>")+
+      (S.upd&&S.upd.new?'<br><a href="'+esc(S.upd.new.url)+'" target="_blank" rel="noopener" style="color:var(--warn)">'+L("Hay NeoHEN ","NeoHEN ")+esc(S.upd.new.tag.replace(/^v/,""))+L(""," is out")+'</a>':"");
     $("ver").textContent="NeoWEB · v"+(i.version||"");
+    if(i.neohen&&!S.upd)checkUpd(i.neohen);
     if(i.cpuTemp>0||i.socTemp>0){S.hist.push([i.cpuTemp|0,i.socTemp|0]);if(S.hist.length>120)S.hist.shift()}
     var r=i.running&&i.running.titleId||null,ch=r!==S.running;S.running=r;
     $("mini").hidden=!r;if(r){$("mini-i").src="/apps/icon?id="+r;$("mini-k").textContent=L("Jugando","Playing");$("mini-t").textContent=title(r)}
@@ -2024,6 +2136,7 @@ function slow(){
   return Promise.all([api("/api/apps/list"),api("/api/sys/mounts")]).then(function(x){
     S.apps=x[0].apps||[];S.mounts=x[1].mounts||[];paintNav();loadStatus();if(S.full)api("/api/stats/playtime").then(function(j){S.play={games:j.games||{},today:j.today||""}}).catch(function(){});
     if(S.view==="panel")paintPanel();else if(S.view==="library")paintGrid();else if(S.view==="system"&&!/^(fan-r|nt)$/.test((document.activeElement||{}).id||""))paintSys();
+    else if(S.view==="fixes"&&S.fx.loaded&&(document.activeElement||{}).tagName!=="SELECT")paintFixes();
   }).catch(function(){});
 }
 function probe(){return fetch("/api/fs/stat?path=/data").then(function(r){S.full=r.status!==404},function(){S.full=false})}
