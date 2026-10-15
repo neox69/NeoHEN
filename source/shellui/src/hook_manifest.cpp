@@ -1,5 +1,6 @@
 /* Copyright (C) 2025 OnionHEN / LightningMods — P0 split. */
 
+#include "neo_web.hpp"
 #include "neo_actions.hpp"
 #include "hooked_funcs.hpp"
 #include "ipc.hpp"
@@ -123,6 +124,10 @@ uint64_t GetManifestResourceStream_Hook(uint64_t inst, MonoString *FileName) {
     if (neo_saves_page_pending()) {
       /* Asked for from a game's options menu (see neo_actions.cpp). */
       neo_generate_saves_xml(new_xml_string);
+      break;
+    }
+    if (neo_disk_page_pending()) {
+      neo_generate_disk_xml(new_xml_string);
       break;
     }
     LoadSettings();

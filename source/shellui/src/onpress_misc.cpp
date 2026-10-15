@@ -1,4 +1,5 @@
 /* Copyright (C) 2025 OnionHEN / LightningMods — OnPress misc (kstuff, account, credits) */
+#include "neo_web.hpp"
 #include <onion/brand.h>
 #include "onpress.hpp"
 #include "account_activator.h"
@@ -126,7 +127,40 @@ static OnPressResult id_theme_restart(OnPressContext &ctx) {
   neo_menu_restart();
   return OnPressResult::Consumed;
 }
+static OnPressResult id_usb_eject(OnPressContext &ctx) {
+  /* id_usb_eject_<n>; the confirmation has already been accepted. */
+  ctx.dirty = false;
+  neo_usb_eject(ctx.id.back() - '0');
+  return OnPressResult::Consumed;
+}
+static OnPressResult id_disk(OnPressContext &ctx) {
+  /* id_disk_fix, id_disk_unfix, id_disk_move_<n> */
+  ctx.dirty = false;
+  if (ctx.id == "id_disk_fix")
+    neo_disk_fix();
+  else if (ctx.id == "id_disk_unfix")
+    neo_disk_unfix();
+  else
+    neo_disk_move(ctx.id.back() - '0');
+  return OnPressResult::Consumed;
+}
 static const OnPressExactEntry kRootExact[] = {
+    {"id_usb_eject_0", id_usb_eject},
+    {"id_usb_eject_1", id_usb_eject},
+    {"id_usb_eject_2", id_usb_eject},
+    {"id_usb_eject_3", id_usb_eject},
+    {"id_usb_eject_4", id_usb_eject},
+    {"id_usb_eject_5", id_usb_eject},
+    {"id_usb_eject_6", id_usb_eject},
+    {"id_usb_eject_7", id_usb_eject},
+    {"id_disk_fix", id_disk},
+    {"id_disk_unfix", id_disk},
+    {"id_disk_move_0", id_disk},
+    {"id_disk_move_1", id_disk},
+    {"id_disk_move_2", id_disk},
+    {"id_disk_move_3", id_disk},
+    {"id_disk_move_4", id_disk},
+    {"id_disk_move_5", id_disk},
     {"id_theme_restart", id_theme_restart},
     {"id_smp_relaunch", id_smp_relaunch},
     {"id_theme_stock", id_theme},
