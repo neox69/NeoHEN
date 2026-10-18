@@ -514,6 +514,7 @@
     "notify.remote_play.enable_failed_fmt": "เปิดใช้เล่นระยะไกลไม่ได้: 0x%X",
     "notify.remote_play.pairing_failed_fmt": "จับคู่เล่นระยะไกลไม่สำเร็จ: 0x%X",
     "notify.remote_play.paired": "จับคู่อุปกรณ์เล่นระยะไกลแล้ว",
+    "notify.remote_play.activated_fmt": "Account %s activated without PSN",
     "notify.remote_play.pairing_start_failed": "เริ่มจับคู่เล่นระยะไกลไม่ได้",
     "notify.remote_play.waiting": "กำลังรออุปกรณ์เล่นระยะไกลเชื่อมต่อ",
     "notify.remote_play.pairing_cancelled": "ยกเลิกการจับคู่เล่นระยะไกลแล้ว",

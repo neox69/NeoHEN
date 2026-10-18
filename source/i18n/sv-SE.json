@@ -514,6 +514,7 @@
     "notify.remote_play.enable_failed_fmt": "Kunde inte aktivera Remote Play: 0x%X",
     "notify.remote_play.pairing_failed_fmt": "Remote Play-parkoppling misslyckades: 0x%X",
     "notify.remote_play.paired": "Remote Play-enhet parkopplad.",
+    "notify.remote_play.activated_fmt": "Account %s activated without PSN",
     "notify.remote_play.pairing_start_failed": "Kunde inte starta Remote Play-parkoppling",
     "notify.remote_play.waiting": "Väntar på att en Remote Play-enhet ska ansluta",
     "notify.remote_play.pairing_cancelled": "Remote Play-parkoppling avbruten.",

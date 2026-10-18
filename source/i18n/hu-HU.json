@@ -514,6 +514,7 @@
     "notify.remote_play.enable_failed_fmt": "A Remote Play nem kapcsolható be: 0x%X",
     "notify.remote_play.pairing_failed_fmt": "A Remote Play párosítás sikertelen: 0x%X",
     "notify.remote_play.paired": "Remote Play eszköz párosítva.",
+    "notify.remote_play.activated_fmt": "Account %s activated without PSN",
     "notify.remote_play.pairing_start_failed": "A Remote Play párosítás nem indítható",
     "notify.remote_play.waiting": "Remote Play eszköz csatlakozására várakozás",
     "notify.remote_play.pairing_cancelled": "Remote Play párosítás megszakítva.",

@@ -514,6 +514,7 @@
     "notify.remote_play.enable_failed_fmt": "無法啟用遠端遊玩：0x%X",
     "notify.remote_play.pairing_failed_fmt": "遠端遊玩配對失敗：0x%X",
     "notify.remote_play.paired": "遠端遊玩裝置已配對。",
+    "notify.remote_play.activated_fmt": "Account %s activated without PSN",
     "notify.remote_play.pairing_start_failed": "無法開始遠端遊玩配對",
     "notify.remote_play.waiting": "正在等待遠端遊玩裝置連線",
     "notify.remote_play.pairing_cancelled": "遠端遊玩配對已中止。",

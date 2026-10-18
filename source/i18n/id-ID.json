@@ -514,6 +514,7 @@
     "notify.remote_play.enable_failed_fmt": "Tidak dapat mengaktifkan Remote Play: 0x%X",
     "notify.remote_play.pairing_failed_fmt": "Pemasangan Remote Play gagal: 0x%X",
     "notify.remote_play.paired": "Perangkat Remote Play dipasangkan.",
+    "notify.remote_play.activated_fmt": "Account %s activated without PSN",
     "notify.remote_play.pairing_start_failed": "Tidak dapat memulai pemasangan Remote Play",
     "notify.remote_play.waiting": "Menunggu perangkat Remote Play terhubung",
     "notify.remote_play.pairing_cancelled": "Pemasangan Remote Play dibatalkan.",

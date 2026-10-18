@@ -160,6 +160,42 @@ bool Activator::SetAccountFlags(uint32_t account_number, uint32_t Flags)
 
 
 
+bool Activator::SlotUser(int32_t slot, int32_t &user_id, uint64_t &account_id,
+                         std::string &account_type)
+{
+    user_id = -1;
+    account_id = 0;
+    account_type.clear();
+    if (slot < 1 || slot > 16)
+        return false;
+    const int n = GetEntityNumber(slot, USER_ID_ENTITY_NUMBER, USER_ID_ENTITY_NUMBER_2);
+    if (sceRegMgrGetInt_hook(n, &user_id) != 0 || user_id <= 0)
+        return false;
+    GetAccountID(static_cast<uint32_t>(slot), account_id);
+    char type[ACCOUNT_TYPE_MAX] = {};
+    GetAccountType(static_cast<uint32_t>(slot), type);
+    type[ACCOUNT_TYPE_MAX - 1] = 0;
+    account_type = type;
+    return true;
+}
+
+bool Activator::ActivateSlot(int32_t slot, const std::string &username)
+{
+    int32_t user_id = -1;
+    uint64_t current = 0;
+    std::string type;
+    if (!SlotUser(slot, user_id, current, type) || username.empty())
+        return false;
+    if (current != 0)
+        return true; /* already has an account ID: nothing to do */
+    const uint64_t account_id = GenerateAccountID(username.c_str());
+    char account_type[ACCOUNT_TYPE_MAX] = "np";
+    return account_id != 0 &&
+           SetAccountID(static_cast<uint32_t>(slot), account_id) &&
+           SetAccountType(static_cast<uint32_t>(slot), account_type) &&
+           SetAccountFlags(static_cast<uint32_t>(slot), 4098);
+}
+
 bool Activator::IsNotActivated()
 {
     return currentUser.accountID == 0;

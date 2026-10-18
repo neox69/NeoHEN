@@ -514,6 +514,7 @@
     "notify.remote_play.enable_failed_fmt": "Не вдалося ввімкнути Remote Play: 0x%X",
     "notify.remote_play.pairing_failed_fmt": "Спарювання Remote Play не вдалося: 0x%X",
     "notify.remote_play.paired": "Пристрій Remote Play спаровано.",
+    "notify.remote_play.activated_fmt": "Account %s activated without PSN",
     "notify.remote_play.pairing_start_failed": "Не вдалося почати спарювання Remote Play",
     "notify.remote_play.waiting": "Очікування підключення пристрою Remote Play",
     "notify.remote_play.pairing_cancelled": "Спарювання Remote Play скасовано.",

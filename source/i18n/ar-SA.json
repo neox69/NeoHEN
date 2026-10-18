@@ -514,6 +514,7 @@
     "notify.remote_play.enable_failed_fmt": "تعذر تفعيل اللعب عن بُعد: 0x%X",
     "notify.remote_play.pairing_failed_fmt": "فشل إقران اللعب عن بُعد: 0x%X",
     "notify.remote_play.paired": "تم إقران جهاز اللعب عن بُعد.",
+    "notify.remote_play.activated_fmt": "Account %s activated without PSN",
     "notify.remote_play.pairing_start_failed": "تعذر بدء إقران اللعب عن بُعد",
     "notify.remote_play.waiting": "في انتظار اتصال جهاز اللعب عن بُعد",
     "notify.remote_play.pairing_cancelled": "تم إلغاء إقران اللعب عن بُعد.",

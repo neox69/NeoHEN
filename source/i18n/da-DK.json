@@ -514,6 +514,7 @@
     "notify.remote_play.enable_failed_fmt": "Kunne ikke aktivere Remote Play: 0x%X",
     "notify.remote_play.pairing_failed_fmt": "Remote Play-parring mislykkedes: 0x%X",
     "notify.remote_play.paired": "Remote Play-enhed parret.",
+    "notify.remote_play.activated_fmt": "Account %s activated without PSN",
     "notify.remote_play.pairing_start_failed": "Kunne ikke starte Remote Play-parring",
     "notify.remote_play.waiting": "Venter på, at en Remote Play-enhed opretter forbindelse",
     "notify.remote_play.pairing_cancelled": "Remote Play-parring annulleret.",

@@ -16,6 +16,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <time.h>
 #include <unistd.h>
 
 #include "fsutil.h"
@@ -168,8 +169,8 @@ api_launcher_install(http_req_t *req) {
 }
 
 /* GET /api/remoteplay
- * the account ID and the PIN the Toolbox showed last (Remote Play page), so
- * they can be pasted into Chiaki or PXPlay on the PC */
+ * what the Toolbox last wrote: every user with its account ID (base64, as
+ * Chiaki and PXPlay want it, and decimal), the pairing PIN and its state */
 void
 api_remoteplay(http_req_t *req) {
   char local[PATH_MAX], *text = NULL;
@@ -179,18 +180,51 @@ api_remoteplay(http_req_t *req) {
 
   plat_path(PS5AIO_DATA_DIR "/remoteplay.json", local, sizeof(local));
   api_begin(&w);
-  if(!fs_read_file(local, &text, &len, 4096) && (v = json_parse(text, len))) {
+  if(!fs_read_file(local, &text, &len, 64 * 1024) && (v = json_parse(text, len))) {
     jw_kbool(&w, "known", 1);
-    jw_kstr(&w, "accountId", json_get_str(v, "accountId", ""));
-    jw_kstr(&w, "accountIdDecimal", json_get_str(v, "accountIdDecimal", ""));
-    jw_kstr(&w, "pin", json_get_str(v, "pin", ""));
-    jw_kint(&w, "time", json_get_int(v, "time", 0));
+    jw_kint(&w, "now", (int64_t)time(NULL)); /* the console's clock, for the PIN countdown */
+    jw_key(&w, "status");
+    json_write(&w, v);
     json_free(v);
   } else {
     jw_kbool(&w, "known", 0);
   }
   free(text);
   api_finish(req, &w);
+}
+
+/* POST /api/remoteplay {"op": "list" | "pin" | "cancel" | "activate", "slot": 1}
+ * left for the Toolbox, which carries it out within a second or two */
+void
+api_remoteplay_request(http_req_t *req) {
+  char local[PATH_MAX], line[96];
+  jval_t *b = api_body(req);
+  const char *op;
+  int slot;
+
+  if(!b) {
+    return;
+  }
+  op = json_get_str(b, "op", "list");
+  slot = (int)json_get_int(b, "slot", 0);
+  if(strcmp(op, "list") && strcmp(op, "pin") && strcmp(op, "cancel") && strcmp(op, "activate")) {
+    json_free(b);
+    http_send_error(req, 400, "op is list, pin, cancel or activate");
+    return;
+  }
+  if(!strcmp(op, "activate") && (slot < 1 || slot > 16)) {
+    json_free(b);
+    http_send_error(req, 400, "slot goes from 1 to 16");
+    return;
+  }
+  snprintf(line, sizeof(line), "{\"op\":\"%s\",\"slot\":%d}\n", op, slot);
+  json_free(b);
+  plat_path(PS5AIO_DATA_DIR "/rp_request.json", local, sizeof(local));
+  if(fs_write_file(local, line, strlen(line))) {
+    http_send_error(req, 500, "the request could not be written");
+    return;
+  }
+  http_send_ok(req);
 }
 
 /* POST /api/launcher/remove */

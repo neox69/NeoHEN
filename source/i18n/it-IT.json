@@ -514,6 +514,7 @@
     "notify.remote_play.enable_failed_fmt": "Impossibile abilitare la Riproduzione remota: 0x%X",
     "notify.remote_play.pairing_failed_fmt": "Abbinamento Riproduzione remota non riuscito: 0x%X",
     "notify.remote_play.paired": "Dispositivo abbinato.",
+    "notify.remote_play.activated_fmt": "Account %s activated without PSN",
     "notify.remote_play.pairing_start_failed": "Impossibile avviare l'abbinamento Riproduzione remota",
     "notify.remote_play.waiting": "In attesa della connessione di un dispositivo di Riproduzione remota",
     "notify.remote_play.pairing_cancelled": "Abbinamento Riproduzione remota annullato.",

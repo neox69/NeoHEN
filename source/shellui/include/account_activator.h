@@ -68,6 +68,11 @@ public:
     }
     bool IsNotActivated();
 
+    /* NeoHEN: any registry slot (1..16), not only the foreground user. */
+    bool SlotUser(int32_t slot, int32_t &user_id, uint64_t &account_id,
+                  std::string &account_type);
+    bool ActivateSlot(int32_t slot, const std::string &username);
+
     User currentUser;
 private:
     int GetEntityNumber(int a, int d, int e);

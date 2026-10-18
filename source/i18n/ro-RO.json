@@ -514,6 +514,7 @@
     "notify.remote_play.enable_failed_fmt": "Nu s-a putut activa Remote Play: 0x%X",
     "notify.remote_play.pairing_failed_fmt": "Asocierea Remote Play a eșuat: 0x%X",
     "notify.remote_play.paired": "Dispozitiv Remote Play asociat.",
+    "notify.remote_play.activated_fmt": "Account %s activated without PSN",
     "notify.remote_play.pairing_start_failed": "Nu s-a putut porni asocierea Remote Play",
     "notify.remote_play.waiting": "Se așteaptă conectarea unui dispozitiv Remote Play",
     "notify.remote_play.pairing_cancelled": "Asocierea Remote Play a fost anulată.",

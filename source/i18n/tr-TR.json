@@ -514,6 +514,7 @@
     "notify.remote_play.enable_failed_fmt": "Remote Play etkinleştirilemedi: 0x%X",
     "notify.remote_play.pairing_failed_fmt": "Remote Play eşlemesi başarısız: 0x%X",
     "notify.remote_play.paired": "Remote Play cihazı eşlendi.",
+    "notify.remote_play.activated_fmt": "Account %s activated without PSN",
     "notify.remote_play.pairing_start_failed": "Remote Play eşlemesi başlatılamadı",
     "notify.remote_play.waiting": "Remote Play cihazının bağlanması bekleniyor",
     "notify.remote_play.pairing_cancelled": "Remote Play eşlemesi iptal edildi.",
