@@ -199,6 +199,12 @@ python3 scripts/neohen_ctl.py shutdown <IP_PS5>   # parar NeoHEN; kstuff sigue
 python3 scripts/neohen_ctl.py menu     <IP_PS5>   # reiniciar solo el menú
 ```
 
+Para actualizar, manda el `NeoHEN.elf` nuevo al 9021 con el viejo cargado. El
+nuevo para al anterior (lo mismo que `shutdown`), espera a que vuelva el menú y
+arranca. kstuff no se carga dos veces, y los payloads que trae NeoHEN se
+cambian si su versión es otra (ShadowMount+ solo sin juego abierto). Con un
+juego abierto no cambia nada: pide cerrarlo y volver a mandarlo.
+
 Los logs están en `/data/neohen/`: `NeoHEN.log`, `NeoHEN_crash.log` y
 `NeoHEN_util_daemon.log`.
 

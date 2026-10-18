@@ -119,6 +119,13 @@ publicarlo.
 Para util, el cargador 9020 y reinicia SceShellUI (la Toolbox desaparece);
 kstuff y los demás payloads siguen en marcha.
 
+Para cambiar de versión no hace falta: manda el NeoHEN.elf nuevo al 9021
+con el viejo cargado. El nuevo para al anterior (el mismo apagado de
+arriba), espera a que el menú vuelva y arranca él. kstuff no se recarga si
+ya está, y los payloads que trae NeoHEN se cambian si su versión es otra
+(ShadowMount+ solo sin juego abierto). Con un juego abierto no cambia nada:
+avisa de que lo cierres y lo vuelvas a mandar.
+
 
 8. NeoWEB (página web y acceso remoto)
 ----------------------------------------------------------------

@@ -24,6 +24,7 @@ along with this program; see the file COPYING. If not, see
 #include "launch_pipeline.h"
 #include "payload_autostart.h"
 #include "bundled_payloads.h"
+#include "replace_running.h"
 
 #include <onion/conflict.h>
 #include <onion/log.h>
@@ -51,6 +52,11 @@ int main(void) {
     bootstrap_notify("notify.boot.conflict", conflict);
     return 0;
   }
+
+  /* NeoHEN: an older (or the same) NeoHEN already loaded is shut down first;
+   * two daemons and two Toolboxes in one home screen hang the console. */
+  if (!bootstrap_replace_running_neohen())
+    return 0;
 
   LOG_DEBUG("============== Spawner (Bootstrapper) Started =================");
   bootstrap_filesystem_create_directories();
