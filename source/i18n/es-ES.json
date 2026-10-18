@@ -487,6 +487,7 @@
     "notify.neo.menu_busy": "Cierra el juego o la aplicación abierta antes de reiniciar el menú",
     "notify.neo.theme_wait": "Tema elegido. Se verá al salir de un juego o al moverte por el menú",
     "notify.neo.no_title": "No se sabe de qué juego es este menú",
+    "notify.update.available_fmt": "NeoHEN %s ya está disponible. Más información en NeoWEB o en github.com/neox69/NeoHEN",
     "notify.usb.ejecting": "Soltando %s…",
     "notify.usb.ejected": "Ya puedes quitar %s",
     "notify.disk.fixing": "%s: aplicando el arreglo PlayGo…",

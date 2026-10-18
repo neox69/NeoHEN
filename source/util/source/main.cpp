@@ -97,6 +97,8 @@ bool LoadSettings() {
     return true;
 }
 
+void util_update_check_start();
+
 int main(void) {
     /* Raw elfldr uploads default to "payload.elf"; publish our stable name. */
     (void)syscall(SYS_thr_set_name, -1, "onion_util.elf");
@@ -151,6 +153,9 @@ int main(void) {
     }
     /* Mark that util completed cold start (typed flag; replaces util_first_boot file). */
     onion_ready_signal(ONION_FLAG_UTIL_BOOTED);
+
+    /* NeoHEN: a notice on the TV when a newer release is out */
+    util_update_check_start();
 
     LOG_INFO("Initializing cheat engine...");
     onion::cheats::CheatService::instance().ensureDir();

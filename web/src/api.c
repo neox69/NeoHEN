@@ -634,6 +634,7 @@ static const api_route_t g_routes[] = {
   {"POST", "/api/usb/eject",        api_usb_eject},
   {"GET",  "/api/launcher",         api_launcher},
   {"GET",  "/api/remoteplay",       api_remoteplay},
+  {NULL,   "/api/update/notice",    api_update_notice},
   {"POST", "/api/remoteplay",       api_remoteplay_request},
   {"POST", "/api/launcher/install", api_launcher_install},
   {"POST", "/api/launcher/remove",  api_launcher_remove},

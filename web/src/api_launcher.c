@@ -227,6 +227,35 @@ api_remoteplay_request(http_req_t *req) {
   http_send_ok(req);
 }
 
+/* GET/POST /api/update/notice {"enabled": bool}
+ * whether NeoHEN's util service says on the TV that a newer release is out;
+ * the file update_check_off in NeoHEN's data folder turns it off */
+void
+api_update_notice(http_req_t *req) {
+  char local[PATH_MAX];
+  struct stat st;
+  jw_t w;
+
+  plat_path("/data/neohen/update_check_off", local, sizeof(local));
+  if(!strcmp(req->method, "POST")) {
+    jval_t *b = api_body(req);
+    if(!b) {
+      return;
+    }
+    int on = json_get_bool(b, "enabled", 1);
+    json_free(b);
+    if(on) {
+      unlink(local);
+    } else if(fs_write_file(local, "", 0)) {
+      http_send_error(req, 500, "the setting could not be written");
+      return;
+    }
+  }
+  api_begin(&w);
+  jw_kbool(&w, "enabled", stat(local, &st) != 0);
+  api_finish(req, &w);
+}
+
 /* POST /api/launcher/remove */
 void
 api_launcher_remove(http_req_t *req) {
