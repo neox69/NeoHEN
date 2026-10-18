@@ -17,6 +17,14 @@
 #include <onion/brand.h>
 #include <onion/fs.h>
 #include <onion/log.h>
+#include <onion/payload.h>
+#include <onion/payload_identity.h>
+#include <onion/proc_query.h>
+
+#include "bootstrap_notify.h"
+
+#include <signal.h>
+#include <unistd.h>
 
 #include <stddef.h>
 #include <stdint.h>
@@ -62,6 +70,32 @@ static const BundledPayload kBundled[] = {
 
 #define PAYLOAD_DIR ONION_DATA_DIR "/payloads"
 
+int sceSystemServiceGetAppIdOfRunningBigApp(void);
+
+/* An updated payload that is still running from the previous NeoHEN would
+ * keep its old version (auto-start skips a running one): stop it so the new
+ * file starts. ShadowMount+ is left alone while a game is open, since the
+ * game runs from its mounts; it moves on at the next boot. */
+static void stop_old_instance(const char *elf, const char *name) {
+  char key[ONION_PAYLOAD_IDENTITY_SIZE], pid_path[256];
+  if (!onion_payload_identity_from_path(elf, key, sizeof(key)))
+    return;
+  onion_payload_pid_path(pid_path, sizeof(pid_path), key);
+  const pid_t pid = onion_payload_read_pid_file(pid_path);
+  if (pid <= 1 || pid == getpid() || !onion_proc_is_alive(pid))
+    return;
+  if (strstr(name, "shadowmount") && sceSystemServiceGetAppIdOfRunningBigApp() > 0) {
+    LOG_INFO("bundled payload %s: a game is open, the old one keeps running", name);
+    bootstrap_notify("notify.boot.bundled_kept", name);
+    return;
+  }
+  LOG_INFO("bundled payload %s: stopping the previous version pid=%d", name, (int)pid);
+  (void)kill(pid, SIGKILL);
+  for (int i = 0; i < 20 && onion_proc_is_alive(pid); ++i)
+    usleep(100 * 1000);
+  unlink(pid_path);
+}
+
 static bool stamp_matches(const char *stamp_path, const char *tag) {
   char *text = NULL;
   size_t length = 0;
@@ -100,6 +134,8 @@ void bootstrap_bundled_payloads_install(void) {
     if (have_elf && stamp_matches(stamp, p->tag))
       continue;
 
+    if (have_elf)
+      stop_old_instance(elf, p->name);
     if (!write_file_atomic(elf, p->data, *p->size)) {
       LOG_ERROR("bundled payload %s: cannot write %s", p->name, elf);
       continue;
