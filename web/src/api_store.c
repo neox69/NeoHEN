@@ -16,6 +16,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <unistd.h>
 
 #include "fsutil.h"
@@ -57,6 +58,14 @@ api_store(http_req_t *req) {
   } else {
     jw_obj(&w);
     jw_obj_end(&w);
+  }
+  /* what NeoHEN updated by itself: [{"name", "from", "to", "time"}] */
+  jw_key(&w, "updates");
+  if(json_get(s, "updates")) {
+    json_write(&w, json_get(s, "updates"));
+  } else {
+    jw_arr(&w);
+    jw_arr_end(&w);
   }
   json_free(s);
   api_finish(req, &w);
@@ -115,6 +124,8 @@ api_store_fetch(http_req_t *req) {
   } else {
     s = store_load();
     json_set_str(json_get_or_add_obj(s, "installed"), name, tag);
+    /* where it came from, so NeoHEN can look for newer releases of it */
+    json_set_str(json_get_or_add_obj(s, "sources"), name, url);
     jw_init(&w);
     json_write(&w, s);
     plat_path(STORE, local, sizeof(local));
@@ -127,4 +138,33 @@ api_store_fetch(http_req_t *req) {
     api_finish(req, &w);
   }
   json_free(b);
+}
+
+/* GET/POST /api/store/auto {"enabled": bool}
+ * whether NeoHEN keeps the payloads installed from the store up to date
+ * (store_auto_off in NeoHEN's data folder turns it off) */
+void
+api_store_auto(http_req_t *req) {
+  char local[PATH_MAX];
+  struct stat st;
+  jw_t w;
+
+  plat_path("/data/neohen/store_auto_off", local, sizeof(local));
+  if(!strcmp(req->method, "POST")) {
+    jval_t *b = api_body(req);
+    if(!b) {
+      return;
+    }
+    int on = json_get_bool(b, "enabled", 1);
+    json_free(b);
+    if(on) {
+      unlink(local);
+    } else if(fs_write_file(local, "", 0)) {
+      http_send_error(req, 500, "the setting could not be written");
+      return;
+    }
+  }
+  api_begin(&w);
+  jw_kbool(&w, "enabled", stat(local, &st) != 0);
+  api_finish(req, &w);
 }

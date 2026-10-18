@@ -6,7 +6,7 @@
 #include "json.h"
 
 #define PS5AIO_NAME      "NeoWEB"
-#define PS5AIO_VERSION   "0.4.1"
+#define PS5AIO_VERSION   "0.5.0"
 #define PS5AIO_HTTP_PORT 8686
 #define PS5AIO_DISC_PORT 8687
 #define PS5AIO_DATA_DIR  "/data/neohen/web"
@@ -97,6 +97,7 @@ void api_remoteplay_request(http_req_t *req);
 void api_launcher_install(http_req_t *req);
 void api_launcher_remove(http_req_t *req);
 void api_store(http_req_t *req);
+void api_store_auto(http_req_t *req);
 void api_store_fetch(http_req_t *req);
 void api_cheats_live(http_req_t *req);
 void api_cheats_toggle(http_req_t *req);

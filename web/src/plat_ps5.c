@@ -214,6 +214,29 @@ plat_notify(const char *fmt, ...) {
 
 /* ------------------------------------------------------------ info */
 
+int
+plat_first_ip(char *out, size_t size) {
+  struct ifaddrs *ifaddr;
+  int found = -1;
+
+  if(getifaddrs(&ifaddr)) {
+    return -1;
+  }
+  for(struct ifaddrs *ifa = ifaddr; ifa && found; ifa = ifa->ifa_next) {
+    char ip[INET_ADDRSTRLEN];
+    if(!ifa->ifa_addr || ifa->ifa_addr->sa_family != AF_INET || !strncmp(ifa->ifa_name, "lo", 2)) {
+      continue;
+    }
+    inet_ntop(AF_INET, &((struct sockaddr_in *)ifa->ifa_addr)->sin_addr, ip, sizeof(ip));
+    if(strncmp(ip, "0.", 2) && strncmp(ip, "127.", 4)) {
+      snprintf(out, size, "%s", ip);
+      found = 0;
+    }
+  }
+  freeifaddrs(ifaddr);
+  return found;
+}
+
 static void
 write_ips(jw_t *w) {
   struct ifaddrs *ifaddr;

@@ -485,6 +485,12 @@ plat_unmount(const char *path) {
 }
 
 int
+plat_first_ip(char *out, size_t size) {
+  snprintf(out, size, "127.0.0.1");
+  return 0;
+}
+
+int
 plat_remount_system_ex(void) {
   return 0; /* the emulator's /system_ex is an ordinary folder */
 }

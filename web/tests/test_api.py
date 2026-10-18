@@ -1252,6 +1252,19 @@ class PayloadTest(unittest.TestCase):
         st, j = self.api.post("/api/store/fetch", ok)
         self.assertEqual(st, 502)
         self.assertEqual(self.api.get("/api/store")[1]["installed"], {})
+        # what NeoHEN updated by itself comes back for the page
+        with open(f"{self.root}/data/neohen/web/store.json", "w") as f:
+            json.dump({"installed": {"x.elf": "v2"}, "sources": {"x.elf": ok["url"]},
+                       "updates": [{"name": "x.elf", "from": "v1", "to": "v2", "time": 1792300000}]}, f)
+        _, j = self.api.get("/api/store")
+        self.assertEqual((j["installed"], j["updates"][0]["to"]), ({"x.elf": "v2"}, "v2"))
+        os.unlink(f"{self.root}/data/neohen/web/store.json")
+        # the automatic updates switch
+        _, j = self.api.post("/api/store/auto", {"enabled": False})
+        self.assertFalse(j["enabled"])
+        self.assertTrue(os.path.exists(f"{self.root}/data/neohen/store_auto_off"))
+        _, j = self.api.post("/api/store/auto", {"enabled": True})
+        self.assertTrue(j["enabled"])
 
     def test_jobs_listing(self):
         _, j = self.api.get("/api/jobs")

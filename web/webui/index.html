@@ -448,7 +448,7 @@ html.plain body::after{display:none}
 /* sidebar */
 .side{background:linear-gradient(180deg,rgba(8,12,24,.86),rgba(5,8,16,.92));border-right:1px solid var(--line)}
 .side::after{content:"";position:absolute;top:0;right:-1px;bottom:0;width:1px;background:linear-gradient(180deg,transparent,var(--cyan),var(--violet),transparent);opacity:.55}
-.side{position:relative}
+@media (min-width:901px){.side{position:relative}}
 .logo{filter:drop-shadow(0 0 18px color-mix(in srgb,var(--cyan) 70%,transparent));animation:breathe 5s ease-in-out infinite}
 @keyframes breathe{50%{filter:drop-shadow(0 0 28px color-mix(in srgb,var(--violet) 80%,transparent))}}
 .ps{background:linear-gradient(135deg,rgba(77,208,255,.06),rgba(142,123,255,.05));border-color:var(--line2)}
@@ -527,6 +527,29 @@ html.tv{font-size:16px}html.tv .btn{padding:11px 18px}html.tv nav button{padding
 #evp .ev.old{opacity:.6}
 #evp .ev small{display:block;font:500 11px var(--mono);color:var(--faint);margin-top:2px}
 .cfg .seg{flex-wrap:wrap;max-width:100%}
+.tabs{display:none}
+.drawer{overflow:hidden}
+#v-smp label.sw{white-space:normal;align-items:flex-start}
+@media (max-width:900px){.bar{gap:6px}.bar>div:nth-child(2){min-width:0;flex:1}.bar h1{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.bar .sp{display:none}
+  .kbtn kbd,.kbtn span{display:none}.kbtn{padding:8px;border-color:transparent;background:transparent}}
+@media (max-width:620px){.hero .t{flex:1 1 calc(100% - 110px)}.hero .acts{flex:1 1 100%}.hero .acts .btn{flex:1}.hero h2{font-size:28px}}
+@media (max-width:900px){
+  .tabs{display:flex;position:fixed;left:10px;right:10px;bottom:calc(10px + env(safe-area-inset-bottom));z-index:30;padding:6px;gap:4px;border-radius:20px;
+    background:rgba(8,12,24,.86);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border:1px solid var(--line2);box-shadow:var(--glow),0 20px 40px -10px #000}
+  .tabs button{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:7px 2px;border:0;border-radius:14px;background:transparent;color:var(--dim);font:600 10.5px var(--ui)}
+  .tabs button svg{width:21px;height:21px}
+  .tabs button.on{color:var(--text);background:linear-gradient(160deg,color-mix(in srgb,var(--cyan) 24%,transparent),color-mix(in srgb,var(--violet) 18%,transparent))}
+  .tabs button.on svg{color:var(--cyan);filter:drop-shadow(0 0 6px var(--cyan))}
+  .view{padding-bottom:110px}
+  .toast{bottom:96px}
+}
+dialog.news h4{display:flex;align-items:center;gap:10px}
+dialog.news .md{max-height:62vh;overflow:auto;margin:6px 0 18px;padding-right:6px;color:var(--dim);font-size:14px}
+dialog.news .md h3,dialog.news .md h4,dialog.news .md h5{color:var(--text);margin:18px 0 8px;font-size:15px}
+dialog.news .md h3{font-size:12px;font-family:var(--mono);letter-spacing:.14em;text-transform:uppercase;color:color-mix(in srgb,var(--cyan) 60%,#fff)}
+dialog.news .md ul{margin:6px 0;padding-left:20px}dialog.news .md li{margin:4px 0}
+dialog.news .md b{color:var(--text)}dialog.news .md code{font:500 12.5px var(--mono);padding:1px 6px;border-radius:6px;background:rgba(120,160,255,.12)}
+dialog.news .md a{color:var(--cyan)}dialog.news .md p{margin:8px 0}
 /* command palette */
 #cmdk{position:fixed;inset:0;z-index:130;display:flex;justify-content:center;align-items:flex-start;padding-top:12vh;background:rgba(3,5,11,.66);backdrop-filter:blur(6px)}
 #cmdk .box{width:min(640px,94vw);border-radius:18px;overflow:hidden;box-shadow:var(--glow),0 40px 90px -30px #000}
@@ -571,11 +594,12 @@ html.tv{font-size:16px}html.tv .btn{padding:11px 18px}html.tv nav button{padding
       <button class="btn ic ghost burger" id="burger" aria-label="Menu"></button>
       <div><h1 id="vt"></h1><p id="vs"></p></div>
       <div class="sp"></div>
-      <button class="kbtn hide-m" id="cmdk-b" title="Ctrl+K"><svg class="i" viewBox="0 0 24 24"><path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-4-4"/></svg><span id="cmdk-l"></span><kbd>Ctrl K</kbd></button>
+      <button class="kbtn" id="cmdk-b" title="Ctrl+K"><svg class="i" viewBox="0 0 24 24"><path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-4-4"/></svg><span id="cmdk-l"></span><kbd>Ctrl K</kbd></button>
       <span class="chip hide-m" id="clock"></span>
       <button class="btn ic ghost bell" id="bell" title="Avisos"><svg class="i" viewBox="0 0 24 24"><path d="M6 16v-5a6 6 0 0 1 12 0v5l2 2H4zM10 20a2 2 0 0 0 4 0"/></svg><em id="bell-n" hidden></em></button>
       <button class="btn ic ghost" id="reload" title="Refresh"></button>
     </header>
+    <nav class="tabs" id="tabs" aria-label="Sections"></nav>
     <div class="view" id="view">
       <section id="v-panel"></section>
       <section id="v-library" hidden></section>
@@ -740,7 +764,15 @@ function app(id){for(var i=0;i<S.apps.length;i++)if(S.apps[i].titleId===id)retur
 function games(){return S.apps.filter(function(a){return !UTIL.test(a.titleId)})}
 
 /* ------------------------------------------------------------ nav */
+/* the phone's bottom bar: the most used sections, and "more" for the rest */
+var TABS=["panel","library","payloads","remote"];
+function paintTabs(){var t=$("tabs");if(!t)return;
+  var vs=TABS.filter(function(k){var v=VIEWS.filter(function(x){return x[0]===k})[0];return v&&(!v[3]||S.full)&&CFG.hide.indexOf(k)<0}).slice(0,4);
+  t.innerHTML=vs.map(function(k){var v=VIEWS.filter(function(x){return x[0]===k})[0];return '<button data-v="'+k+'" class="'+(S.view===k?"on":"")+'">'+ic(k)+'<span>'+esc(v[1])+'</span></button>'}).join("")+
+    '<button data-more="1" class="'+(vs.indexOf(S.view)<0?"on":"")+'">'+ic("menu")+'<span>'+L("Más","More")+'</span></button>'}
+$("tabs").onclick=function(e){var b=e.target.closest("button");if(!b)return;if(b.hasAttribute("data-more")){e.stopPropagation();$("side").className="side open";return}show(b.getAttribute("data-v"),true)};
 function paintNav(){
+  paintTabs();
   var act=S.ups.filter(function(u){return u.st==="run"||u.st==="wait"}).length+S.jobs.filter(function(j){return j.state==="running"}).length;
   var badge={library:games().length||"",payloads:S.pay.length?S.pay.filter(function(p){return p.running}).length+"/"+S.pay.length:"",transfers:act||""};
   $("nav").innerHTML='<h6>'+L("Consola","Console")+'</h6>'+VIEWS.filter(function(v){return (!v[3]||S.full)&&!v[4]&&CFG.hide.indexOf(v[0])<0}).map(function(v,i){
@@ -814,7 +846,7 @@ function paintPanel(){
   var pay=S.pay.map(function(p){return '<div class="rowl"><i class="dot'+(p.running?" on":"")+'"></i><div class="t"><b>'+esc(p.name)+'</b><small>'+(p.running?L("en marcha","running")+" · pid "+p.pid:L("parado","stopped"))+'</small></div></div>'}).join("");
   var act=S.ups.slice(-3).reverse().map(function(u){return '<div class="rowl"><i class="dot'+(u.st==="run"?" on":"")+'"></i><div class="t"><b>'+esc(u.name)+'</b><small>'+upState(u)+'</small></div></div>'}).join("")+
     S.jobs.slice(-3).reverse().map(function(j){return '<div class="rowl"><i class="dot'+(j.state==="running"?" on":"")+'"></i><div class="t"><b>'+esc(j.title)+'</b><small>'+esc(j.state)+'</small></div></div>'}).join("");
-  $("v-panel").innerHTML=updNote()+hero+k+
+  $("v-panel").innerHTML=updNote()+hero+k+qrCard()+
     '<div class="g2"><div class="card pad chart"><h3 class="h">'+L("Temperatura","Temperature")+' <em>'+L("últimos 10 min","last 10 min")+'</em><span class="sp"></span><span class="lg"><b style="--c:#4DA3FF">CPU</b><b style="--c:#8E7BFF">SoC</b></span></h3>'+chart()+'</div>'+
     '<div class="card pad"><h3 class="h">'+L("Almacenamiento","Storage")+'</h3>'+(st||'<div class="empty">–</div>')+'</div></div>'+
     '<div class="g3"><div class="card pad"><h3 class="h">'+L("Accesos rápidos","Quick actions")+'</h3><div class="qa">'+
@@ -822,6 +854,7 @@ function paintPanel(){
       (S.full?'<button data-act="upload">'+ic("upload")+'<b>'+L("Subir","Upload")+'</b><small>'+L("Ficheros a la consola","Files to the console")+'</small></button>'+
       '<button data-open="/data/homebrew">'+ic("files")+'<b>Homebrew</b><small>/data/homebrew</small></button>':"")+
       '<button data-act="notify">'+ic("bell")+'<b>'+L("Aviso","Notify")+'</b><small>'+L("Mensaje en pantalla","On-screen message")+'</small></button>'+
+      '<button data-act="qr">'+ic("remote")+'<b>'+L("En el móvil","On the phone")+'</b><small>'+L("Código QR de NeoWEB","NeoWEB QR code")+'</small></button>'+
       (S.full?"":'<button data-go="payloads">'+ic("payloads")+'<b>Payloads</b><small>'+L("Gestionar","Manage")+'</small></button>')+'</div></div>'+
     '<div class="card pad"><h3 class="h">Payloads<span class="sp"></span><button class="btn sm ghost" data-go="payloads">'+L("Gestionar","Manage")+'</button></h3>'+(pay||'<div class="empty">–</div>')+'</div>'+
     '<div class="card pad"><h3 class="h">'+L("Actividad","Activity")+(S.full?'<span class="sp"></span><button class="btn sm ghost" data-go="transfers">'+L("Ver todo","See all")+'</button>':"")+'</h3>'+
@@ -834,6 +867,7 @@ $("v-panel").addEventListener("click",function(e){
   else if((v=b.getAttribute("data-act"))==="close")closeGame();
   else if(v==="detail")detail(b.getAttribute("data-id"));
   else if(v==="notify")notify();
+  else if(v==="qr")qrShow();
   else if(v==="upload"){show("files",true);$("pick-f").click()}
 });
 function closeGame(){ask(L("Cerrar el juego","Close the game"),L("Lo que no esté guardado se pierde.","Anything unsaved is lost."),L("Cerrar juego","Close game"),true).then(function(ok){
@@ -1041,11 +1075,64 @@ $("bell").onclick=function(e){e.stopPropagation();if($("evp")){evClose();return}
   S.evPrev=S.evSeen;S.evSeen=Date.now();evSave();evPaint();evBadge()};
 document.addEventListener("click",function(e){var p=$("evp");if(p&&!p.contains(e.target)&&e.target.id!=="bell")evClose()});
 $("bell").title=L("Avisos","Notices");evBadge();
+/* payloads NeoHEN updated by itself since this browser last looked */
+function storeNews(list){var last=0;try{last=+localStorage.getItem("nw-store-upd")||0}catch(_){}
+  var nu=(list||[]).filter(function(u){return u.time>last});
+  nu.slice().reverse().forEach(function(u){note("ok",u.name+L(" actualizado a "," updated to ")+u.to,L("Desde la tienda de payloads","From the payload store"))});
+  if(nu.length)try{localStorage.setItem("nw-store-upd",String(nu[0].time))}catch(_){}}
+setTimeout(function(){if(S.full)api("/api/store").then(function(j){storeNews(j.updates)}).catch(function(){})},4000);
 /* jobs: one look every 10 s is enough to say when one ends */
 S.jobSeen={};
 function evJobs(list){(list||[]).forEach(function(j){var was=S.jobSeen[j.id];S.jobSeen[j.id]=j.state;
   if(was==="running"&&j.state!=="running")note(j.state==="done"?"ok":j.state==="cancelled"?"warn":"bad",(j.state==="done"?L("Terminado: ","Done: "):j.state==="cancelled"?L("Cancelado: ","Cancelled: "):L("Falló: ","Failed: "))+(j.title||j.type),j.error||"")})}
 setInterval(function(){if(S.full&&S.online)api("/api/jobs").then(function(j){evJobs(j.jobs)}).catch(function(){})},10000);
+
+/* ------------------------------------------------------------ what's new
+ * When the NeoHEN loaded is not the one this browser last saw, the notes of
+ * its release on GitHub are shown once. The version in the sidebar, or
+ * "What's new" in Ctrl+K, shows them again. */
+function mdHtml(t){
+  function inl(x){return esc(x).replace(/`([^`]+)`/g,'<code>$1</code>').replace(/\*\*([^*]+)\*\*/g,"<b>$1</b>")
+    .replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>')}
+  var out="",list=0;
+  t.split(/\r?\n/).forEach(function(l){var m;
+    if((m=/^(\s*)[-*] (.*)$/.exec(l))){var d=m[1].length>=2?2:1;while(list<d){out+="<ul>";list++}while(list>d){out+="</ul>";list--}out+="<li>"+inl(m[2])+"</li>";return}
+    while(list){out+="</ul>";list--}
+    if((m=/^(#{1,4}) (.*)$/.exec(l)))out+="<h"+(m[1].length+2)+">"+inl(m[2])+"</h"+(m[1].length+2)+">";
+    else if((m=/^\d+\. (.*)$/.exec(l)))out+='<p class="ol">'+inl(m[1])+"</p>";
+    else if(l.trim())out+="<p>"+inl(l)+"</p>"});
+  while(list){out+="</ul>";list--}return out}
+function newsShow(ver){
+  var base=String(ver||"").replace(/\+.*$/,"");if(!base)return;
+  fetch("https://api.github.com/repos/neox69/NeoHEN/releases/tags/v"+base).then(function(r){if(!r.ok)throw new Error(r.status);return r.json()}).then(function(rel){
+    var d=document.createElement("dialog");d.className="wide news";
+    d.innerHTML='<h4>'+ic("bell")+' '+L("Novedades de NeoHEN ","What is new in NeoHEN ")+esc(base)+'</h4><div class="md">'+mdHtml(rel.body||"")+'</div><div class="row"><a class="btn ghost" href="'+esc(rel.html_url)+'" target="_blank" rel="noopener">GitHub</a><button class="btn pri" id="news-ok">'+L("Entendido","Got it")+'</button></div>';
+    document.body.appendChild(d);d.showModal();d.querySelector("#news-ok").onclick=function(){d.close();d.remove()};d.addEventListener("close",function(){d.remove()});
+    try{localStorage.setItem("nw-news",base)}catch(_){}
+  }).catch(function(){toast(L("No se pudieron leer las novedades (¿sin internet?)","The release notes could not be read (no internet?)"),true)})}
+function newsCheck(ver){var base=String(ver||"").replace(/\+.*$/,""),seen="";try{seen=localStorage.getItem("nw-news")||""}catch(_){}
+  if(base&&seen!==base&&!S.newsAsked){S.newsAsked=1;if(seen)newsShow(base);else try{localStorage.setItem("nw-news",base)}catch(_){}}}
+
+/* ------------------------------------------------------------ QR
+ * NeoWEB's address as a QR code, to open it on a phone: from the PC, or from
+ * the TV when NeoWEB runs on the console itself. The encoder is a small
+ * library loaded from cdnjs only when a code is asked for. */
+function nwAddr(){var h=location.hostname,ip=(S.info.ips||[])[0];
+  return (h==="127.0.0.1"||h==="localhost")&&ip?"http://"+ip.ip+":"+(location.port||8686)+"/":location.origin+"/"}
+function qrLib(){return window.qrcode?Promise.resolve():new Promise(function(res,rej){var sc=document.createElement("script");
+  sc.src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js";sc.onload=res;sc.onerror=rej;document.head.appendChild(sc)})}
+function qrSvg(text,px){var q=qrcode(0,"M");q.addData(text);q.make();var n=q.getModuleCount(),c=px/(n+8),r="";
+  for(var y=0;y<n;y++)for(var x=0;x<n;x++)if(q.isDark(y,x))r+='M'+((x+4)*c).toFixed(2)+','+((y+4)*c).toFixed(2)+'h'+c.toFixed(2)+'v'+c.toFixed(2)+'h-'+c.toFixed(2)+'z';
+  return '<svg viewBox="0 0 '+px+' '+px+'" width="'+px+'" height="'+px+'" style="background:#fff;border-radius:16px;box-shadow:0 0 40px -6px var(--cyan)"><path d="'+r+'" fill="#05070f"/></svg>'}
+function qrShow(){var a=nwAddr();
+  qrLib().then(function(){var d=document.createElement("dialog");
+    d.innerHTML='<h4>'+L("Abre NeoWEB en el móvil","Open NeoWEB on the phone")+'</h4><p>'+L("Apunta con la cámara. El móvil tiene que estar en la misma red que la consola.","Point the camera at it. The phone has to be on the same network as the console.")+'</p><div style="display:grid;place-items:center;margin:8px 0 14px">'+qrSvg(a,260)+'</div><p style="text-align:center;font-family:var(--mono)">'+esc(a)+'</p><div class="row"><button class="btn pri" id="qr-ok">'+L("Cerrar","Close")+'</button></div>';
+    document.body.appendChild(d);d.showModal();d.querySelector("#qr-ok").onclick=function(){d.close()};d.addEventListener("close",function(){d.remove()})})
+  .catch(function(){toast(L("Sin internet no se puede dibujar el QR. La dirección es ","Without internet the QR cannot be drawn. The address is ")+a,true)})}
+/* on the TV the dashboard carries the code, so the phone is one look away */
+function qrCard(){if(!S.tv)return "";
+  if(!S.qrTv)setTimeout(function(){qrLib().then(function(){S.qrTv=qrSvg(nwAddr(),150);var b=$("qr-tv");if(b)b.innerHTML=S.qrTv}).catch(function(){})},50);
+  return '<div class="card pad" style="margin-top:14px;display:flex;gap:20px;align-items:center"><div id="qr-tv">'+(S.qrTv||"")+'</div><div><h3 class="h">'+L("Ábrelo en el móvil","Open it on the phone")+'</h3><p style="margin:0;color:var(--dim)">'+L("Apunta con la cámara del móvil, en la misma red que la consola:","Point the phone's camera at it, on the same network as the console:")+'</p><p style="font:600 18px var(--mono);margin:8px 0 0">'+esc(nwAddr())+'</p></div></div>'}
 
 /* ------------------------------------------------------------ Remote Play
  * Only the Toolbox (inside the PS5 menu) can read the accounts and ask for a
@@ -1102,6 +1189,8 @@ function cmdItems(){
   var it=VIEWS.filter(function(v){return v[1]&&(!v[3]||S.full)}).map(function(v){return {t:v[1],s:L("Sección","Section"),k:"v:"+v[0],ic:v[0]}});
   games().forEach(function(a){it.push({t:a.title||a.titleId,s:a.titleId,k:"g:"+a.titleId,img:a.hasIcon?"/apps/icon?id="+a.titleId:""})});
   it.push({t:L("Actualizar datos","Refresh data"),s:L("Acción","Action"),k:"a:reload",ic:"refresh"});
+  it.push({t:L("Abrir NeoWEB en el móvil (QR)","Open NeoWEB on the phone (QR)"),s:L("Acción","Action"),k:"a:qr",ic:"remote"});
+  if(S.info.neohen)it.push({t:L("Novedades de esta versión","What is new in this version"),s:"NeoHEN "+String(S.info.neohen).replace(/\+.*$/,""),k:"a:news",ic:"bell"});
   if(S.running)it.push({t:L("Cerrar ","Close ")+title(S.running),s:L("Acción","Action"),k:"a:kill",ic:"x"});
   return it}
 function cmdOpen(){
@@ -1113,7 +1202,7 @@ function cmdOpen(){
     var on=$("cmdk-ls").querySelector(".on");if(on)on.scrollIntoView({block:"nearest"})}
   function run(x,alt){if(!x)return;cmdClose();var k=x.k.slice(2);
     if(x.k[0]==="v")show(k,true);else if(x.k[0]==="g"){if(alt)launch(k);else show("game="+k,true)}
-    else if(k==="reload")$("reload").click();else if(k==="kill")api("/api/apps/kill",{}).then(function(){toast(L("Cerrado","Closed"))}).catch(fail)}
+    else if(k==="reload")$("reload").click();else if(k==="news")newsShow(S.info.neohen);else if(k==="qr")qrShow();else if(k==="kill")api("/api/apps/kill",{}).then(function(){toast(L("Cerrado","Closed"))}).catch(fail)}
   $("cmdk-q").oninput=function(){sel=0;draw()};
   $("cmdk-q").onkeydown=function(e){if(e.key==="ArrowDown"){sel=Math.min(sel+1,shown.length-1);draw();e.preventDefault()}else if(e.key==="ArrowUp"){sel=Math.max(sel-1,0);draw();e.preventDefault()}
     else if(e.key==="Enter"){run(shown[sel],e.shiftKey);e.preventDefault()}else if(e.key==="Escape")cmdClose()};
@@ -1484,7 +1573,8 @@ function loadStore(){
   if(!S.full)return Promise.resolve();
   var st=S.st;st.asked=true;st.err="";
   try{var c=JSON.parse(sessionStorage.getItem("nw-store")||"null");if(c&&Date.now()-c.t<36e5)st.rel=c.rel}catch(_){}
-  var ps=[api("/api/store").then(function(j){st.inst=j.installed||{}}).catch(function(){})];
+  var ps=[api("/api/store").then(function(j){st.inst=j.installed||{};st.upd=j.updates||[];storeNews(st.upd)}).catch(function(){}),
+    api("/api/store/auto").then(function(j){st.auto=j.enabled}).catch(function(){})];
   STORE.forEach(function(x){if(st.rel[x[0]])return;
     ps.push(fetch("https://api.github.com/repos/"+x[2]+"/releases?per_page=1").then(function(r){if(!r.ok)throw new Error("GitHub "+r.status);return r.json()}).then(function(j){
       var rl=j[0],a=rl&&rl.assets.filter(function(y){return x[3].test(y.name)})[0];if(a)st.rel[x[0]]={tag:rl.tag_name,url:a.browser_download_url,size:a.size,date:(rl.published_at||"").slice(0,10)}},
@@ -1497,6 +1587,10 @@ function paintStore(){
   box.innerHTML='<div class="tools"><h3 class="h" style="margin:0">'+L("Tienda de payloads","Payload store")+' <em>'+STORE.length+'</em></h3><span class="sp"></span><button class="btn sm ghost" id="st-re">'+ic("refresh")+L("Mirar versiones","Check versions")+'</button></div>'+
     '<div class="note" style="border-color:rgba(77,163,255,.4);background:rgba(77,163,255,.08);color:#CFE4FF">'+L("La consola descarga cada payload de la página de su autor en GitHub, a su carpeta de payloads. Hace falta que la consola tenga salida a internet. Uno que está en marcha sigue con la versión vieja hasta que lo pares y lo arranques.","The console downloads each payload from its author's page on GitHub, into its payloads folder. The console needs a way out to the internet. One that is running keeps the old version until you stop and start it.")+'</div>'+
     (st.err?'<div class="note">'+L("GitHub no ha contestado a todo: ","GitHub did not answer everything: ")+esc(st.err)+'</div>':"")+
+    '<div class="card" style="margin-bottom:14px"><div class="item"><div class="t"><b>'+L("Actualizar solos los payloads de la tienda","Keep the store's payloads up to date by themselves")+'</b><small style="white-space:normal">'+
+      L("NeoHEN mira GitHub al arrancar y cada 12 h y pone la versión nueva de los que instalaste desde aquí; se usa la próxima vez que arranquen. Los que pusiste a mano o vienen con NeoHEN no se tocan.","NeoHEN checks GitHub at start and every 12 h and puts the new release of the ones you installed from here; it is used the next time they start. The ones you put by hand or that come with NeoHEN are not touched.")+'</small></div>'+
+      '<div class="acts"><label class="sw"><input type="checkbox" id="st-auto"'+(st.auto!==false?" checked":"")+(S.ro?" disabled":"")+'><i></i></label></div></div>'+
+      ((st.upd||[]).length?(st.upd||[]).slice(0,5).map(function(u){return '<div class="item"><i class="dot on"></i><div class="t"><b>'+esc(u.name)+'</b><small>'+esc(u.from||"?")+" → "+esc(u.to)+" · "+new Date(u.time*1000).toLocaleString()+'</small></div><div class="acts"><span class="chip ok">'+L("actualizado solo","updated by itself")+'</span></div></div>'}).join(""):"")+'</div>'+
     '<div class="card">'+STORE.map(function(x){var n=x[0],r=st.rel[n],p=have[n],it=st.inst[n],busy=st.busy[n],same=p&&r&&it===r.tag;
       return '<div class="item"><i class="dot'+(p&&p.running?" on":"")+'"></i><div class="t"><b>'+esc(x[1])+'</b><small>'+esc(x[4])+' · <a href="https://github.com/'+x[2]+'" target="_blank" rel="noopener">'+x[2]+'</a></small></div>'+
         '<div class="acts">'+(r?'<span class="chip" title="'+esc(r.date)+'">'+esc(r.tag)+" · "+size(r.size)+'</span>':'<span class="chip">'+(st.asked&&st.err?"?":"…")+'</span>')+
@@ -1520,7 +1614,7 @@ $("v-payloads").addEventListener("click",function(e){
   else if((n=b.getAttribute("data-stop")))ask(L("Parar ","Stop ")+n,L("El proceso se cierra de inmediato. Si es un payload del que depende la consola, como ShadowMount+, dejará de hacer su trabajo hasta que lo arranques otra vez.","The process is closed at once. If the console relies on it, like ShadowMount+, it stops doing its job until you start it again."),L("Parar","Stop"),true).then(function(ok){if(ok)pact("/api/payloads/stop",{name:n},"…",n+L(" parado"," stopped"))});
   else if((n=b.getAttribute("data-del")))ask(L("Borrar ","Delete ")+n,L("Se elimina el fichero de la consola. No se puede deshacer.","The file is removed from the console. This cannot be undone."),L("Borrar","Delete"),true).then(function(ok){if(ok)pact("/api/payloads/delete",{name:n},"…",n+L(" borrado"," deleted"))});
 });
-$("v-payloads").addEventListener("change",function(e){var n=e.target.getAttribute("data-auto");if(n)pact("/api/payloads/autostart",{name:n,enabled:e.target.checked},"…",L("Hecho","Done"))});
+$("v-payloads").addEventListener("change",function(e){if(e.target.id==="st-auto"){api("/api/store/auto",{enabled:e.target.checked}).then(function(j){S.st.auto=j.enabled;toast(L("Hecho","Done"))}).catch(fail);return}var n=e.target.getAttribute("data-auto");if(n)pact("/api/payloads/autostart",{name:n,enabled:e.target.checked},"…",L("Hecho","Done"))});
 function upPay(files){
   var list=[].filter.call(files,function(f){return /\.(elf|bin)$/i.test(f.name)});
   if(!list.length){if(files.length)toast(L("Solo ficheros .elf o .bin","Only .elf or .bin files"),true);return}
@@ -2452,8 +2546,10 @@ function fast(){
     S.info=i;online(true);
     $("ps-m").innerHTML=[i.model,i.firmware&&"FW "+i.firmware,i.ips&&i.ips[0]&&i.ips[0].ip].filter(Boolean).map(esc).join("<br>")+
       (S.upd&&S.upd.new?'<br><a href="'+esc(S.upd.new.url)+'" target="_blank" rel="noopener" style="color:var(--warn)">'+L("Hay NeoHEN ","NeoHEN ")+esc(S.upd.new.tag.replace(/^v/,""))+L(""," is out")+'</a>':"");
-    $("ver").textContent="NeoWEB · v"+(i.version||"");
+    $("ver").textContent="NeoWEB · v"+(i.version||"")+(i.neohen?" · NeoHEN "+String(i.neohen).replace(/\+.*$/,""):"");
+    if(i.neohen&&!$("ver").onclick){$("ver").style.cursor="pointer";$("ver").title=L("Novedades de esta versión","What is new in this version");$("ver").onclick=function(){newsShow(S.info.neohen)}}
     if(i.neohen&&!S.upd)checkUpd(i.neohen);
+    if(i.neohen)newsCheck(i.neohen);
     if(i.cpuTemp>0||i.socTemp>0){S.hist.push([i.cpuTemp|0,i.socTemp|0]);if(S.hist.length>120)S.hist.shift()}
     var r=i.running&&i.running.titleId||null,ch=r!==S.running;
     /* the first answer only says how things are; changes after it are news */
