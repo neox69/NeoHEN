@@ -551,6 +551,17 @@ class PayloadTest(unittest.TestCase):
         _, j = self.api.get("/api/remoteplay")
         self.assertEqual((j["known"], j["status"]), (True, status))
 
+    def test_update_notice(self):
+        off = f"{self.root}/data/neohen/update_check_off"
+        _, j = self.api.get("/api/update/notice")
+        self.assertTrue(j["enabled"])
+        _, j = self.api.post("/api/update/notice", {"enabled": False})
+        self.assertFalse(j["enabled"])
+        self.assertTrue(os.path.exists(off))
+        _, j = self.api.post("/api/update/notice", {"enabled": True})
+        self.assertTrue(j["enabled"])
+        self.assertFalse(os.path.exists(off))
+
     def test_launcher(self):
         # the NeoWEB icon in Media: a web based media app pointing at this page
         _, j = self.api.get("/api/launcher")

@@ -515,6 +515,18 @@ h3.h::before{width:14px;height:2px;border-radius:2px;box-shadow:0 0 10px var(--c
 .toast{border-color:color-mix(in srgb,var(--cyan) 40%,transparent);box-shadow:0 0 0 1px rgba(0,0,0,.4),0 0 30px -8px var(--cyan),0 20px 50px -20px #000}
 
 html.tv{font-size:16px}html.tv .btn{padding:11px 18px}html.tv nav button{padding:13px 14px}
+.bell{position:relative}.bell em{position:absolute;top:2px;right:2px;min-width:17px;height:17px;padding:0 4px;border-radius:9px;font:700 10px/17px var(--mono);font-style:normal;text-align:center;color:#06101F;background:var(--grad);box-shadow:0 0 12px var(--cyan)}
+#evp{position:fixed;top:66px;right:18px;z-index:90;width:min(400px,94vw);max-height:70vh;display:flex;flex-direction:column;border-radius:16px;overflow:hidden;box-shadow:var(--glow),0 30px 70px -20px #000}
+#evp .hd{display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid var(--line)}
+#evp .hd b{flex:1}
+#evp .ls{overflow:auto}
+#evp .ev{display:flex;gap:11px;padding:11px 14px;border-top:1px solid var(--line);font-size:13.5px}
+#evp .ev:first-child{border-top:0}
+#evp .ev i{width:9px;height:9px;border-radius:50%;margin-top:5px;flex:none;background:var(--cyan);box-shadow:0 0 8px var(--cyan)}
+#evp .ev.ok i{background:var(--ok);box-shadow:0 0 8px var(--ok)}#evp .ev.bad i{background:var(--bad);box-shadow:0 0 8px var(--bad)}#evp .ev.warn i{background:var(--warn);box-shadow:0 0 8px var(--warn)}
+#evp .ev.old{opacity:.6}
+#evp .ev small{display:block;font:500 11px var(--mono);color:var(--faint);margin-top:2px}
+.cfg .seg{flex-wrap:wrap;max-width:100%}
 /* command palette */
 #cmdk{position:fixed;inset:0;z-index:130;display:flex;justify-content:center;align-items:flex-start;padding-top:12vh;background:rgba(3,5,11,.66);backdrop-filter:blur(6px)}
 #cmdk .box{width:min(640px,94vw);border-radius:18px;overflow:hidden;box-shadow:var(--glow),0 40px 90px -30px #000}
@@ -561,6 +573,7 @@ html.tv{font-size:16px}html.tv .btn{padding:11px 18px}html.tv nav button{padding
       <div class="sp"></div>
       <button class="kbtn hide-m" id="cmdk-b" title="Ctrl+K"><svg class="i" viewBox="0 0 24 24"><path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-4-4"/></svg><span id="cmdk-l"></span><kbd>Ctrl K</kbd></button>
       <span class="chip hide-m" id="clock"></span>
+      <button class="btn ic ghost bell" id="bell" title="Avisos"><svg class="i" viewBox="0 0 24 24"><path d="M6 16v-5a6 6 0 0 1 12 0v5l2 2H4zM10 20a2 2 0 0 0 4 0"/></svg><em id="bell-n" hidden></em></button>
       <button class="btn ic ghost" id="reload" title="Refresh"></button>
     </header>
     <div class="view" id="view">
@@ -614,7 +627,7 @@ html.tv{font-size:16px}html.tv .btn{padding:11px 18px}html.tv nav button{padding
  * to any other device). */
 var CFG_FILE="/data/neohen/web/ui.json";
 var CFG_DEF={lang:"auto",accent:"blue",zoom:100,start:"panel",hide:[],refresh:5,temp:"c",cover:"m",anim:true,grid:true,
-  confirmLaunch:false,libFilter:"games",libSort:"name",clock12:false,toast:4,stats10:10};
+  confirmLaunch:false,libFilter:"games",libSort:"name",clock12:false,toast:4,stats10:10,sysNote:false};
 var CFG={};(function(){var o={};try{o=JSON.parse(localStorage.getItem("neoweb_ui")||"{}")||{}}catch(e){}
   for(var k in CFG_DEF)CFG[k]=o[k]!==undefined&&typeof o[k]===typeof CFG_DEF[k]?o[k]:CFG_DEF[k]})();
 var ES=CFG.lang==="es"||(CFG.lang!=="en"&&/^es\b/i.test(navigator.language||""));
@@ -743,7 +756,7 @@ function show(v,push){
   $("vt").textContent=def[1];$("vs").textContent=def[2];
   if(push)history.replaceState(null,"","#"+(v==="game"?"game="+S.gp.id:v));
   $("side").className="side";paintNav();render();$("view").scrollTop=0;
-  if(v==="files")loadDir(S.cwd);if(v==="procs")loadProcs();if(v==="system"){loadLog();S.fanEdit=null;loadFan();loadLnch()}if(v==="transfers")loadJobs();if(v==="payloads"){loadPay();loadStore()}if(v==="themes")loadThemes();if(v==="saves")loadSaves();if(v==="captures")loadCaps();if(v==="cheats")loadCheats();if(v==="stats")loadStats();if(v==="trophies")loadTrophies();if(v==="smp")loadSmp();if(v==="fixes")loadFixes();if(v==="remote")loadRemote();if(v==="game")loadGame();
+  if(v==="files")loadDir(S.cwd);if(v==="procs")loadProcs();if(v==="system"){loadLog();S.fanEdit=null;loadFan();loadLnch()}if(v==="transfers")loadJobs();if(v==="payloads"){loadPay();loadStore()}if(v==="themes")loadThemes();if(v==="saves")loadSaves();if(v==="captures")loadCaps();if(v==="cheats")loadCheats();if(v==="stats")loadStats();if(v==="trophies")loadTrophies();if(v==="smp")loadSmp();if(v==="fixes")loadFixes();if(v==="settings"&&S.full)api("/api/update/notice").then(function(j){S.updOn=j.enabled;if(S.view==="settings")paintCfg()}).catch(function(){});if(v==="remote")loadRemote();if(v==="game")loadGame();
 }
 $("nav").onclick=function(e){var b=e.target.closest("button[data-v]");if(b)show(b.getAttribute("data-v"),true)};
 window.addEventListener("hashchange",function(){var h=location.hash.slice(1);if(h!==S.view&&h!=="game="+S.gp.id)show(h)});
@@ -1002,13 +1015,46 @@ function gameAct(id,k,v){
         watchJob(j.job,function(job){toast(job.state==="done"?title(id)+L(" ya está en el "," is now on the ")+whereName(r.where):L("No se pudo mover: ","Could not move: ")+(job.error||job.state),job.state!=="done");if(S.gmId===id)gameBox(id,true)})}).catch(fail)})}
 }
 
+/* ------------------------------------------------------------ notices
+ * What happened while the page was open (and before: they are kept in this
+ * browser): jobs that ended, uploads, games opened and closed, a hot console,
+ * a new NeoHEN, a Remote Play pairing. Browsers only allow system
+ * notifications on https or localhost; where they do, and the user said yes,
+ * they go there too. */
+S.ev=(function(){try{return JSON.parse(localStorage.getItem("nw-ev")||"[]")}catch(_){return []}})();
+S.evSeen=+(function(){try{return localStorage.getItem("nw-ev-seen")||0}catch(_){return 0}})();
+function evSave(){try{localStorage.setItem("nw-ev",JSON.stringify(S.ev.slice(0,60)));localStorage.setItem("nw-ev-seen",String(S.evSeen))}catch(_){}}
+function note(kind,text,sub){
+  var e={k:kind,t:text,s:sub||"",ts:Date.now()};S.ev.unshift(e);S.ev=S.ev.slice(0,60);evSave();evBadge();
+  if($("evp"))evPaint();
+  if(CFG.sysNote&&window.isSecureContext&&window.Notification&&Notification.permission==="granted"&&document.hidden)try{new Notification("NeoWEB",{body:text+(sub?"\n"+sub:""),tag:"nw"+e.ts})}catch(_){}
+}
+function evUnread(){return S.ev.filter(function(e){return e.ts>S.evSeen}).length}
+function evBadge(){var n=evUnread(),b=$("bell-n");b.hidden=!n;b.textContent=n>9?"9+":n;document.title=(n?"("+n+") ":"")+"NeoWEB"}
+function evPaint(){var p=$("evp");if(!p)return;
+  p.innerHTML='<div class="hd">'+ic("bell")+'<b>'+L("Avisos","Notices")+'</b><button class="btn sm ghost" id="ev-clr">'+L("Vaciar","Clear")+'</button><button class="btn ic sm ghost" id="ev-x">'+ic("x")+'</button></div><div class="ls">'+
+    (S.ev.length?S.ev.map(function(e){return '<div class="ev '+e.k+(e.ts<=S.evPrev?" old":"")+'"><i></i><div><div>'+esc(e.t)+'</div><small>'+(e.s?esc(e.s)+" · ":"")+new Date(e.ts).toLocaleString()+'</small></div></div>'}).join(""):'<div class="empty">'+L("Nada por ahora.","Nothing yet.")+'</div>')+'</div>';
+  $("ev-x").onclick=evClose;$("ev-clr").onclick=function(){S.ev=[];evSave();evPaint();evBadge()}}
+function evClose(){var p=$("evp");if(p)p.remove()}
+$("bell").onclick=function(e){e.stopPropagation();if($("evp")){evClose();return}
+  var p=document.createElement("div");p.id="evp";p.className="card";document.body.appendChild(p);
+  S.evPrev=S.evSeen;S.evSeen=Date.now();evSave();evPaint();evBadge()};
+document.addEventListener("click",function(e){var p=$("evp");if(p&&!p.contains(e.target)&&e.target.id!=="bell")evClose()});
+$("bell").title=L("Avisos","Notices");evBadge();
+/* jobs: one look every 10 s is enough to say when one ends */
+S.jobSeen={};
+function evJobs(list){(list||[]).forEach(function(j){var was=S.jobSeen[j.id];S.jobSeen[j.id]=j.state;
+  if(was==="running"&&j.state!=="running")note(j.state==="done"?"ok":j.state==="cancelled"?"warn":"bad",(j.state==="done"?L("Terminado: ","Done: "):j.state==="cancelled"?L("Cancelado: ","Cancelled: "):L("Falló: ","Failed: "))+(j.title||j.type),j.error||"")})}
+setInterval(function(){if(S.full&&S.online)api("/api/jobs").then(function(j){evJobs(j.jobs)}).catch(function(){})},10000);
+
 /* ------------------------------------------------------------ Remote Play
  * Only the Toolbox (inside the PS5 menu) can read the accounts and ask for a
  * PIN: the page leaves it a request and reads back what it wrote. */
 S.rp={st:null,known:false,busy:"",asked:0,tm:0};
 function loadRemote(){
   if(!S.full)return Promise.resolve();
-  return api("/api/remoteplay").then(function(j){var rp=S.rp;rp.known=j.known;rp.st=j.status||null;rp.now=j.now||0;rp.at=Date.now();
+  return api("/api/remoteplay").then(function(j){var rp=S.rp,was=rp.st&&rp.st.state;rp.known=j.known;rp.st=j.status||null;rp.now=j.now||0;rp.at=Date.now();
+    if(was==="waiting"&&rp.st&&rp.st.state==="paired")note("ok",L("Remote Play vinculado","Remote Play paired"));else if(was==="waiting"&&rp.st&&rp.st.state==="failed")note("bad",L("La vinculación de Remote Play falló","Remote Play pairing failed"));
     if(rp.busy&&rp.st&&rp.st.updated>=rp.asked)rp.busy="";
     if(S.view==="remote")paintRemote();
     clearTimeout(rp.tm);
@@ -1323,8 +1369,8 @@ function runUp(u){
     if(s.exists&&s.type==="file"&&s.size>0&&s.size<u.size){u.done=u.base=s.size;u.resumed=true;return true}
     if(s.exists)return ask(L("Ya existe ","Already there: ")+u.name,L("¿Sustituirlo por el que estás subiendo?","Replace it with the one you are uploading?"),L("Sustituir","Replace"),true);
     return true},function(){return true})
-  .then(function(go){if(!go){u.st="skip";return}u.t0=Date.now();return loop(u,0).then(function(){if(u.st==="run"){u.st="ok";if(u.after)u.after()}})})
-  .catch(function(e){u.st="err";u.err=e.message});
+  .then(function(go){if(!go){u.st="skip";return}u.t0=Date.now();return loop(u,0).then(function(){if(u.st==="run"){u.st="ok";note("ok",L("Subido: ","Uploaded: ")+u.name,u.dest);if(u.after)u.after()}})})
+  .catch(function(e){u.st="err";u.err=e.message;note("bad",L("Subida fallida: ","Upload failed: ")+u.name,e.message)});
 }
 function loop(u,tries){
   if(u.cancel){u.st="cancel";return Promise.resolve()}
@@ -1368,7 +1414,7 @@ window.addEventListener("drop",function(e){dzN=0;$("dropz").className="dropz";
   var dir=S.cwd;gather(e.dataTransfer.items).then(function(l){enqueue(l,dir)})});
 
 /* ------------------------------------------------------------ transfers */
-function loadJobs(){if(!S.full)return Promise.resolve();return api("/api/jobs").then(function(j){S.jobs=j.jobs||[];paintNav();if(S.view==="transfers")paintTr()}).catch(function(){})}
+function loadJobs(){if(!S.full)return Promise.resolve();return api("/api/jobs").then(function(j){S.jobs=j.jobs||[];evJobs(S.jobs);paintNav();if(S.view==="transfers")paintTr()}).catch(function(){})}
 function watchJob(id,cb){(function p(){api("/api/jobs?id="+id).then(function(j){if(j.job.state==="running")setTimeout(p,700);else{loadJobs();cb(j.job)}}).catch(fail)})()}
 function paintTr(){
   var ups=S.ups.slice().reverse().map(function(u){var i=S.ups.indexOf(u),pct=u.size?Math.round((u.done+(u.cur||0))/u.size*100):(u.st==="ok"?100:0);
@@ -1843,7 +1889,7 @@ function paintCfg(){
   function seg(k,opts,reload){return '<div class="seg">'+opts.map(function(o){return '<button data-ck="'+k+'" data-cv="'+o[0]+'"'+(reload?' data-cr="1"':"")+' class="'+(String(CFG[k])===String(o[0])?"on":"")+'">'+o[1]+'</button>'}).join("")+'</div>'}
   function sw(k){return '<label class="sw"><input type="checkbox" data-cb="'+k+'"'+(CFG[k]?" checked":"")+'><i></i></label>'}
   function opt(t,d,c){return '<div class="opt"><div class="t"><b>'+t+'</b>'+(d?'<small>'+d+'</small>':"")+'</div>'+c+'</div>'}
-  var vis=VIEWS.filter(function(v){return v[0]!=="panel"&&v[0]!=="settings"&&(!v[3]||S.full)});
+  var vis=VIEWS.filter(function(v){return v[0]!=="panel"&&v[0]!=="settings"&&v[1]&&!v[4]&&(!v[3]||S.full)});
   $("v-settings").innerHTML='<div class="cfg">'+
     '<div class="card"><h3 class="h">'+L("Aspecto","Looks")+'</h3>'+
       opt(L("Color","Colour"),L("El acento de botones, gráficas y resaltados","The accent of buttons, charts and highlights"),'<div class="sws">'+Object.keys(ACC).map(function(k){return '<button data-ck="accent" data-cv="'+k+'" class="'+(CFG.accent===k?"on":"")+'" style="background:linear-gradient(135deg,'+ACC[k][1]+','+ACC[k][0]+' 50%,'+ACC[k][2]+')" title="'+k+'"></button>'}).join("")+'</div>')+
@@ -1852,7 +1898,7 @@ function paintCfg(){
       opt(L("Fondo con rejilla","Grid background"),L("El dibujo de fondo de la página","The pattern behind the page"),sw("grid"))+
       opt(L("Idioma","Language"),L("Automático usa el del navegador","Automatic follows the browser"),seg("lang",[["auto",L("Automático","Automatic")],["es","Español"],["en","English"]],1))+'</div>'+
     '<div class="card"><h3 class="h">'+L("Inicio y menú","Start and menu")+'</h3>'+
-      opt(L("Abrir en","Open on"),L("La sección que sale al entrar","The section shown when you come in"),'<select class="in" data-cs="start">'+VIEWS.filter(function(v){return !v[3]||S.full}).map(function(v){return '<option value="'+v[0]+'"'+(CFG.start===v[0]?" selected":"")+'>'+v[1]+'</option>'}).join("")+'</select>')+
+      opt(L("Abrir en","Open on"),L("La sección que sale al entrar","The section shown when you come in"),'<select class="in" data-cs="start">'+VIEWS.filter(function(v){return v[1]&&!v[4]&&(!v[3]||S.full)}).map(function(v){return '<option value="'+v[0]+'"'+(CFG.start===v[0]?" selected":"")+'>'+v[1]+'</option>'}).join("")+'</select>')+
       '<div class="opt" style="display:block"><div class="t"><b>'+L("Secciones del menú","Menu sections")+'</b><small>'+L("Desmarca las que no uses; siguen ahí si las vuelves a marcar","Untick the ones you do not use; they are still there if you tick them again")+'</small></div>'+
         '<div class="hidel">'+vis.map(function(v){return '<label class="sw"><input type="checkbox" data-hide="'+v[0]+'"'+(CFG.hide.indexOf(v[0])<0?" checked":"")+'><i></i>'+v[1]+'</label>'}).join("")+'</div></div>'+
       opt(L("Reloj","Clock"),"",seg("clock12",[[false,"24 h"],[true,"12 h"]]))+'</div>'+
@@ -1866,6 +1912,10 @@ function paintCfg(){
       opt(L("Temperatura en","Temperature in"),L("El umbral del ventilador va siempre en °C","The fan threshold is always in °C"),seg("temp",[["c","°C"],["f","°F"]]))+
       opt(L("Racha: minutos al día","Streak: minutes a day"),L("Lo mínimo jugado para que un día cuente","The least played for a day to count"),seg("stats10",[[1,"1"],[10,"10"],[30,"30"],[60,"60"]]))+
       opt(L("Avisos en pantalla","On-screen notices"),L("Cuánto duran los mensajes de esta página","How long this page's messages stay"),seg("toast",[[2,"2 s"],[4,"4 s"],[8,"8 s"]]))+'</div>'+
+    '<div class="card"><h3 class="h">'+L("Avisos","Notices")+'</h3>'+
+      opt(L("Notificaciones del sistema","System notifications"),window.isSecureContext&&window.Notification?L("Los avisos de la campana también salen en el escritorio o el móvil cuando esta pestaña no está a la vista","The bell's notices also show on the desktop or phone when this tab is not in view"):L("Este navegador solo las permite en páginas https o en localhost; NeoWEB va por http en tu red. Los avisos siguen en la campana.","This browser only allows them on https pages or on localhost; NeoWEB runs over http on your network. The notices are still in the bell."),
+        window.isSecureContext&&window.Notification?sw("sysNote"):'<span class="chip">'+L("no disponible","not available")+'</span>')+
+      (S.full?opt(L("Versión nueva, en la tele","New version, on the TV"),L("NeoHEN mira GitHub al arrancar y cada 12 h y lo dice una vez en la PS5. No descarga nada.","NeoHEN checks GitHub at start and every 12 h and says it once on the PS5. Nothing is downloaded."),'<label class="sw"><input type="checkbox" id="cfg-upd"'+(S.updOn!==false?" checked":"")+'><i></i></label>'):"")+'</div>'+
     '<div class="card"><h3 class="h">'+L("Estos ajustes","These settings")+'</h3><p style="margin:0 0 14px;color:var(--dim)">'+
       (S.full?L("Se guardan en la consola, así que valen en cualquier navegador desde el que entres.","They are kept on the console, so they hold in any browser you come in from.")
         :L("En la variante restringida se guardan solo en este navegador.","In the restricted build they are kept in this browser only."))+'</p>'+
@@ -1880,6 +1930,8 @@ $("v-settings").addEventListener("click",function(e){
     if(!ok)return;for(var x in CFG_DEF)CFG[x]=JSON.parse(JSON.stringify(CFG_DEF[x]));cfgSet("lang",CFG_DEF.lang,true)})});
 $("v-settings").addEventListener("change",function(e){
   var t=e.target,k;
+  if(t.id==="cfg-upd"){api("/api/update/notice",{enabled:t.checked}).then(function(j){S.updOn=j.enabled;toast(L("Hecho","Done"))}).catch(fail);return}
+  if(t.getAttribute("data-cb")==="sysNote"&&t.checked&&window.Notification&&Notification.permission!=="granted"){Notification.requestPermission().then(function(r){cfgSet("sysNote",r==="granted");if(r!=="granted")toast(L("El navegador no dio permiso","The browser did not allow it"),true)});return}
   if((k=t.getAttribute("data-cb")))cfgSet(k,t.checked);
   else if((k=t.getAttribute("data-cs")))cfgSet(k,t.value);
   else if((k=t.getAttribute("data-hide"))){var h=CFG.hide.filter(function(x){return x!==k});if(!t.checked)h.push(k);cfgSet("hide",h)}});
@@ -2383,6 +2435,7 @@ function checkUpd(cur){
     try{sessionStorage.setItem("nw-upd",JSON.stringify({t:Date.now(),rel:rel}))}catch(_){}return rel}))
   .then(function(rel){var best=null;rel.forEach(function(x){if(!best||verCmp(verKey(x.tag),verKey(best.tag))>0)best=x});
     if(best&&verCmp(verKey(best.tag),mine)>0){S.upd.new=best;
+      if(!S.ev.some(function(e){return e.t.indexOf(best.tag)>=0}))note("ok",L("Hay NeoHEN ","NeoHEN ")+best.tag.replace(/^v/,"")+L(""," is out"),L("Tienes ","You have ")+cur);
       if(S.view==="panel")paintPanel()}})
   .catch(function(){});
 }
@@ -2402,7 +2455,11 @@ function fast(){
     $("ver").textContent="NeoWEB · v"+(i.version||"");
     if(i.neohen&&!S.upd)checkUpd(i.neohen);
     if(i.cpuTemp>0||i.socTemp>0){S.hist.push([i.cpuTemp|0,i.socTemp|0]);if(S.hist.length>120)S.hist.shift()}
-    var r=i.running&&i.running.titleId||null,ch=r!==S.running;S.running=r;
+    var r=i.running&&i.running.titleId||null,ch=r!==S.running;
+    /* the first answer only says how things are; changes after it are news */
+    if(ch&&S.runKnown){if(S.running)note("",L("Cerrado: ","Closed: ")+title(S.running),S.running);if(r)note("",L("Abierto: ","Opened: ")+title(r),r)}
+    S.runKnown=true;S.running=r;
+    var hot=Math.max(i.cpuTemp|0,i.socTemp|0);if(hot>=85&&Date.now()-(S.hotAt||0)>6e5){S.hotAt=Date.now();note("warn",L("Consola caliente: ","Console running hot: ")+hot+" °C",L("Mira el ventilador en Sistema","Check the fan in System"))}
     $("mini").hidden=!r;if(r){$("mini-i").src="/apps/icon?id="+r;$("mini-k").textContent=L("Jugando","Playing");$("mini-t").textContent=title(r)}
     if(S.view==="panel")paintPanel();else if(ch&&S.view==="library")paintGrid();
   }).catch(function(){online(false)});
