@@ -514,6 +514,7 @@
     "notify.remote_play.enable_failed_fmt": "Αδυναμία ενεργοποίησης Remote Play: 0x%X",
     "notify.remote_play.pairing_failed_fmt": "Η σύζευξη Remote Play απέτυχε: 0x%X",
     "notify.remote_play.paired": "Η συσκευή Remote Play συζεύχθηκε.",
+    "notify.remote_play.activated_fmt": "Account %s activated without PSN",
     "notify.remote_play.pairing_start_failed": "Αδυναμία έναρξης σύζευξης Remote Play",
     "notify.remote_play.waiting": "Αναμονή σύνδεσης συσκευής Remote Play",
     "notify.remote_play.pairing_cancelled": "Η σύζευξη Remote Play ακυρώθηκε.",

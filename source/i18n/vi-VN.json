@@ -514,6 +514,7 @@
     "notify.remote_play.enable_failed_fmt": "Không bật được Remote Play: 0x%X",
     "notify.remote_play.pairing_failed_fmt": "Ghép nối Remote Play thất bại: 0x%X",
     "notify.remote_play.paired": "Đã ghép nối thiết bị Remote Play.",
+    "notify.remote_play.activated_fmt": "Account %s activated without PSN",
     "notify.remote_play.pairing_start_failed": "Không bắt đầu được ghép nối Remote Play",
     "notify.remote_play.waiting": "Đang chờ thiết bị Remote Play kết nối",
     "notify.remote_play.pairing_cancelled": "Đã hủy ghép nối Remote Play.",

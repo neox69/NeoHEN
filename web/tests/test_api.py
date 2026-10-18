@@ -529,12 +529,27 @@ class PayloadTest(unittest.TestCase):
         self.assertEqual((st, j["drive"]), (200, "/mnt/usb0"))
 
     def test_remoteplay(self):
+        r = f"{self.root}/data/neohen/web"
+        for f in ("remoteplay.json", "rp_request.json"):
+            if os.path.exists(f"{r}/{f}"):
+                os.unlink(f"{r}/{f}")
         _, j = self.api.get("/api/remoteplay")
         self.assertFalse(j["known"])
-        with open(f"{self.root}/data/neohen/web/remoteplay.json", "w") as f:
-            f.write('{"accountId":"AAECAwQFBgc=","accountIdDecimal":"506097522914230528","pin":"12345678","time":1792100000}\n')
+        # the request is left for the Toolbox
+        self.api.post("/api/remoteplay", {"op": "activate", "slot": 2})
+        with open(f"{r}/rp_request.json") as f:
+            self.assertEqual(json.load(f), {"op": "activate", "slot": 2})
+        st, body, _ = self.api.req("POST", "/api/remoteplay", body={"op": "rm -rf"})
+        self.assertEqual(st, 400, body)
+        st, body, _ = self.api.req("POST", "/api/remoteplay", body={"op": "activate", "slot": 99})
+        self.assertEqual(st, 400, body)
+        # and what the Toolbox writes comes back as it is
+        status = {"users": [{"slot": 1, "name": "NeoX", "activated": True, "accountId": "AAECAwQFBgc="}],
+                  "pin": "12345678", "state": "waiting", "time": 1792100000}
+        with open(f"{r}/remoteplay.json", "w") as f:
+            json.dump(status, f)
         _, j = self.api.get("/api/remoteplay")
-        self.assertEqual((j["known"], j["accountId"], j["pin"]), (True, "AAECAwQFBgc=", "12345678"))
+        self.assertEqual((j["known"], j["status"]), (True, status))
 
     def test_launcher(self):
         # the NeoWEB icon in Media: a web based media app pointing at this page

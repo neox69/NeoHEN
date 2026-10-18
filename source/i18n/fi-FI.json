@@ -514,6 +514,7 @@
     "notify.remote_play.enable_failed_fmt": "Remote Playta ei voitu ottaa käyttöön: 0x%X",
     "notify.remote_play.pairing_failed_fmt": "Remote Play -paritus epäonnistui: 0x%X",
     "notify.remote_play.paired": "Remote Play -laite paritettu.",
+    "notify.remote_play.activated_fmt": "Account %s activated without PSN",
     "notify.remote_play.pairing_start_failed": "Remote Play -paritusta ei voitu aloittaa",
     "notify.remote_play.waiting": "Odotetaan Remote Play -laitteen yhdistämistä",
     "notify.remote_play.pairing_cancelled": "Remote Play -paritus peruttu.",

@@ -514,6 +514,7 @@
     "notify.remote_play.enable_failed_fmt": "Nelze zapnout Remote Play: 0x%X",
     "notify.remote_play.pairing_failed_fmt": "Párování Remote Play selhalo: 0x%X",
     "notify.remote_play.paired": "Zařízení Remote Play spárováno.",
+    "notify.remote_play.activated_fmt": "Account %s activated without PSN",
     "notify.remote_play.pairing_start_failed": "Nelze zahájit párování Remote Play",
     "notify.remote_play.waiting": "Čekání na připojení zařízení Remote Play",
     "notify.remote_play.pairing_cancelled": "Párování Remote Play zrušeno.",

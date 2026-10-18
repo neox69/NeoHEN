@@ -14,6 +14,7 @@ You should have received a copy of the GNU General Public License
 along with this program; see the file COPYING. If not, see
 <http://www.gnu.org/licenses/>.  */
 
+#include "remote_play.hpp"
 #include "neo_actions.hpp"
 #include <onion/brand.h>
 #include "detour.h"
@@ -849,6 +850,7 @@ int main(int argc, char const* argv[]) {
    */
   shellui_request_home_reload();
   neo_theme_watch_start();
+  remote_play_web_start();
   hooked = true;
   run_keep_alive();
   return 0;

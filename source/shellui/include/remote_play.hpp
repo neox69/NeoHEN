@@ -6,6 +6,7 @@
 #include "monodef.h"
 
 #include <atomic>
+#include <cstdint>
 #include <string>
 
 namespace remote_play {
@@ -31,6 +32,11 @@ inline bool try_finish_pairing(std::atomic<PairingState> &state,
 extern std::string g_remote_play_info;
 
 void generate_remote_play_xml(std::string &xml_buffer);
+
+/** NeoHEN: carries out NeoWEB's Remote Play requests (see remote_play.cpp). */
+void remote_play_web_start();
+/** A PIN shown by the Toolbox page, so NeoWEB shows it too. */
+void remote_play_web_note_pin(uint32_t pin);
 
 /** Remember the managed SettingPage instance that owns Remote Play pairing. */
 void remote_play_bind_page(MonoObject *page);

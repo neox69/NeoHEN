@@ -514,6 +514,7 @@
     "notify.remote_play.enable_failed_fmt": "Não foi possível ativar o Uso remoto: 0x%X",
     "notify.remote_play.pairing_failed_fmt": "Falha ao emparelhar o Uso remoto: 0x%X",
     "notify.remote_play.paired": "Dispositivo emparelhado.",
+    "notify.remote_play.activated_fmt": "Account %s activated without PSN",
     "notify.remote_play.pairing_start_failed": "Não foi possível iniciar o emparelhamento do Uso remoto",
     "notify.remote_play.waiting": "Aguardando a ligação de um dispositivo de Uso remoto",
     "notify.remote_play.pairing_cancelled": "Emparelhamento do Uso remoto cancelado.",

@@ -514,6 +514,7 @@
     "notify.remote_play.enable_failed_fmt": "Nie można włączyć Gry zdalnej: 0x%X",
     "notify.remote_play.pairing_failed_fmt": "Parowanie Gry zdalnej nie powiodło się: 0x%X",
     "notify.remote_play.paired": "Urządzenie Gry zdalnej sparowane.",
+    "notify.remote_play.activated_fmt": "Account %s activated without PSN",
     "notify.remote_play.pairing_start_failed": "Nie można rozpocząć parowania Gry zdalnej",
     "notify.remote_play.waiting": "Oczekiwanie na połączenie urządzenia Gry zdalnej",
     "notify.remote_play.pairing_cancelled": "Parowanie Gry zdalnej anulowane.",

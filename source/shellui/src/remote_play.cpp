@@ -11,6 +11,8 @@
 #include "ps5_settings_ui.hpp"
 #include "remote_play.hpp"
 #include "toolbox_i18n.hpp"
+#include "onion_cjson.hpp"
+#include <unistd.h>
 
 #include <onion/notify.h>
 
@@ -256,14 +258,7 @@ void generate_remote_play_xml(std::string &xml_buffer) {
           << pin_text;
   g_remote_play_info = details.str();
   /* NeoHEN: NeoWEB shows these on the PC, to paste into Chiaki or PXPlay. */
-  if (FILE *f = fopen(ONION_USER_DATA_DIR "/web/remoteplay.json", "wb")) {
-    fprintf(f,
-            "{\"accountId\":\"%s\",\"accountIdDecimal\":\"%llu\","
-            "\"pin\":\"%04u%04u\",\"time\":%lld}\n",
-            account_id, static_cast<unsigned long long>(decoded_account_id),
-            pin / 10000, pin % 10000, static_cast<long long>(time(nullptr)));
-    fclose(f);
-  }
+  remote_play_web_note_pin(pin);
 
   page.label("id_remote_play_pin", pin_text, ps5ui::Style::Center)
       .label("id_remote_play_account",
@@ -274,4 +269,202 @@ void generate_remote_play_xml(std::string &xml_buffer) {
                 std::nullopt, std::nullopt, std::nullopt,
                 ps5ui::Style::Center);
   xml_buffer = page.build();
+}
+
+/* ------------------------------------------------------------------------
+ * NeoHEN: Remote Play from NeoWEB.
+ *
+ * Only SceShellUI can read and write the accounts and ask for a pairing PIN,
+ * so NeoWEB leaves a request in web/rp_request.json and this thread, started
+ * with the Toolbox, carries it out and keeps web/remoteplay.json up to date:
+ * every user with its account ID (base64 as Chiaki and PXPlay want it, and in
+ * decimal), the PIN and how the pairing is going. */
+namespace {
+constexpr const char *kRpRequest = ONION_USER_DATA_DIR "/web/rp_request.json";
+constexpr const char *kRpStatus = ONION_USER_DATA_DIR "/web/remoteplay.json";
+constexpr int kPinSeconds = 300; /* a PIN not used by then is withdrawn */
+
+uint32_t g_web_pin = 0;
+time_t g_web_pin_time = 0;
+std::string g_last_op, g_last_error;
+bool g_last_ok = true;
+
+const char *state_name(remote_play::PairingState s) {
+  switch (s) {
+  case remote_play::PairingState::Waiting: return "waiting";
+  case remote_play::PairingState::Paired: return "paired";
+  case remote_play::PairingState::Failed: return "failed";
+  case remote_play::PairingState::Cancelled: return "cancelled";
+  default: return "idle";
+  }
+}
+
+void write_status() {
+  Activator activator(true);
+  int fg_user = -1;
+  sceUserServiceGetForegroundUser(&fg_user);
+  cJSON *root = cJSON_CreateObject();
+  cJSON *users = cJSON_AddArrayToObject(root, "users");
+  for (int32_t slot = 1; slot <= 16; ++slot) {
+    int32_t user_id = -1;
+    uint64_t account = 0;
+    std::string type;
+    if (!activator.SlotUser(slot, user_id, account, type))
+      continue;
+    char name[100] = {};
+    sceUserServiceGetUserName(user_id, name, sizeof(name));
+    char b64[16] = {};
+    char dec[24] = {};
+    if (account) {
+      base64_encode(account, b64, sizeof(b64));
+      snprintf(dec, sizeof(dec), "%llu", static_cast<unsigned long long>(account));
+    }
+    cJSON *u = cJSON_CreateObject();
+    cJSON_AddNumberToObject(u, "slot", slot);
+    cJSON_AddNumberToObject(u, "userId", user_id);
+    cJSON_AddStringToObject(u, "name", name);
+    cJSON_AddBoolToObject(u, "activated", account != 0);
+    cJSON_AddStringToObject(u, "accountId", b64);
+    cJSON_AddStringToObject(u, "accountIdDecimal", dec);
+    cJSON_AddStringToObject(u, "type", type.c_str());
+    cJSON_AddBoolToObject(u, "foreground", user_id == fg_user);
+    cJSON_AddItemToArray(users, u);
+    if (user_id == fg_user) {
+      cJSON_AddStringToObject(root, "accountId", b64);
+      cJSON_AddStringToObject(root, "accountIdDecimal", dec);
+    }
+  }
+  char pin[12] = "";
+  if (g_web_pin)
+    snprintf(pin, sizeof(pin), "%04u%04u", g_web_pin / 10000, g_web_pin % 10000);
+  cJSON_AddStringToObject(root, "pin", pin);
+  cJSON_AddNumberToObject(root, "time", static_cast<double>(g_web_pin_time));
+  cJSON_AddNumberToObject(root, "pinSeconds", kPinSeconds);
+  cJSON_AddStringToObject(root, "state",
+                          state_name(g_pairing_state.load(std::memory_order_acquire)));
+  cJSON_AddStringToObject(root, "lastOp", g_last_op.c_str());
+  cJSON_AddBoolToObject(root, "lastOk", g_last_ok);
+  cJSON_AddStringToObject(root, "lastError", g_last_error.c_str());
+  cJSON_AddNumberToObject(root, "updated", static_cast<double>(time(nullptr)));
+  char *text = cJSON_PrintUnformatted(root);
+  cJSON_Delete(root);
+  if (!text)
+    return;
+  const std::string tmp = std::string(kRpStatus) + ".tmp";
+  if (FILE *f = fopen(tmp.c_str(), "wb")) {
+    fputs(text, f);
+    fclose(f);
+    rename(tmp.c_str(), kRpStatus);
+  }
+  cJSON_free(text);
+}
+
+void web_request(const std::string &op, int slot) {
+  g_last_op = op;
+  g_last_ok = false;
+  g_last_error.clear();
+  if (op == "pin") {
+    static bool initialized = false;
+    Activator activator(true);
+    if (!activator.Valid()) {
+      g_last_error = "account";
+    } else if (activator.IsNotActivated()) {
+      g_last_error = "not_activated";
+    } else {
+      if (!initialized) {
+        initialize_remote_play();
+        initialized = true;
+      }
+      const uint32_t pin = generate_pin_code();
+      if (pin) {
+        g_web_pin = pin;
+        g_web_pin_time = time(nullptr);
+        g_last_ok = true;
+      } else {
+        g_last_error = "pin";
+      }
+    }
+  } else if (op == "cancel") {
+    if (remote_play::try_finish_pairing(g_pairing_state,
+                                        remote_play::PairingState::Cancelled))
+      invalidate_pin_registration("web_cancel");
+    g_web_pin = 0;
+    g_last_ok = true;
+  } else if (op == "activate") {
+    Activator activator(true);
+    int32_t user_id = -1;
+    uint64_t account = 0;
+    std::string type;
+    char name[100] = {};
+    if (activator.SlotUser(slot, user_id, account, type))
+      sceUserServiceGetUserName(user_id, name, sizeof(name));
+    g_last_ok = name[0] && activator.ActivateSlot(slot, name);
+    if (!g_last_ok)
+      g_last_error = "activate";
+    else
+      onion_notify_debug(/*show_watermark=*/0, "notify.remote_play.activated_fmt", name);
+  } else {
+    g_last_ok = true; /* "list": the status below is the answer */
+  }
+  LOG_INFO("remote play from NeoWEB: %s slot=%d ok=%d %s", op.c_str(), slot,
+           g_last_ok ? 1 : 0, g_last_error.c_str());
+}
+
+void *web_thread(void *) {
+  remote_play::PairingState last = remote_play::PairingState::Idle;
+  sleep(5); /* let the menu settle, then say who is there */
+  write_status();
+  for (;;) {
+    sleep(1);
+    std::string text;
+    if (FILE *f = fopen(kRpRequest, "rb")) {
+      char buf[1024];
+      size_t n;
+      while ((n = fread(buf, 1, sizeof(buf), f)) > 0 && text.size() < 4096)
+        text.append(buf, n);
+      fclose(f);
+      unlink(kRpRequest);
+    }
+    bool changed = false;
+    if (!text.empty()) {
+      onion_cjson::Root req(text);
+      web_request(req ? onion_cjson::string_item(req.get(), "op", "list") : "list",
+                  req ? onion_cjson::int_item(req.get(), "slot", 0) : 0);
+      changed = true;
+    }
+    const remote_play::PairingState now = g_pairing_state.load(std::memory_order_acquire);
+    if (now == remote_play::PairingState::Waiting && g_web_pin &&
+        time(nullptr) - g_web_pin_time > kPinSeconds &&
+        remote_play::try_finish_pairing(g_pairing_state,
+                                        remote_play::PairingState::Cancelled)) {
+      invalidate_pin_registration("web_pin_expired");
+      g_web_pin = 0;
+    }
+    if (now != last) {
+      if (now != remote_play::PairingState::Waiting)
+        g_web_pin = 0;
+      last = now;
+      changed = true;
+    }
+    if (changed)
+      write_status();
+  }
+  return nullptr;
+}
+} // namespace
+
+void remote_play_web_note_pin(uint32_t pin) {
+  g_web_pin = pin;
+  g_web_pin_time = time(nullptr);
+  write_status();
+}
+
+void remote_play_web_start() {
+  static bool started = false;
+  if (started)
+    return;
+  started = true;
+  pthread_t thread;
+  if (pthread_create(&thread, nullptr, web_thread, nullptr) == 0)
+    pthread_detach(thread);
 }

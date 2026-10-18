@@ -514,6 +514,7 @@
     "notify.remote_play.enable_failed_fmt": "リモートプレイを有効にできません: 0x%X",
     "notify.remote_play.pairing_failed_fmt": "リモートプレイのペアリングに失敗しました: 0x%X",
     "notify.remote_play.paired": "リモートプレイ機器を登録しました。",
+    "notify.remote_play.activated_fmt": "Account %s activated without PSN",
     "notify.remote_play.pairing_start_failed": "リモートプレイのペアリングを開始できません",
     "notify.remote_play.waiting": "リモートプレイ機器の接続を待っています",
     "notify.remote_play.pairing_cancelled": "リモートプレイのペアリングを中止しました。",

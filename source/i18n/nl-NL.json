@@ -514,6 +514,7 @@
     "notify.remote_play.enable_failed_fmt": "Remote Play inschakelen mislukt: 0x%X",
     "notify.remote_play.pairing_failed_fmt": "Koppelen van Remote Play mislukt: 0x%X",
     "notify.remote_play.paired": "Remote Play-apparaat gekoppeld.",
+    "notify.remote_play.activated_fmt": "Account %s activated without PSN",
     "notify.remote_play.pairing_start_failed": "Koppelen van Remote Play starten mislukt",
     "notify.remote_play.waiting": "Wachten tot een Remote Play-apparaat verbindt",
     "notify.remote_play.pairing_cancelled": "Koppelen van Remote Play geannuleerd.",

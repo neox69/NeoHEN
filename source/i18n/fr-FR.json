@@ -514,6 +514,7 @@
     "notify.remote_play.enable_failed_fmt": "Impossible d'activer la Lecture à distance : 0x%X",
     "notify.remote_play.pairing_failed_fmt": "Échec de l'association Lecture à distance : 0x%X",
     "notify.remote_play.paired": "Appareil associé.",
+    "notify.remote_play.activated_fmt": "Account %s activated without PSN",
     "notify.remote_play.pairing_start_failed": "Impossible de démarrer l'association Lecture à distance",
     "notify.remote_play.waiting": "En attente de la connexion d'un appareil de Lecture à distance",
     "notify.remote_play.pairing_cancelled": "Association Lecture à distance annulée.",

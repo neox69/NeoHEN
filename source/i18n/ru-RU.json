@@ -514,6 +514,7 @@
     "notify.remote_play.enable_failed_fmt": "Не удалось включить Дистанционную игру: 0x%X",
     "notify.remote_play.pairing_failed_fmt": "Не удалось подключить устройство Дистанционной игры: 0x%X",
     "notify.remote_play.paired": "Устройство подключено.",
+    "notify.remote_play.activated_fmt": "Account %s activated without PSN",
     "notify.remote_play.pairing_start_failed": "Не удалось начать подключение Дистанционной игры",
     "notify.remote_play.waiting": "Ожидание подключения устройства Дистанционной игры",
     "notify.remote_play.pairing_cancelled": "Подключение устройства Дистанционной игры отменено.",

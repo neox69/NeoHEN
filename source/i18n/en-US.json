@@ -514,6 +514,7 @@
     "notify.remote_play.enable_failed_fmt": "Unable to enable Remote Play: 0x%X",
     "notify.remote_play.pairing_failed_fmt": "Remote Play pairing failed: 0x%X",
     "notify.remote_play.paired": "Remote Play device paired.",
+    "notify.remote_play.activated_fmt": "Account %s activated without PSN",
     "notify.remote_play.pairing_start_failed": "Unable to start Remote Play pairing",
     "notify.remote_play.waiting": "Waiting for a Remote Play device to connect",
     "notify.remote_play.pairing_cancelled": "Remote Play pairing cancelled.",

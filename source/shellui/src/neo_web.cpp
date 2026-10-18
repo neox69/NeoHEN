@@ -11,6 +11,7 @@
 #include <cerrno>
 #include <cstdio>
 #include <cstring>
+#include <ctime>
 #include <netinet/in.h>
 #include <pthread.h>
 #include <string>
@@ -133,10 +134,18 @@ struct Drive {
   double free = 0, total = 0;
 };
 
+/* The Toolbox root asks twice while it is built (status and USB groups):
+ * one answer serves both, and a slow NeoWEB costs one short wait, not two. */
 std::vector<Drive> drives() {
+  static std::vector<Drive> cached;
+  static time_t cached_at = 0;
+  if (cached_at && time(nullptr) - cached_at < 3)
+    return cached;
   std::vector<Drive> out;
   std::string body;
-  if (neoweb("GET", "/api/sys/mounts", "", body) != 200)
+  cached_at = time(nullptr);
+  cached.clear();
+  if (neoweb("GET", "/api/sys/mounts", "", body, 1) != 200)
     return out;
   onion_cjson::Root root(body);
   const cJSON *list = root ? onion_cjson::item(root.get(), "mounts") : nullptr;
@@ -152,6 +161,7 @@ std::vector<Drive> drives() {
     if (d.total > 0)
       out.push_back(d);
   }
+  cached = out;
   return out;
 }
 
@@ -179,7 +189,7 @@ template <typename Fn> void run_detached(Fn fn) {
 void neo_append_status_group(ps5ui::Group &g) {
   std::string body, address = toolbox_i18n::tr("neoweb.down");
   std::vector<std::string> lines;
-  if (neoweb("GET", "/api/sys/info", "", body, 2) == 200) {
+  if (neoweb("GET", "/api/sys/info", "", body, 1) == 200) {
     onion_cjson::Root root(body);
     const cJSON *info = root.get();
     const cJSON *ips = onion_cjson::item(info, "ips");
