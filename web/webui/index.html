@@ -1105,7 +1105,7 @@ function paintGrid(){
   $("lib-n").textContent=list.length+" "+L("títulos","titles");
   $("grid").innerHTML=list.length?list.map(function(a){var run=a.titleId===S.running,id=esc(a.titleId);
     return '<div class="game'+(run?" run":"")+'" data-id="'+id+'" tabindex="0"><div class="cover">'+
-      (a.hasIcon?'<img loading="lazy" alt="" src="/apps/icon?id='+id+'">':'<div class="ph">'+id+'</div>')+
+      (a.hasIcon?'<img loading="lazy" referrerpolicy="no-referrer" alt="" src="/apps/icon?id='+id+'">':'<div class="ph">'+id+'</div>')+
       (S.status[a.titleId]?'<div class="st '+S.status[a.titleId]+'">'+stName(S.status[a.titleId]).toUpperCase()+'</div>':"")+
       (run?'<div class="tag">'+L("EN MARCHA","RUNNING")+'</div>':'<div class="go"><button class="btn pri sm" data-id="'+id+'">'+ic("play")+L("Lanzar","Launch")+'</button></div>')+
       '</div><b title="'+esc(a.title)+'">'+esc(a.title||a.titleId)+'</b><i>'+id+(a.version?" · v"+esc(a.version.replace(/^0/,"")):"")+'</i></div>'
@@ -2558,7 +2558,7 @@ S.tc={tab:"mine",sort:"top",cat:"",page:1,items:[],total:0,loading:false,err:"",
 function tName(n){return String(n||"").replace(/[^A-Za-z0-9 ._()-]/g,"_").replace(/^[. ]+|[. ]+$/g,"").slice(0,60)}
 function loadCommunity(more){
   var c=S.tc;if(c.loading)return;c.loading=true;c.err="";if(!more){c.page=1;c.items=[]}else c.page++;paintThemes();
-  fetch(TSTORE+"/api/themes?sort="+c.sort+"&page="+c.page+"&pageSize=24"+(c.cat?"&category="+enc(c.cat):"")).then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);return r.json()}).then(function(j){
+  fetch(TSTORE+"/api/themes?sort="+c.sort+"&page="+c.page+"&pageSize=24"+(c.cat?"&category="+enc(c.cat):""),{referrerPolicy:"no-referrer"}).then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);return r.json()}).then(function(j){
     c.items=c.items.concat(j.items||[]);c.total=j.total||c.items.length}).catch(function(e){c.err=L("No se puede llegar a la tienda de temas: ","The theme store cannot be reached: ")+(e.message||e)}).then(function(){c.loading=false;if(S.view==="themes")paintThemes()})}
 function paintCommunity(){
   var c=S.tc,have={};S.themes.forEach(function(t){have[t.name]=1});
@@ -2605,7 +2605,7 @@ function askApply(name){ask(L("Tema instalado: ","Theme installed: ")+name,L("¿
 function getCommunity(id){
   var c=S.tc,it=c.items.filter(function(x){return x.id===id})[0];if(!it||c.busy[id])return;
   c.busy[id]=L("Descargando…","Downloading…");paintThemes();
-  fetch(TSTORE+it.downloadUrl).then(function(r){if(!r.ok)throw new Error(L("Descarga fallida (","Download failed (")+r.status+")");return r.arrayBuffer()}).then(function(buf){
+  fetch(TSTORE+it.downloadUrl,{referrerPolicy:"no-referrer"}).then(function(r){if(!r.ok)throw new Error(L("Descarga fallida (","Download failed (")+r.status+")");return r.arrayBuffer()}).then(function(buf){
     return p5Install(buf,it.name,it,function(t){c.busy[id]=t||L("Instalado","Installed");if(S.view==="themes"&&S.tc.tab==="community")paintThemes()})}).then(function(name){
     delete c.busy[id];paintThemes();return setTheme(name)}).catch(function(e){delete c.busy[id];paintThemes();fail(e)})}
 function setTheme(n){
