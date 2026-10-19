@@ -1105,7 +1105,7 @@ function paintGrid(){
   $("lib-n").textContent=list.length+" "+L("títulos","titles");
   $("grid").innerHTML=list.length?list.map(function(a){var run=a.titleId===S.running,id=esc(a.titleId);
     return '<div class="game'+(run?" run":"")+'" data-id="'+id+'" tabindex="0"><div class="cover">'+
-      (a.hasIcon?'<img loading="lazy" referrerpolicy="no-referrer" alt="" src="/apps/icon?id='+id+'">':'<div class="ph">'+id+'</div>')+
+      (a.hasIcon?'<img loading="lazy" alt="" src="/apps/icon?id='+id+'">':'<div class="ph">'+id+'</div>')+
       (S.status[a.titleId]?'<div class="st '+S.status[a.titleId]+'">'+stName(S.status[a.titleId]).toUpperCase()+'</div>':"")+
       (run?'<div class="tag">'+L("EN MARCHA","RUNNING")+'</div>':'<div class="go"><button class="btn pri sm" data-id="'+id+'">'+ic("play")+L("Lanzar","Launch")+'</button></div>')+
       '</div><b title="'+esc(a.title)+'">'+esc(a.title||a.titleId)+'</b><i>'+id+(a.version?" · v"+esc(a.version.replace(/^0/,"")):"")+'</i></div>'
@@ -2564,7 +2564,7 @@ function paintCommunity(){
   var c=S.tc,have={};S.themes.forEach(function(t){have[t.name]=1});
   function card(it){var n=tName(it.name),got=have[n],b=c.busy[it.id],sm=it.summary||{};
     var what=[sm.fallback?L("fondo","background"):"",sm.icons?sm.icons+" "+L("iconos","icons"):"",sm.tiles?sm.tiles+" "+L("mosaicos","tiles"):""].filter(Boolean).join(" · ");
-    return '<div class="card theme'+(S.tactive===n?" on":"")+'"><div class="pv"><img loading="lazy" alt="" src="'+esc(TSTORE+it.previewUrl)+'">'+(got?'<div class="tag">'+L("EN LA CONSOLA","ON THE CONSOLE")+'</div>':"")+'</div>'+
+    return '<div class="card theme'+(S.tactive===n?" on":"")+'"><div class="pv"><img loading="lazy" referrerpolicy="no-referrer" alt="" src="'+esc(TSTORE+it.previewUrl)+'">'+(got?'<div class="tag">'+L("EN LA CONSOLA","ON THE CONSOLE")+'</div>':"")+'</div>'+
       '<div class="bd"><b>'+esc(it.name)+'</b><small>'+esc(it.author||"")+" · "+size(it.size)+" · ♥ "+(it.likes||0)+" · ⬇ "+(it.downloads||0)+'</small><small class="desc">'+esc(what)+'</small>'+
       '<div class="acts">'+(b?'<span class="chip">'+esc(b)+'</span>':'<button class="btn pri sm" data-tcget="'+esc(it.id)+'"'+(S.ro?" disabled":"")+'>'+(got?L("Descargar de nuevo y aplicar","Download again and apply"):L("Descargar y aplicar","Download and apply"))+'</button>')+'</div></div></div>'}
   $("v-themes").innerHTML=themeTabs()+
