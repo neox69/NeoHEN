@@ -6,7 +6,7 @@
 #include "json.h"
 
 #define PS5AIO_NAME      "NeoWEB"
-#define PS5AIO_VERSION   "0.6.0"
+#define PS5AIO_VERSION   "0.7.0"
 #define PS5AIO_HTTP_PORT 8686
 #define PS5AIO_DISC_PORT 8687
 #define PS5AIO_DATA_DIR  "/data/neohen/web"
