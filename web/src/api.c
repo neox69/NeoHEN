@@ -731,6 +731,7 @@ api_init(void) {
 #ifdef NEOWEB_FULL
   api_mem_init();
   api_stats_init();
+  api_launcher_init();
 #endif
 }
 

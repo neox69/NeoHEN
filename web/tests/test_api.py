@@ -563,26 +563,28 @@ class PayloadTest(unittest.TestCase):
         self.assertFalse(os.path.exists(off))
 
     def test_launcher(self):
-        # the NeoWEB icon in Media: a web based media app pointing at this page
+        # the NeoWEB icon in Media: a web shortcut (65536 + deeplinkUri) to this
+        # page; NeoWEB puts it there when it starts
         _, j = self.api.get("/api/launcher")
-        self.assertEqual((j["titleId"], j["installed"]), ("NEOW00001", False))
+        self.assertEqual((j["titleId"], j["installed"], j["uri"]),
+                         ("NEOW00001", True, "http://127.0.0.1:8686/"))
         st, body, _ = self.api.req("POST", "/api/launcher/install", body={"uri": "ftp://x"})
         self.assertEqual(st, 400, body)
-        self.api.post("/api/launcher/install", {"uri": "http://127.0.0.1:8686/"})
+        self.api.post("/api/launcher/install", {"uri": "http://127.0.0.1:8686/x"})
         with open(f"{self.root}/user/app/NEOW00001/sce_sys/param.json") as f:
             p = json.load(f)
-        self.assertEqual((p["applicationCategoryType"], p["titleId"], p["webAppUri"]),
-                         (66048, "NEOW00001", "http://127.0.0.1:8686/"))
-        with open(f"{self.root}/system_ex/app/NEOW00001/sce_sys/param.json") as f:
-            self.assertEqual(json.load(f), p)
-        self.assertEqual(os.path.getsize(f"{self.root}/system_ex/app/NEOW00001/eboot.bin"), 0)
+        self.assertEqual((p["applicationCategoryType"], p["titleId"], p["deeplinkUri"]),
+                         (65536, "NEOW00001", "http://127.0.0.1:8686/x"))
+        self.assertFalse(os.path.exists(f"{self.root}/system_ex/app/NEOW00001"))
         with open(f"{self.root}/user/app/NEOW00001/sce_sys/icon0.png", "rb") as f:
             self.assertEqual(f.read(8), b"\x89PNG\r\n\x1a\n")
         _, j = self.api.get("/api/launcher")
-        self.assertEqual((j["installed"], j["uri"]), (True, "http://127.0.0.1:8686/"))
+        self.assertEqual((j["installed"], j["uri"]), (True, "http://127.0.0.1:8686/x"))
         self.api.post("/api/launcher/remove", {})
         self.assertFalse(os.path.exists(f"{self.root}/user/app/NEOW00001"))
-        self.assertFalse(os.path.exists(f"{self.root}/system_ex/app/NEOW00001"))
+        self.assertTrue(os.path.exists(f"{self.root}/data/neohen/web/launcher_off"))
+        self.api.post("/api/launcher/install", {"uri": "http://127.0.0.1:8686/"})
+        self.assertFalse(os.path.exists(f"{self.root}/data/neohen/web/launcher_off"))
 
     def test_neohen_version(self):
         # NeoHEN writes its version at start; the page compares it with GitHub
