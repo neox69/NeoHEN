@@ -109,6 +109,7 @@ extern const unsigned char theme_pack_end[];
 
 #define TICK_MS        25 /* how often a new menu is looked for */
 #define TICKS_PER_PASS 80 /* the theme itself is looked at every 2 s */
+#define MENU_SETTLE_S  45  /* a new menu is left alone this long */
 #define CRASH_SECONDS  20  /* a menu gone sooner than this did not start well */
 #define MAX_LAYERS     96
 #define MAX_DEPTH      8
@@ -1425,7 +1426,10 @@ main(void) {
       cover_menus();
 
       /* a pass after the notice, so it is read before the menu goes */
-      if(restart && tick >= restart_at) {
+      /* and never in a menu's first 45 s: NeoHEN waits 30 s to hook its
+       * Toolbox into a new menu, and a restart then could catch the menu
+       * half hooked */
+      if(restart && tick >= restart_at && time(NULL) - menu_since >= MENU_SETTLE_S) {
         int r = restart_menu();
         if(r == 0) {
           note("menu restarted for theme \"%s\"", applied);
