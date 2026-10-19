@@ -57,6 +57,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <netinet/in.h>
+#include <sys/mman.h>
+#include <sys/socket.h>
 #include <sys/mount.h>
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -85,8 +88,11 @@
 #define BUNDLED  THEMES "/.bundled"
 #define ONE_BG   "background.dds.zst"
 #define SOUNDS   "sounds"
+#define ICONS    "icons"
 #define UI_RCO   "Sce.PlayStation.PUI_UI3.rco"
 #define MAX_SOUNDS 48
+#define MAX_ICONS  64
+#define MAX_SVG    (16 << 10)
 
 /* every background the menu has; a theme's background.dds.zst is all of them */
 static const char *const BG_NAMES[] = {
@@ -770,6 +776,162 @@ list_sounds(const char *theme, char names[][64], int max, tally_t *t) {
   return n;
 }
 
+/* The theme's menu icons, as "iconid_home" names: icons/<name>.svg, the
+ * form ProsperoThemes' packs (.p5theme) bring them in. */
+static int
+list_icons(const char *theme, char names[][64], int max, tally_t *t) {
+  char dir_path[768];
+  struct dirent *e;
+  int n = 0;
+  DIR *dir;
+
+  snprintf(dir_path, sizeof(dir_path), "%s/" ICONS, theme);
+  if(!(dir = opendir(dir_path))) {
+    return 0;
+  }
+  while((e = readdir(dir)) && n < max) {
+    char path[1024];
+    struct stat st;
+    size_t len = strlen(e->d_name);
+
+    if(len < 5 || len >= 64 || strcmp(e->d_name + len - 4, ".svg")) {
+      continue;
+    }
+    snprintf(path, sizeof(path), "%s/%s", dir_path, e->d_name);
+    if(stat(path, &st) || !S_ISREG(st.st_mode) || st.st_size < 16 || st.st_size > MAX_SVG) {
+      continue;
+    }
+    if(t) {
+      t->files++;
+      t->bytes += (unsigned long long)st.st_size;
+      if((long)st.st_mtime > t->newest) {
+        t->newest = (long)st.st_mtime;
+      }
+    }
+    snprintf(names[n], 64, "%.*s", (int)(len - 4), e->d_name);
+    n++;
+  }
+  closedir(dir);
+  return n;
+}
+
+static const unsigned char *
+find(const unsigned char *hay, size_t n, const char *needle) {
+  size_t k = strlen(needle);
+  const unsigned char *p = hay, *last;
+
+  if(n < k) {
+    return NULL;
+  }
+  last = hay + n - k;
+  while(p <= last && (p = memchr(p, needle[0], (size_t)(last - p) + 1)) != NULL) {
+    if(!memcmp(p, needle, k)) {
+      return p;
+    }
+    p++;
+  }
+  return NULL;
+}
+
+/* An icon's SVG, whitespace runs made one space; its length, or -1. */
+static long
+svg_read(const char *path, char *out, size_t size) {
+  FILE *f = fopen(path, "rb");
+  size_t n = 0;
+  int c, space = 0;
+
+  if(!f) {
+    return -1;
+  }
+  while((c = fgetc(f)) != EOF && n < size) {
+    if(c == '\n' || c == '\r' || c == '\t' || c == ' ') {
+      space = n > 0;
+      continue;
+    }
+    if(space && c != '<' && n && out[n - 1] != '>') {
+      out[n++] = ' ';
+    }
+    space = 0;
+    if(n < size) {
+      out[n++] = (char)c;
+    }
+  }
+  fclose(f);
+  if(c != EOF || n < 6 || memcmp(out + n - 6, "</svg>", 6)) {
+    return -1;
+  }
+  return (long)n;
+}
+
+/* Puts the theme's icons into the bundle at fd: the menu keeps its icons as
+ * plain SVG text, most named by a <title>group/iconid_name</title>. Each one
+ * replaced is padded with spaces to the original's length, so nothing in
+ * the bundle moves (as ProsperoThemes does). Returns how many went in. */
+static int
+put_icons(int fd, const char *theme, char names[][64], int count) {
+  static char svg[MAX_SVG];
+  struct stat st;
+  unsigned char *map, *p, *end;
+  int put = 0;
+
+  if(fstat(fd, &st) || st.st_size <= 0) {
+    return 0;
+  }
+  map = mmap(NULL, (size_t)st.st_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+  if(map == MAP_FAILED) {
+    note("icons: the bundle could not be mapped: %s", strerror(errno));
+    return 0;
+  }
+  end = map + st.st_size;
+  p = map;
+  for(int idx = 0; (p = (unsigned char *)find(p, (size_t)(end - p), "<svg")) != NULL; idx++) {
+    const unsigned char *close = find(p, (size_t)(end - p), "</svg>"), *t, *te, *name = NULL;
+    size_t len, nlen = 0;
+    if(!close) {
+      break;
+    }
+    close += 6;
+    len = (size_t)(close - p);
+    t = find(p, len, "<title>");
+    te = t ? find(t, (size_t)(close - t), "</title>") : NULL;
+    if(t && te) {
+      name = te;
+      t += 7;
+      while(name > t && name[-1] != '/') {
+        name--;
+      }
+      nlen = (size_t)(te - name);
+    } else if(!t && idx == 875 && len == 512) {
+      /* the top bar's search magnifier has no title: the 876th icon, as
+       * on 13.00 and 13.42 */
+      name = (const unsigned char *)"iconid_search";
+      nlen = 13;
+    }
+    if(name) {
+      for(int i = 0; i < count; i++) {
+        char path[1024];
+        long n;
+        if(strlen(names[i]) != nlen || memcmp(name, names[i], nlen)) {
+          continue;
+        }
+        snprintf(path, sizeof(path), "%s/" ICONS "/%s.svg", theme, names[i]);
+        if((n = svg_read(path, svg, sizeof(svg))) < 0 || (size_t)n > len) {
+          note("icons: %s %s", names[i], n < 0 ? "is not an SVG" : "is longer than the console's");
+          break;
+        }
+        memcpy(p, svg, (size_t)n - 6);
+        memset(p + n - 6, ' ', len - (size_t)n);
+        memcpy(p + len - 6, "</svg>", 6);
+        put++;
+        break;
+      }
+    }
+    p = (unsigned char *)close;
+  }
+  munmap(map, (size_t)st.st_size);
+  return put;
+}
+
 /* Adds one sound to the copy being written and points the element at it. */
 static int
 rco_put(rco_t *r, FILE *out, uint32_t file_off, const char *ident, const char *vag_path) {
@@ -819,14 +981,16 @@ build_sounds(const char *theme) {
   unsigned char hdr[80];
   rco_t r = {0};
   uint32_t file_off, file_size;
+  static char inames[MAX_ICONS][64];
   int count = list_sounds(theme, names, MAX_SOUNDS, NULL), put = 0, bad = 0;
+  int icount = list_icons(theme, inames, MAX_ICONS, NULL), iput = 0;
   struct stat st;
   long end;
   FILE *in, *out;
 
   snprintf(final, sizeof(final), CURRENT "/" UI_RCO);
-  if(!count || !stat(final, &st)) {
-    return 0; /* no sounds, or the theme brings a whole bundle of its own */
+  if((!count && !icount) || !stat(final, &st)) {
+    return 0; /* no sounds or icons, or the theme brings a whole bundle of its own */
   }
   if(!(in = fopen("/" ASSETS "/" UI_RCO, "rb"))) {
     return -1;
@@ -908,11 +1072,18 @@ build_sounds(const char *theme) {
     bad = fwrite(r.head, 1, file_off, out) != file_off;
   }
   free(r.head);
-  if(fclose(out) || bad || !put || rename(tmp, final)) {
-    unlink(tmp);
-    return put || bad ? -1 : 0;
+  if(!bad && icount) {
+    bad = fflush(out) != 0;
+    if(!bad) {
+      iput = put_icons(fileno(out), theme, inames, icount);
+    }
   }
-  note("sounds: %d of the theme's %d put into the menu's bundle", put, count);
+  if(fclose(out) || bad || (!put && !iput) || rename(tmp, final)) {
+    unlink(tmp);
+    return put || iput || bad ? -1 : 0;
+  }
+  note("sounds: %d of the theme's %d, icons: %d of %d, put into the menu's bundle", put, count,
+       iput, icount);
   return 0;
 }
 
@@ -947,7 +1118,9 @@ signature(const char *theme, char *out, size_t size) {
   walk(theme, "", 0, 0, &t);
   {
     char names[MAX_SOUNDS][64];
+    static char inames[MAX_ICONS][64];
     list_sounds(theme, names, MAX_SOUNDS, &t);
+    list_icons(theme, inames, MAX_ICONS, &t);
   }
   snprintf(out, size, "%s|%d|%llu|%ld", theme, t.files, t.bytes, t.newest);
 }
@@ -967,6 +1140,55 @@ mkparents(char *path) {
       *p = '/';
     }
   }
+}
+
+/* The "version" number in a theme.json, or 0. */
+static int
+theme_version(const char *text, size_t len) {
+  const char *k = len ? (const char *)find((const unsigned char *)text, len, "\"version\"") : NULL;
+  if(!k) {
+    return 0;
+  }
+  k += 9;
+  while(k < text + len && (*k == ' ' || *k == ':')) {
+    k++;
+  }
+  return k < text + len ? atoi(k) : 0;
+}
+
+/* The version of a theme already in the themes folder. */
+static int
+installed_version(const char *name) {
+  char path[768], buf[512];
+  size_t n = 0;
+  FILE *f;
+
+  snprintf(path, sizeof(path), THEMES "/%s/theme.json", name);
+  if((f = fopen(path, "r"))) {
+    n = fread(buf, 1, sizeof(buf) - 1, f);
+    fclose(f);
+  }
+  buf[n] = 0;
+  return theme_version(buf, n);
+}
+
+/* The version of a theme in the pack, from its theme.json there. */
+static int
+packed_version(const char *name) {
+  const unsigned char *p = theme_pack + 8, *end = theme_pack_end;
+  size_t nlen = strlen(name);
+
+  while(end - p >= 6) {
+    uint32_t plen = (uint32_t)p[0] | ((uint32_t)p[1] << 8), size = rd32(p + 2);
+    if(!plen || end - p < 6 + (long)plen + (long)size) {
+      break;
+    }
+    if(plen == nlen + 11 && !memcmp(p + 6, name, nlen) && !memcmp(p + 6 + nlen, "/theme.json", 11)) {
+      return theme_version((const char *)p + 6 + plen, size);
+    }
+    p += 6 + plen + size;
+  }
+  return 0;
 }
 
 static void
@@ -1021,7 +1243,9 @@ unpack_themes(void) {
     if(!known) {
       struct stat st;
       snprintf(path, sizeof(path), THEMES "/%s", name);
-      wanted = stat(path, &st) != 0;
+      /* not there yet, or there in an older version of the one that comes
+       * (the user's own files in that folder are kept) */
+      wanted = stat(path, &st) != 0 || installed_version(name) < packed_version(name);
       if(wanted && ntake < 16) {
         snprintf(take[ntake++], 64, "%s", name);
       } else if(!wanted && nskip < 16) {
@@ -1055,6 +1279,35 @@ unpack_themes(void) {
   }
 }
 
+/* Asks NeoHEN, on its control port, to restart the home menu: only a new
+ * menu reads every file of a theme (icons, sounds, music). 0 done, 2 a game
+ * or app is open, -1 no NeoHEN that can do it. */
+static int
+restart_menu(void) {
+  const uint32_t frame[2] = {0x4F4E494Fu, 3};
+  struct sockaddr_in addr;
+  struct timeval tv = {3, 0};
+  unsigned char reply = 0xff;
+  int s = socket(AF_INET, SOCK_STREAM, 0);
+
+  if(s < 0) {
+    return -1;
+  }
+  memset(&addr, 0, sizeof(addr));
+  addr.sin_family = AF_INET;
+  addr.sin_port = htons(9048);
+  addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+  setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+  setsockopt(s, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
+  if(connect(s, (struct sockaddr *)&addr, sizeof(addr)) ||
+     send(s, frame, sizeof(frame), 0) != (ssize_t)sizeof(frame) || recv(s, &reply, 1, 0) != 1) {
+    close(s);
+    return -1;
+  }
+  close(s);
+  return reply == 0 ? 0 : reply == 2 ? 2 : -1;
+}
+
 int
 main(void) {
   char shown[640] = "";  /* signature of what the stores hold */
@@ -1064,6 +1317,10 @@ main(void) {
   int uncovered = 0;     /* the live menu has not got the stores yet */
   int settle = 0;        /* ticks left of covering a new menu at every tick */
   int said = 0;
+  int restart = 0;       /* 1: the menu is to be restarted, 2: and a game was open */
+  unsigned restart_at = 0; /* not before this tick, so the notice is read first */
+  int restarted = 0;     /* the next new menu is the one asked for, not a crash */
+  char applied[128] = ""; /* the name of the theme last put on */
 
   kill_previous();
   syscall(SYS_thr_set_name, -1, SELF);
@@ -1095,7 +1352,10 @@ main(void) {
     if(now[0] && strcmp(now, menu)) {
       /* a new menu: cover it before it reads anything */
       time_t t = time(NULL);
-      if(menu[0] && shown[0] && strcmp(shown, "-")) {
+      if(restarted) {
+        restarted = 0;
+        short_lived = 0;
+      } else if(menu[0] && shown[0] && strcmp(shown, "-")) {
         short_lived = t - menu_since < CRASH_SECONDS ? short_lived + 1 : 0;
         if(short_lived >= 2) {
           /* the menu keeps dying with this theme on: take it off */
@@ -1146,17 +1406,41 @@ main(void) {
              * load it and blinks */
             say("NeoHEN: tema \"%s\" aplicado. Si el menú parpadea, es normal.\n"
                 "Tu consola, tus reglas. A jugar.", name);
-          } else if(theme[0]) {
-            say("NeoHEN: tema \"%s\" aplicado", name);
-          } else if(said) {
-            say("NeoHEN: aspecto de fabrica");
+          } else if(strcmp(name, applied)) {
+            /* chosen now, from NeoWEB or the Toolbox: only a new menu reads
+             * all of it, so the menu is restarted (a file added to the theme
+             * in use does not do it) */
+            say("NeoHEN: %s%s%s. El menu se reinicia en unos segundos para cargarlo entero.",
+                theme[0] ? "tema \"" : "aspecto de fabrica", theme[0] ? name : "",
+                theme[0] ? "\" aplicado" : "");
+            restart = 1;
+            restart_at = tick + 4000 / TICK_MS;
           }
           said = 1;
+          snprintf(applied, sizeof(applied), "%s", name);
           snprintf(shown, sizeof(shown), "%s", sig);
           write_state(name, "ok");
         }
       }
       cover_menus();
+
+      /* a pass after the notice, so it is read before the menu goes */
+      if(restart && tick >= restart_at) {
+        int r = restart_menu();
+        if(r == 0) {
+          note("menu restarted for theme \"%s\"", applied);
+          restart = 0;
+          restarted = 1;
+        } else if(r == 2) {
+          if(restart == 1) {
+            say("NeoHEN: cierra el juego o la app; el menu se reiniciara entonces para cargar el tema.");
+          }
+          restart = 2;
+        } else {
+          note("menu restart: NeoHEN does not answer on its control port");
+          restart = 0;
+        }
+      }
     }
     usleep(TICK_MS * 1000);
   }
