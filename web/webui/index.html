@@ -682,7 +682,19 @@ nav button.on,.tabs button.on{animation:pick .5s ease-out}
 html.noanim .holo{animation:none}
 @media (prefers-reduced-motion:reduce){#fx{display:none}.holo{animation:none}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+/* ============================================================ lite
+ * The PS5's own browser draws all of the above at a few frames a second: on
+ * the console (html.lite) the particles, blur, glows, shadows, the cursor
+ * light and every animation are off, and the page only repaints what changed. */
+html.lite #fx,html.lite .app::before,html.lite .app::after{display:none!important}
+html.lite *,html.lite *::before,html.lite *::after{animation:none!important;transition:none!important;
+  backdrop-filter:none!important;-webkit-backdrop-filter:none!important;filter:none!important;
+  box-shadow:none!important;text-shadow:none!important;will-change:auto!important}
+html.lite .card::before,html.lite .card::after,html.lite .cover::after,html.lite .holo::before,html.lite .holo::after{display:none!important}
+html.lite :focus-visible{box-shadow:none!important;outline:3px solid var(--cyan)!important}
 </style>
+<script>/* lite: what the console's browser can draw smoothly; ?lite=0 or ?lite=1 forces it */
+if(/[?&]lite=1/.test(location.search)||/PlayStation/i.test(navigator.userAgent)&&!/[?&]lite=0/.test(location.search))document.documentElement.classList.add("lite");</script>
 </head>
 <body>
 <canvas id="fx" aria-hidden="true"></canvas>
@@ -1204,7 +1216,7 @@ setInterval(function(){if(S.full&&S.online)api("/api/jobs").then(function(j){evJ
 
 /* ------------------------------------------------------------ NEO v2 effects
  * All of it stands down with Settings > Animations off or reduced motion. */
-function fxOn(){return CFG.anim&&!(window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches)}
+function fxOn(){return CFG.anim&&!document.documentElement.classList.contains("lite")&&!(window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches)}
 /* numbers on the dashboard count up the first time they show */
 function countUp(){if(!fxOn())return;document.querySelectorAll("#v-panel .kpi b[data-n]").forEach(function(b){
   var t=b.getAttribute("data-n"),m=/^(\d+)([.,]\d+)?$/.exec(t);if(!m)return;var dec=m[2]?m[2].length-1:0,to=parseFloat(t.replace(",",".")),sep=m[2]?m[2][0]:"",node=b.firstChild,t0=performance.now();
@@ -1226,7 +1238,7 @@ function decode(el,text){if(!fxOn()||!text){el.textContent=text;return}
       if(tl)tl.style.transform="perspective(600px) rotateY("+(hx*22).toFixed(1)+"deg) rotateX("+(-hy*22).toFixed(1)+"deg) translateZ(20px)";S.tiltHero=tl}
     if(S.tiltEl&&(!g||g.querySelector(".cover")!==S.tiltEl)){S.tiltEl.style.transform="";S.tiltEl=null}
     if(S.tiltHero&&!h){S.tiltHero.style.transform="";S.tiltHero=null}}
-  document.addEventListener("pointermove",function(e){if(e.pointerType==="touch")return;ev=e;if(!raf)raf=requestAnimationFrame(frame)},{passive:true})})();
+  document.addEventListener("pointermove",function(e){if(e.pointerType==="touch"||S.lite)return;ev=e;if(!raf)raf=requestAnimationFrame(frame)},{passive:true})})();
 /* the particle field behind everything */
 (function(){var cv=$("fx"),cx=cv.getContext&&cv.getContext("2d");if(!cx)return;
   var W=0,H=0,dpr=1,pts=[],mx=-1e4,my=-1e4,last=0,col=["#4DD0FF","#8E7BFF"];
@@ -1234,7 +1246,7 @@ function decode(el,text){if(!fxOn()||!text){el.textContent=text;return}
   function size(){dpr=Math.min(2,window.devicePixelRatio||1);W=innerWidth;H=innerHeight;cv.width=W*dpr;cv.height=H*dpr;cv.style.width=W+"px";cv.style.height=H+"px";cx.setTransform(dpr,0,0,dpr,0,0);
     var n=Math.round(Math.min(S.tv?40:90,W*H/16000));pts=[];for(var i=0;i<n;i++)pts.push({x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-.5)*.25,vy:(Math.random()-.5)*.25,r:Math.random()*1.6+.4,c:Math.random()<.5?0:1,z:Math.random()*.8+.2});colors()}
   function hex(c,a){var m=/^#([0-9a-f]{6})$/i.exec(c);if(!m)return "rgba(77,208,255,"+a+")";var v=parseInt(m[1],16);return "rgba("+(v>>16)+","+(v>>8&255)+","+(v&255)+","+a+")"}
-  function draw(now){requestAnimationFrame(draw);if(document.hidden||!fxOn()||document.documentElement.classList.contains("plain")){if(W)cx.clearRect(0,0,W,H);return}
+  function draw(now){if(document.documentElement.classList.contains("lite")){if(W)cx.clearRect(0,0,W,H);return}requestAnimationFrame(draw);if(document.hidden||!fxOn()||document.documentElement.classList.contains("plain")){if(W)cx.clearRect(0,0,W,H);return}
     if(now-last<33)return;last=now;cx.clearRect(0,0,W,H);
     for(var i=0;i<pts.length;i++){var p=pts[i];p.x+=p.vx*p.z;p.y+=p.vy*p.z;
       var dx=p.x-mx,dy=p.y-my,d2=dx*dx+dy*dy;if(d2<16000){var f=(16000-d2)/16000*.6;p.x+=dx/Math.sqrt(d2+1)*f;p.y+=dy/Math.sqrt(d2+1)*f}
@@ -1395,6 +1407,8 @@ document.addEventListener("keydown",function(e){
  * arrows keep scrolling the page */
 S.tv=/PlayStation/i.test(navigator.userAgent);
 if(S.tv)document.documentElement.classList.add("tv");
+/* lite: what the console's browser can draw smoothly; ?lite=0 or ?lite=1 forces it */
+S.lite=document.documentElement.classList.contains("lite");
 function navMove(dir){
   var a=document.activeElement,els=[].slice.call(document.querySelectorAll('#cmdk .it,dialog[open] button,nav button,.view button:not([disabled]),.view a[href],.view a[data-p],.view [data-smg],.view .game,.view input,.view select,.view [tabindex="0"],header .btn,header .kbtn')).filter(function(x){var r=x.getBoundingClientRect();return r.width>0&&r.height>0&&!x.closest("[hidden]")});
   if(!els.length)return;if(!a||els.indexOf(a)<0){els[0].focus();return}
@@ -1418,7 +1432,7 @@ new MutationObserver(function(){document.querySelectorAll(".view .game:not([tabi
       if(now.x&&!prev.x&&document.activeElement)document.activeElement.click();
       if(now.o&&!prev.o){if($("cmdk"))cmdClose();else history.back()}
       prev=now}
-    requestAnimationFrame(tick)}
+    if(S.lite)setTimeout(tick,50);else requestAnimationFrame(tick)}
   if(navigator.getGamepads)requestAnimationFrame(tick)})();
 
 /* ------------------------------------------------------------ fixes
@@ -2750,7 +2764,7 @@ probe().then(function(){show(location.hash.slice(1)||CFG.start||"panel");return 
   if(!document.hidden){fast();
     if(S.view==="payloads")loadPay();if(S.view==="procs")loadProcs();
     if(S.view==="transfers"||S.jobs.some(function(j){return j.state==="running"}))loadJobs()}
-  tickFast()},Math.max(2,CFG.refresh)*1000)})();
+  tickFast()},Math.max(S.lite?10:2,CFG.refresh)*1000)})();
 setInterval(function(){if(!document.hidden){slow();loadPay()}},60000);
 document.addEventListener("visibilitychange",function(){if(!document.hidden){fast();slow();loadPay()}});
 document.addEventListener("keydown",function(e){
