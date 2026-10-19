@@ -96,6 +96,7 @@ void api_update_notice(http_req_t *req);
 void api_remoteplay_request(http_req_t *req);
 void api_launcher_install(http_req_t *req);
 void api_launcher_remove(http_req_t *req);
+void api_launcher_init(void);
 void api_store(http_req_t *req);
 void api_store_auto(http_req_t *req);
 void api_store_fetch(http_req_t *req);
