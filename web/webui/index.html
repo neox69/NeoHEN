@@ -350,6 +350,18 @@ table.t tr:hover td.a .btn,table.t td.a .btn:focus{opacity:1}
 .theme .pv .tag{left:10px;top:10px}
 .theme .pv img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .ttabs{display:flex;gap:8px;margin:0 0 16px;flex-wrap:wrap}
+.tcov{position:fixed;inset:0;z-index:60;background:rgba(2,4,10,.82);display:grid;place-items:center;padding:16px}
+.tcov .box{width:min(1100px,100%);max-height:100%;overflow:auto;background:var(--panel,#0b1222);border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:16px}
+.tmock{position:relative;aspect-ratio:16/9;border-radius:12px;overflow:hidden;background:#05080F center/cover;container-type:inline-size}
+.tmock .nav{position:absolute;left:3%;top:4.5%;font:700 1.6cqw var(--ui);color:#fff;display:flex;gap:1.6cqw}.tmock .nav i{font-style:normal;opacity:.6}
+.tmock .top{position:absolute;right:3%;top:4%;display:flex;gap:1.8cqw;align-items:center;font:700 1.6cqw var(--ui);color:#fff}
+.tmock .top img{width:2cqw;height:2cqw}.tmock .top b{width:2.2cqw;height:2.2cqw;border-radius:50%;background:#fff;display:block}
+.tmock .row{position:absolute;left:3%;top:12%;display:flex;gap:.9cqw;align-items:flex-start}
+.tmock .row img{width:6.2cqw;height:6.2cqw;border-radius:.8cqw;display:block}
+.tmock .row img:first-child{width:9.6cqw;height:9.6cqw;outline:.25cqw solid #fff;outline-offset:.2cqw}
+.tmock .bars{position:absolute;left:3%;top:31%;display:flex;flex-direction:column;align-items:flex-start}.tmock .bars i{display:block;height:1.1cqw;border-radius:1cqw;background:#fff;width:11.5cqw;margin-bottom:.8cqw}.tmock .bars i+i{background:rgba(255,255,255,.55);width:18.5cqw;height:.8cqw}
+.tcov .syms{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}.tcov .syms img{width:34px;height:34px;padding:6px;border-radius:8px;background:rgba(255,255,255,.06)}
+.theme .pv[data-tcview]{cursor:zoom-in}
 .tcbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 14px}
 .theme .bd small.desc{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .theme .bd{padding:14px 16px;display:flex;flex-direction:column;gap:10px;flex:1}
@@ -2489,7 +2501,8 @@ function restartMenu(){
     api("/api/sys/menu",{}).then(function(){toast(L("Menú reiniciándose…","Menu restarting…"))},function(e){
       var m=String(e&&e.message||e);
       toast(/open/.test(m)?L("Cierra antes el juego o la aplicación abierta","Close the open game or app first"):/control port|cannot/.test(m)?L("El NeoHEN cargado es anterior a esta función: actualízalo","The loaded NeoHEN is older than this feature: update it"):m,true)})})}
-$("v-themes").addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;var n;
+$("v-themes").addEventListener("click",function(e){var v=e.target.closest("[data-tcview]");if(v){viewCommunity(v.getAttribute("data-tcview"));return}
+  var b=e.target.closest("button");if(!b)return;var n;
   if((n=b.getAttribute("data-ttab"))){S.tc.tab=n;if(n==="community"&&!S.tc.items.length)loadCommunity();paintThemes();return}
   if((n=b.getAttribute("data-tcs"))){S.tc.sort=n;loadCommunity();return}
   if((n=b.getAttribute("data-tcc"))!=null){S.tc.cat=n;loadCommunity();return}
@@ -2564,7 +2577,7 @@ function paintCommunity(){
   var c=S.tc,have={};S.themes.forEach(function(t){have[t.name]=1});
   function card(it){var n=tName(it.name),got=have[n],b=c.busy[it.id],sm=it.summary||{};
     var what=[sm.fallback?L("fondo","background"):"",sm.icons?sm.icons+" "+L("iconos","icons"):"",sm.tiles?sm.tiles+" "+L("mosaicos","tiles"):""].filter(Boolean).join(" · ");
-    return '<div class="card theme'+(S.tactive===n?" on":"")+'"><div class="pv"><img loading="lazy" referrerpolicy="no-referrer" alt="" src="'+esc(TSTORE+it.previewUrl)+'">'+(got?'<div class="tag">'+L("EN LA CONSOLA","ON THE CONSOLE")+'</div>':"")+'</div>'+
+    return '<div class="card theme'+(S.tactive===n?" on":"")+'"><div class="pv" data-tcview="'+esc(it.id)+'" tabindex="0"><img loading="lazy" referrerpolicy="no-referrer" alt="" src="'+esc(TSTORE+it.previewUrl)+'">'+(got?'<div class="tag">'+L("EN LA CONSOLA","ON THE CONSOLE")+'</div>':"")+'</div>'+
       '<div class="bd"><b>'+esc(it.name)+'</b><small>'+esc(it.author||"")+" · "+size(it.size)+" · ♥ "+(it.likes||0)+" · ⬇ "+(it.downloads||0)+'</small><small class="desc">'+esc(what)+'</small>'+
       '<div class="acts">'+(b?'<span class="chip">'+esc(b)+'</span>':'<button class="btn pri sm" data-tcget="'+esc(it.id)+'"'+(S.ro?" disabled":"")+'>'+(got?L("Descargar de nuevo y aplicar","Download again and apply"):L("Descargar y aplicar","Download and apply"))+'</button>')+'</div></div></div>'}
   $("v-themes").innerHTML=themeTabs()+
@@ -2575,6 +2588,30 @@ function paintCommunity(){
     '<div class="tgrid">'+c.items.map(card).join("")+'</div>'+
     (c.loading?'<p style="margin-top:16px">'+L("Cargando…","Loading…")+'</p>':c.items.length<c.total?'<div class="row" style="margin-top:16px"><button class="btn" id="tc-more">'+L("Cargar más","Load more")+" ("+c.items.length+"/"+c.total+')</button></div>':"");
 }
+
+/* A community theme up close: the home screen as it would look (its
+ * background, the tile icons in a row and the top bar's symbols, the way
+ * the store's own site shows it), its description and its icons. */
+function viewCommunity(id){
+  var it=S.tc.items.filter(function(x){return x.id===id})[0];if(!it)return;
+  var ov=document.createElement("div");ov.className="tcov";ov.tabIndex=-1;
+  function close(){ov.remove();document.removeEventListener("keydown",key,true)}
+  function key(e){if(e.key==="Escape"||e.key==="Backspace"){e.preventDefault();e.stopPropagation();close()}}
+  ov.onclick=function(e){if(e.target===ov||e.target.closest("[data-tcclose]"))close();else if(e.target.closest("[data-tcget2]")){close();getCommunity(id)}};
+  document.addEventListener("keydown",key,true);
+  function paint(d){var a=d&&d.assets||{},tiles=a.tiles||[],sy={};(a.symbols||[]).forEach(function(x){sy[x.name]=x.url});
+    var img=function(u){return '<img referrerpolicy="no-referrer" alt="" src="'+esc(TSTORE+u)+'">'};
+    ov.innerHTML='<div class="box"><div class="tmock" style="background-image:url(\''+esc(TSTORE+it.previewUrl)+'\')">'+
+      '<div class="nav">'+L("Juegos","Games")+'<i>'+L("Multimedia","Media")+'</i></div>'+
+      '<div class="top">'+(sy.iconid_search?img(sy.iconid_search):"")+(sy.iconid_settings?img(sy.iconid_settings):"")+'<b></b>'+new Date().toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})+'</div>'+
+      '<div class="row">'+tiles.map(function(t){return img(t.url)}).join("")+'</div><div class="bars"><i></i><i></i></div></div>'+
+      '<h3 class="h" style="margin:14px 0 4px">'+esc(it.name)+'</h3><p style="margin:0 0 8px;color:var(--dim)">'+esc(it.author||"")+" · v"+esc(it.version||"")+" · "+size(it.size)+" · ♥ "+(it.likes||0)+" · ⬇ "+(it.downloads||0)+'</p>'+
+      '<p style="margin:0">'+esc(it.description||"")+'</p>'+
+      ((a.symbols||[]).length?'<div class="syms">'+a.symbols.map(function(x){return img(x.url)}).join("")+'</div>':"")+
+      '<div class="row" style="margin-top:14px"><button class="btn pri" data-tcget2'+(S.ro?" disabled":"")+'>'+L("Descargar y aplicar","Download and apply")+'</button><button class="btn" data-tcclose>'+L("Cerrar","Close")+'</button></div></div>';
+    var bt=ov.querySelector("[data-tcget2]");if(bt)bt.focus()}
+  paint(null);document.body.appendChild(ov);
+  fetch(TSTORE+"/api/themes/"+enc(id),{referrerPolicy:"no-referrer"}).then(function(r){return r.ok?r.json():null}).then(function(d){if(d&&ov.isConnected)paint(d)}).catch(function(){})}
 function isP5(buf){try{return zipEntries(buf).some(function(e){return e.name==="theme.json"})&&zipEntries(buf).some(function(e){return /^(payloads|icons)\//.test(e.name)})}catch(_){return false}}
 /* Where a pack's target goes in a NeoHEN theme folder, or "" to leave it out. */
 function p5Map(t){var p=t.path||"";
