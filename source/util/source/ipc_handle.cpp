@@ -198,7 +198,9 @@ void handleIPC(clientArgs *client, std::string &inputStr,
     }
     char resolved_version[32] = {};
     if (util_resolve_game_version(title_id.c_str(), resolved_version,
-                                  sizeof(resolved_version)) < 0) {
+                                  sizeof(resolved_version)) < 0 ||
+        resolved_version[0] == '\0') {
+      LOG_WARN("[cheats] version unavailable for %s", title_id.c_str());
       reply(sender_app, true);
       break;
     }
