@@ -11,6 +11,11 @@
  *   - deleting the ".auto_start" marker disables a payload, and deleting the
  *     ELF removes it: neither comes back, because the stamp stays.
  * A bundled copy is only rewritten when this build carries a different one.
+ *
+ * One exception to "never touched": a file without the stamp that is byte for
+ * byte an official release NeoHEN has shipped before (kKnownReleases) is a
+ * copy put by hand or by an older NeoHEN, not the user's own build, and is
+ * taken over like a bundled one.
  */
 #include "bundled_payloads.h"
 
@@ -32,6 +37,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+
+#include <sha256.h>
 
 #ifdef ONION_BUNDLED_PAYLOADS
 
@@ -96,6 +103,43 @@ static void stop_old_instance(const char *elf, const char *name) {
   unlink(pid_path);
 }
 
+/* SHA-256 of every official release NeoHEN has bundled (scripts/release/
+ * payloads.lock and its history). Add the old line here when that file moves
+ * a payload to a new version. */
+static const struct {
+  const char *name;
+  const char *sha256;
+} kKnownReleases[] = {
+    {"shadowmountplus.elf", "3f716a7b2220c7e87e87452ae05cad689ef842d3beb4cdad6c526cb6dfc2b6b5"}, /* 1.7beta2 */
+    {"shadowmountplus.elf", "fc4e5f715e76660ce34bde2adb10eaf1d069cb2cdf06f7a380896dfb62bd0c4a"}, /* 1.7beta4 */
+    {"shadowmountplus.elf", "e85fd63b705498488f39c09c9aea6f9fa22e0df2e932865de49a8cedf25172d5"}, /* 1.7-beta5fix1 */
+    {"shadowmountplus.elf", "7163472217a2390f5bcbe3b61a96963976f7b7bd84d960b8d926f35b9cbecf28"}, /* 1.7beta8 */
+    {"ftpsrv.elf", "7d4b31c83eae4e056580482a3a074e1db25922efc74ac1e439473b45d71a5938"},          /* v0.21.1 */
+    {"nanodns.elf", "fcfb7d47c3b295560ea1603dc015f7c4950353ef0faca16428bd425680ef1fc5"},         /* 0.4 */
+};
+
+/* The file is an official release NeoHEN shipped, or this build's own copy. */
+static bool known_release(const char *elf, const BundledPayload *p) {
+  uint8_t *data = NULL, digest[SHA256_BLOCK_SIZE];
+  size_t size = 0;
+  char hex[SHA256_BLOCK_SIZE * 2 + 1];
+  if (!read_file_alloc(elf, 64u << 20, &data, &size))
+    return false;
+  SHA256_CTX ctx;
+  sha256_init(&ctx);
+  sha256_update(&ctx, data, size);
+  sha256_final(&ctx, digest);
+  free(data);
+  for (size_t i = 0; i < SHA256_BLOCK_SIZE; ++i)
+    snprintf(hex + i * 2, 3, "%02x", digest[i]);
+  if (!strncmp(hex, p->tag, strlen(p->tag)))
+    return true;
+  for (size_t i = 0; i < sizeof(kKnownReleases) / sizeof(kKnownReleases[0]); ++i)
+    if (!strcmp(kKnownReleases[i].name, p->name) && !strcmp(kKnownReleases[i].sha256, hex))
+      return true;
+  return false;
+}
+
 static bool stamp_matches(const char *stamp_path, const char *tag) {
   char *text = NULL;
   size_t length = 0;
@@ -128,8 +172,12 @@ void bootstrap_bundled_payloads_install(void) {
       continue;
     }
     if (have_elf && !have_stamp) {
-      LOG_INFO("bundled payload %s: user-provided file kept", p->name);
-      continue;
+      if (!known_release(elf, p)) {
+        LOG_INFO("bundled payload %s: user-provided file kept", p->name);
+        continue;
+      }
+      LOG_INFO("bundled payload %s: an official release put by hand, taken over",
+               p->name);
     }
     if (have_elf && stamp_matches(stamp, p->tag))
       continue;

@@ -200,6 +200,9 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 )
 target_link_directories	(${PROJECT_NAME} PUBLIC "${ONIONHEN_PS5_STUB_DIR}")
 target_sources(${PROJECT_NAME} PRIVATE "${ONIONHEN_COMMON_DIR}/elfldr_remote.c")
+# SHA-256 of a hand-placed payload, to recognise releases NeoHEN shipped before.
+target_sources(${PROJECT_NAME} PRIVATE "${ONIONHEN_THIRD_PARTY_DIR}/cheat_support/sha256.c")
+target_include_directories(${PROJECT_NAME} PRIVATE "${ONIONHEN_THIRD_PARTY_DIR}/cheat_support")
 target_link_libraries	(${PROJECT_NAME} PUBLIC onion_proc onion_platform onion_settings onion_payload onion_conflict onion_ready onion_elfldr kernel_sys SceNotification SceSystemService)
 add_custom_target(${PROJECT_NAME}_assets
 	DEPENDS ${_generated_icon_files} "${_icon_asm}" "${_icon_manifest}")

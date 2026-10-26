@@ -3,7 +3,9 @@
 # Unmodified release binaries of their authors, all GPL-3.0. They are the
 # versions NeoHEN was tested with on a PS5 (firmware 13.42). To update one,
 # change its line and its checksum; the build refuses a file that does not
-# match.
+# match. When a line changes, add the old SHA-256 to kKnownReleases in
+# source/bootstrapper/source/bundled_payloads.c, so a copy of it put by hand
+# is still updated.
 #
 # name-in-payloads-dir  version   sha256  url
 shadowmountplus.elf  1.7beta8  7163472217a2390f5bcbe3b61a96963976f7b7bd84d960b8d926f35b9cbecf28  https://github.com/drakmor/ShadowMountPlus/releases/download/1.7beta8/shadowmountplus.elf

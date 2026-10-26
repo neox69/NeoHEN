@@ -944,6 +944,7 @@ if(/[?&]lite=1/.test(location.search)||/PlayStation/i.test(navigator.userAgent)&
 <input type="file" id="pick-ch" accept=".json,.shn,.mc4" multiple hidden>
 <input type="file" id="pick-pkg" accept=".pkg" hidden>
 <input type="file" id="pick-img" accept=".ffpfsc,.ffpfs,.ffpkg,.exfat,.ufs,.pfs" hidden>
+<input type="file" id="pick-gd" webkitdirectory multiple hidden>
 <input type="file" id="pick-cfg" accept=".json" hidden>
 <div class="toast" id="toast" role="status"></div>
 <dialog id="dlg"><h4 id="dh"></h4><p id="dp"></p><input class="in" id="di" hidden>
@@ -1095,7 +1096,7 @@ var NAVG=[["home",L("Inicio","Home"),["panel","library","stats","trophies"]],
 function navOk(k){var v=VIEWS.filter(function(x){return x[0]===k})[0];return !!v&&(!v[3]||S.full)&&!v[4]&&CFG.hide.indexOf(k)<0}
 function paintNav(){
   paintTabs();
-  var act=S.ups.filter(function(u){return u.st==="run"||u.st==="wait"}).length+S.jobs.filter(function(j){return j.state==="running"}).length;
+  var act=upRows().filter(function(r){var st=r.b?r.a.st:r.u.st;return st==="run"||st==="wait"}).length+S.jobs.filter(function(j){return j.state==="running"}).length;
   var badge={library:games().length||"",payloads:S.pay.length?S.pay.filter(function(p){return p.running}).length+"/"+S.pay.length:"",transfers:act||""};
   function item(k){var v=VIEWS.filter(function(x){return x[0]===k})[0],pin=CFG.pins.indexOf(k)>=0;
     return '<button data-v="'+k+'" class="'+(S.view===k?"on":"")+'" title="'+esc(v[1])+'">'+ic(k)+'<span>'+v[1]+'</span>'+
@@ -1182,7 +1183,7 @@ function paintPanel(){
     return '<div class="vol">'+ring(pct)+'<div class="t"><b>'+volName(d.path)+'</b><small>'+size(d.free)+" "+L("libres de","free of")+" "+size(d.total)+'</small></div>'+
       (S.full?'<button class="btn sm ghost" data-open="'+esc(d.path==="/user"?"/data":d.path)+'">'+L("Abrir","Open")+'</button>':"")+'</div>'}).join("");
   var pay=S.pay.map(function(p){return '<div class="rowl"><i class="dot'+(p.running?" on":"")+'"></i><div class="t"><b>'+esc(p.name)+'</b><small>'+(p.running?L("en marcha","running")+" · pid "+p.pid:L("parado","stopped"))+'</small></div></div>'}).join("");
-  var act=S.ups.slice(-3).reverse().map(function(u){return '<div class="rowl"><i class="dot'+(u.st==="run"?" on":"")+'"></i><div class="t"><b>'+esc(u.name)+'</b><small>'+upState(u)+'</small></div></div>'}).join("")+
+  var act=upRows().slice(0,3).map(function(r){var st=r.b?r.a.st:r.u.st;return '<div class="rowl"><i class="dot'+(st==="run"?" on":"")+'"></i><div class="t"><b>'+esc(r.b?r.a.name:r.u.name)+'</b><small>'+(r.b?batState(r.a):upState(r.u))+'</small></div></div>'}).join("")+
     S.jobs.slice(-3).reverse().map(function(j){return '<div class="rowl"><i class="dot'+(j.state==="running"?" on":"")+'"></i><div class="t"><b>'+esc(j.title)+'</b><small>'+esc(j.state)+'</small></div></div>'}).join("");
   var vp=$("v-panel"),first=!S.panelOnce&&i.model;if(first){S.panelOnce=1;vp.classList.add("first");setTimeout(function(){vp.classList.remove("first")},1600);setTimeout(countUp,0)}
   $("v-panel").innerHTML=updNote()+hero+k+qrCard()+
@@ -1245,7 +1246,7 @@ $("pick-pkg").onchange=function(){var f=this.files[0];this.value="";if(!f)return
   S.ups.push({f:f,name:f.name,dest:dest,size:f.size,done:0,cur:0,base:0,st:"wait",after:function(){installPkg(dest,f.name.replace(/\.pkg$/i,""))}});
   toast(L("Subiendo el PKG; al terminar te pregunto para instalarlo. Progreso en Transferencias.","Uploading the PKG; when it is done you are asked to install it. Progress under Transfers."));paintNav();pump()};
 /* add a game: an image from this PC to the drive ShadowMount+ watches */
-S.add={open:false,f:null,name:"",to:"",roots:[]};
+S.add={open:false,f:null,dir:null,name:"",to:"",roots:[]};
 function addRoots(){return api("/api/games/images?id=-").then(function(j){var A=S.add;A.roots=j.roots||[];if(!A.roots.some(function(r){return r.path===A.to}))A.to="";
   /* by default the drive with the most room */
   if(!A.to&&A.roots.length)A.to=A.roots.slice().sort(function(a,b){return (b.free||0)-(a.free||0)})[0].path;paintAdd()}).catch(function(){})}
@@ -1254,25 +1255,33 @@ function imgName(n){var dot=n.lastIndexOf("."),ext=dot>0?n.slice(dot):"",b=dot>0
   return b+ext.toLowerCase()}
 function paintAdd(){
   var b=$("addbox"),A=S.add;if(!b)return;if(!A.open){b.innerHTML="";return}
-  var f=A.f,busy=S.ups.filter(function(u){return u.game&&(u.st==="run"||u.st==="wait")})[0];
+  var f=A.f||(A.dir&&{size:A.dir.reduce(function(t,x){return t+x.file.size},0),folder:true}),busy=upRows().filter(function(r){return r.b?r.a.game&&(r.a.st==="run"||r.a.st==="wait"):r.u.game&&(r.u.st==="run"||r.u.st==="wait")})[0];
   b.innerHTML='<div class="card pad" style="margin-bottom:16px"><h3 class="h">'+L("Añadir un juego","Add a game")+'</h3>'+
     '<p style="margin:0 0 14px;color:var(--dim)">'+L("Elige la imagen del juego en este PC (.ffpfsc, .exfat…) y a qué disco va. Se sube a la misma velocidad que por FTP; si se corta, vuelve a elegir el mismo fichero y continúa donde iba. ShadowMount+ lo registra solo al terminar.","Pick the game image on this PC (.ffpfsc, .exfat…) and the drive it goes to. It uploads as fast as FTP; if it is cut, pick the same file again and it carries on where it was. ShadowMount+ registers it by itself when it is done.")+'</p>'+
-    (busy?'<div class="note">'+L("Subiendo ","Uploading ")+esc(busy.name)+" · "+esc(upState(busy))+'</div>':"")+
-    '<div class="row" style="margin-bottom:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center"><button class="btn" id="add-pick">'+ic("files")+(f?L("Elegir otra imagen","Pick another image"):L("Elegir la imagen","Pick the image"))+'</button>'+(f?'<span class="chip">'+size(f.size)+'</span>':"")+'</div>'+
+    (busy?'<div class="note">'+L("Subiendo ","Uploading ")+esc(busy.b?busy.a.name:busy.u.name)+" · "+esc(busy.b?batState(busy.a):upState(busy.u))+'</div>':"")+
+    '<div class="row" style="margin-bottom:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center"><button class="btn" id="add-pick">'+ic("files")+(A.f?L("Elegir otra imagen","Pick another image"):L("Elegir la imagen","Pick the image"))+'</button>'+
+      '<button class="btn" id="add-pickd">'+ic("files")+(A.dir?L("Elegir otra carpeta","Pick another folder"):L("O una carpeta de juego","Or a game folder"))+'</button>'+
+      (f?'<span class="chip">'+(f.folder?A.dir.length+" "+L("ficheros","files")+" · ":"")+size(f.size)+'</span>':"")+'</div>'+
     '<label style="display:block;margin:0 0 6px;color:var(--dim);font-size:13px">'+L("Dónde se guarda","Where it goes")+' <button class="btn sm ghost" id="add-re" title="'+L("Volver a mirar los discos conectados","Look at the plugged-in drives again")+'">'+ic("refresh")+'</button></label>'+
     '<div class="row" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">'+(A.roots.length?A.roots.map(function(r){var room=!f||r.free>f.size+7e7;
         return '<button class="btn'+(A.to===r.path?" pri":"")+'" data-to="'+esc(r.path)+'"'+(room?"":" disabled")+' title="'+esc(r.path)+'">'+ic("disk")+rootName(r)+" · "+size(r.free)+" "+L("libres","free")+(room?"":" · "+L("no cabe","no room"))+'</button>'}).join(""):'<span class="chip">'+L("Mirando los discos…","Looking at the drives…")+'</span>')+'</div>'+
     (f?'<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px"><input class="in" id="add-name" style="flex:1;min-width:280px" value="'+esc(A.name)+'" title="'+L("Nombre que tendrá en la consola","Name it will have on the console")+'"></div>'+
       '<button class="btn pri" id="add-go"'+(A.to&&!S.ro&&A.roots.some(function(r){return r.path===A.to&&r.free>f.size+7e7})?"":" disabled")+'>'+ic("upload")+L("Subir a ","Upload to ")+esc(A.roots.filter(function(r){return r.path===A.to}).map(rootName)[0]||L("la consola","the console"))+'</button>':"")+'</div>';
   $("add-pick").onclick=function(){$("pick-img").click()};
+  $("add-pickd").onclick=function(){$("pick-gd").click()};
   $("add-re").onclick=addRoots;
   b.onclick=function(e){var t=e.target.closest("button[data-to]");if(t){A.to=t.getAttribute("data-to");paintAdd()}};
   if(f){$("add-name").oninput=function(){A.name=this.value};
     $("add-go").onclick=addGo}
 }
-$("pick-img").onchange=function(){var f=this.files[0];this.value="";if(!f)return;S.add.f=f;S.add.name=imgName(f.name);addRoots();paintAdd()};
+$("pick-img").onchange=function(){var f=this.files[0];this.value="";if(!f)return;S.add.f=f;S.add.dir=null;S.add.name=imgName(f.name);addRoots();paintAdd()};
+/* a game folder (PPSA12345 with sce_sys/): every file inside it, one batch */
+$("pick-gd").onchange=function(){var l=[].map.call(this.files,function(f){return{file:f,rel:(f.webkitRelativePath||f.name).split("/").slice(1).join("/")}}).filter(function(x){return x.rel});
+  var top=this.files.length?(this.files[0].webkitRelativePath||"").split("/")[0]:"";this.value="";if(!l.length)return;
+  S.add.dir=l;S.add.f=null;S.add.name=top;addRoots();paintAdd()};
 function addGo(){
-  var A=S.add,f=A.f,name=A.name.trim().replace(/[\\\/]/g,"");if(!f||!A.to||!name)return;
+  var A=S.add,f=A.f,name=A.name.trim().replace(/[\\\/]/g,"");if((!f&&!A.dir)||!A.to||!name)return;
+  if(A.dir)return addGoDir(A,name);
   var fin=pj(A.to,name),tmp=fin+".subiendo",had=S.apps.map(function(a){return a.titleId});
   api("/api/fs/stat?path="+enc(fin)).then(function(s){if(s.exists)throw new Error(L("Ya hay un fichero con ese nombre en ese disco","There is already a file with that name on that drive"));
     /* under another name until it is whole, so that a cut upload is never taken for a game */
@@ -1281,6 +1290,18 @@ function addGo(){
         var n=0;(function look(){slow().then(function(){var nu=S.apps.filter(function(a){return had.indexOf(a.titleId)<0})[0];
           if(nu)toast(L("Registrado: ","Registered: ")+(nu.title||nu.titleId));else if(++n<24)setTimeout(look,5000)})})()},fail)}});
     A.f=null;toast(L("Subiendo. El progreso está en Transferencias.","Uploading. Progress is under Transfers."));paintNav();paintAdd();pump()}).catch(fail);
+}
+function addGoDir(A,name){
+  var fin=pj(A.to,name),tmp=fin+".subiendo",had=S.apps.map(function(a){return a.titleId}),
+    /* param.json last: until it is there ShadowMount+ does not take the folder for a game */
+    list=A.dir.slice().sort(function(x,y){return (x.rel==="sce_sys/param.json")-(y.rel==="sce_sys/param.json")});
+  api("/api/fs/stat?path="+enc(fin)).then(function(s){if(s.exists)throw new Error(L("Ya hay una carpeta con ese nombre en ese disco","There is already a folder with that name on that drive"));
+    /* under another name until every file is there, so a cut upload is never taken for a game */
+    enqueue(list,tmp,{name:name,game:true,after:function(){
+      api("/api/fs/rename",{from:tmp,to:fin}).then(function(){toast(name+L(" ya está en la consola. Esperando a que ShadowMount+ lo registre…"," is on the console. Waiting for ShadowMount+ to register it…"));
+        var n=0;(function look(){slow().then(function(){var nu=S.apps.filter(function(a){return had.indexOf(a.titleId)<0})[0];
+          if(nu)toast(L("Registrado: ","Registered: ")+(nu.title||nu.titleId));else if(++n<24)setTimeout(look,5000)})})()},fail)}});
+    A.dir=null;paintNav();paintAdd()}).catch(fail);
 }
 function paintLib(){
   if(!$("lib-q")){
@@ -1850,9 +1871,15 @@ function upState(u){
   var sent=u.done+(u.cur||0),el=(Date.now()-u.t0)/1000,sp=el>0?(sent-u.base)/el:0;
   return size(sent)+" / "+size(u.size)+" · "+size(sp)+"/s"+(sp>0?" · "+dur((u.size-sent)/sp):"")+(u.retry?" · "+L("reintento ","retry ")+u.retry:"");
 }
-function enqueue(list,dir){
-  if(!list.length)return;
-  list.forEach(function(x){S.ups.push({f:x.file,name:x.rel,dest:pj(dir,x.rel),size:x.file.size,done:0,cur:0,base:0,st:"wait"})});
+/* Several files sent together (a folder, a game) are one batch: one row and
+ * one bar in Transfers, and its "after" runs once every file is there. */
+S.bat={};S.bseq=0;
+function enqueue(list,dir,opt){
+  if(!list.length)return;opt=opt||{};
+  var b=0,top=list[0].rel.split("/")[0];
+  if(list.length>1){b=++S.bseq;S.bat[b]={name:opt.name||(list.every(function(x){return x.rel.split("/")[0]===top&&x.rel.indexOf("/")>0})?top:list.length+" "+L("ficheros","files")),dir:dir,after:opt.after,fired:false}}
+  list.forEach(function(x){var u={f:x.file,name:x.rel,dest:pj(dir,x.rel),size:x.file.size,done:0,cur:0,base:0,st:"wait",b:b,game:!!opt.game};
+    if(!b&&opt.after)u.after=opt.after;S.ups.push(u)});
   toast(list.length+" "+L("en cola para ","queued for ")+dir);paintNav();if(S.view==="transfers")paintTr();pump();
 }
 function pump(){
@@ -1868,9 +1895,27 @@ function runUp(u){
     if(s.exists&&s.type==="file"&&s.size>0&&s.size<u.size){u.done=u.base=s.size;u.resumed=true;return true}
     if(s.exists)return ask(L("Ya existe ","Already there: ")+u.name,L("¿Sustituirlo por el que estás subiendo?","Replace it with the one you are uploading?"),L("Sustituir","Replace"),true);
     return true},function(){return true})
-  .then(function(go){if(!go){u.st="skip";return}u.t0=Date.now();return loop(u,0).then(function(){if(u.st==="run"){u.st="ok";note("ok",L("Subido: ","Uploaded: ")+u.name,u.dest);if(u.after)u.after()}})})
+  .then(function(go){if(!go){u.st="skip";return}u.t0=Date.now();return loop(u,0).then(function(){if(u.st==="run"){u.st="ok";if(!u.b)note("ok",L("Subido: ","Uploaded: ")+u.name,u.dest);if(u.after)u.after();batDone(u.b)}})})
   .catch(function(e){u.st="err";u.err=e.message;note("bad",L("Subida fallida: ","Upload failed: ")+u.name,e.message)});
 }
+function batItems(b){return S.ups.filter(function(x){return x.b===b})}
+function batDone(b){var B=S.bat[b];if(!b||!B||B.fired)return;var it=batItems(b);
+  if(it.every(function(x){return x.st==="ok"||x.st==="skip"})){B.fired=true;note("ok",L("Subido: ","Uploaded: ")+B.name,B.dir);if(B.after)B.after()}}
+/* the batch as one upload: its state, bytes and speed */
+function batAgg(b){var it=batItems(b),a={name:S.bat[b].name,dest:S.bat[b].dir,size:0,sent:0,base:0,n:it.length,ok:0,t0:0,st:"ok",game:it.some(function(x){return x.game})};
+  var has=function(st){return it.some(function(x){return x.st===st})};
+  it.forEach(function(x){a.size+=x.size;a.sent+=x.st==="ok"?x.size:x.done+(x.cur||0);a.base+=x.base||0;if(x.st==="ok"||x.st==="skip")a.ok++;if(x.t0&&(!a.t0||x.t0<a.t0))a.t0=x.t0});
+  a.st=has("run")?"run":has("wait")?(a.ok?"run":"wait"):has("err")?"err":has("cancel")?"cancel":"ok";
+  a.err=(it.filter(function(x){return x.st==="err"})[0]||{}).err;return a}
+function batState(a){
+  if(a.st==="wait")return L("En cola","Queued")+" · "+a.n+" "+L("ficheros","files")+" · "+size(a.size);
+  if(a.st==="ok")return L("Completado","Done")+" · "+a.n+" "+L("ficheros","files")+" · "+size(a.size);
+  if(a.st==="err")return "Error: "+a.err+" · "+a.ok+"/"+a.n;
+  if(a.st==="cancel")return L("Cancelado","Cancelled")+" · "+a.ok+"/"+a.n;
+  var el=(Date.now()-a.t0)/1000,sp=el>0?(a.sent-a.base)/el:0;
+  return a.ok+"/"+a.n+" "+L("ficheros","files")+" · "+size(a.sent)+" / "+size(a.size)+" · "+size(sp)+"/s"+(sp>0?" · "+dur((a.size-a.sent)/sp):"")}
+/* one entry per single upload or per batch, newest first */
+function upRows(){var seen={},rows=[];S.ups.slice().reverse().forEach(function(u){if(!u.b){rows.push({u:u});return}if(seen[u.b])return;seen[u.b]=1;rows.push({b:u.b,a:batAgg(u.b)})});return rows}
 function loop(u,tries){
   if(u.cancel){u.st="cancel";return Promise.resolve()}
   if(u.done>=u.size&&(u.size>0||u.sent))return Promise.resolve();
@@ -1916,7 +1961,12 @@ window.addEventListener("drop",function(e){dzN=0;$("dropz").className="dropz";
 function loadJobs(){if(!S.full)return Promise.resolve();return api("/api/jobs").then(function(j){S.jobs=j.jobs||[];evJobs(S.jobs);paintNav();if(S.view==="transfers")paintTr()}).catch(function(){})}
 function watchJob(id,cb){(function p(){api("/api/jobs?id="+id).then(function(j){if(j.job.state==="running")setTimeout(p,700);else{loadJobs();cb(j.job)}}).catch(fail)})()}
 function paintTr(){
-  var ups=S.ups.slice().reverse().map(function(u){var i=S.ups.indexOf(u),pct=u.size?Math.round((u.done+(u.cur||0))/u.size*100):(u.st==="ok"?100:0);
+  var ups=upRows().map(function(r){if(r.b){var a=r.a,bp=a.size?Math.round(a.sent/a.size*100):(a.st==="ok"?100:0);
+    return '<div class="item"><i class="dot'+(a.st==="run"?" on":"")+'"></i><div class="t"><b title="'+esc(a.dest)+'">'+ic("files")+" "+esc(a.name)+'</b><small>'+esc(a.dest)+" · "+esc(batState(a))+'</small>'+
+      '<div class="prog'+(a.st==="ok"?" ok":a.st==="err"?" bad":"")+'"><i style="width:'+bp+'%"></i></div></div>'+
+      '<div class="acts">'+(a.st==="run"||a.st==="wait"?'<span class="chip">'+bp+'%</span><button class="btn sm danger" data-bc="'+r.b+'">'+L("Cancelar","Cancel")+'</button>'
+        :a.st==="err"||a.st==="cancel"?'<button class="btn sm" data-br="'+r.b+'">'+L("Reanudar","Resume")+'</button>':'<span class="chip ok">OK</span>')+'</div></div>'}
+    var u=r.u,i=S.ups.indexOf(u),pct=u.size?Math.round((u.done+(u.cur||0))/u.size*100):(u.st==="ok"?100:0);
     return '<div class="item"><i class="dot'+(u.st==="run"?" on":"")+'"></i><div class="t"><b title="'+esc(u.dest)+'">'+esc(u.name)+'</b><small>'+esc(u.dest)+" · "+esc(upState(u))+'</small>'+
       (u.st==="run"||u.st==="wait"?'<div class="prog"><i style="width:'+pct+'%"></i></div>':u.st==="ok"?'<div class="prog ok"><i style="width:100%"></i></div>':u.st==="err"?'<div class="prog bad"><i style="width:'+pct+'%"></i></div>':"")+'</div>'+
       '<div class="acts">'+(u.st==="run"||u.st==="wait"?'<span class="chip">'+pct+'%</span><button class="btn sm danger" data-uc="'+i+'">'+L("Cancelar","Cancel")+'</button>'
@@ -1926,7 +1976,7 @@ function paintTr(){
       (j.state==="running"?size(j.bytesDone)+" / "+size(j.bytesTotal)+(j.current?" · "+esc(j.current):""):j.state==="done"?(j.result?esc(j.result):L("terminada","finished")):esc(j.error||j.state))+'</small>'+
       '<div class="prog '+(j.state==="done"?"ok":j.state==="running"?"":"bad")+'"><i style="width:'+pct+'%"></i></div></div>'+
       '<div class="acts">'+(j.state==="running"?'<button class="btn sm danger" data-jc="'+j.id+'">'+L("Cancelar","Cancel")+'</button>':'<span class="chip '+(j.state==="done"?"ok":"bad")+'">'+esc(j.state)+'</span>')+'</div></div>'}).join("");
-  $("v-transfers").innerHTML='<div class="tools"><h3 class="h" style="margin:0">'+L("Subidas desde este navegador","Uploads from this browser")+' <em>'+S.ups.length+'</em></h3><span class="sp"></span>'+
+  $("v-transfers").innerHTML='<div class="tools"><h3 class="h" style="margin:0">'+L("Subidas desde este navegador","Uploads from this browser")+' <em>'+upRows().length+'</em></h3><span class="sp"></span>'+
     '<button class="btn sm ghost" data-a="clr">'+L("Limpiar terminadas","Clear finished")+'</button><button class="btn pri" data-a="up">'+ic("upload")+L("Subir ficheros","Upload files")+'</button></div>'+
     '<div class="card">'+(ups||'<div class="empty">'+ic("upload")+'<div>'+L("Arrastra ficheros o carpetas a la ventana para subirlos a ","Drop files or folders on the window to upload them to ")+esc(S.cwd)+'<br><small>'+
       L("Las subidas van por trozos: si se corta la conexión, continúan donde iban.","Uploads go in chunks: if the connection drops, they continue where they were.")+'</small></div></div>')+'</div>'+
@@ -1936,6 +1986,8 @@ function paintTr(){
 $("v-transfers").addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;var v;
   if((v=b.getAttribute("data-uc"))!=null){var u=S.ups[v];u.cancel=true;if(u.st==="wait")u.st="cancel";if(u.xhr)u.xhr.abort();tick()}
   else if((v=b.getAttribute("data-ur"))!=null){var r=S.ups[v];r.cancel=false;r.st="wait";r.err="";r.retry=0;paintTr();pump()}
+  else if((v=b.getAttribute("data-bc"))!=null)batItems(+v).forEach(function(u){if(u.st==="run"||u.st==="wait"){u.cancel=true;if(u.st==="wait")u.st="cancel";if(u.xhr)u.xhr.abort()}}),tick();
+  else if((v=b.getAttribute("data-br"))!=null){batItems(+v).forEach(function(u){if(u.st==="err"||u.st==="cancel"){u.cancel=false;u.st="wait";u.err="";u.retry=0}});paintTr();pump()}
   else if((v=b.getAttribute("data-jc")))api("/api/jobs/cancel",{id:+v}).then(loadJobs).catch(fail);
   else if((v=b.getAttribute("data-a"))==="up")$("pick-f").click();
   else if(v==="clr"){S.ups=S.ups.filter(function(u){return u.st==="run"||u.st==="wait"});paintTr();paintNav()}
