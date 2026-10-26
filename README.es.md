@@ -149,7 +149,7 @@ Dentro de `NeoHEN.elf`, sin modificar:
 
 | Payload | Versión | Licencia |
 |---|---|---|
-| [ShadowMount+](https://github.com/drakmor/ShadowMountPlus) | 1.7-beta5fix1 | GPL-3.0 |
+| [ShadowMount+](https://github.com/drakmor/ShadowMountPlus) | 1.7beta8 | GPL-3.0 |
 | [ftpsrv](https://github.com/ps5-payload-dev/ftpsrv) | v0.21.1 | GPL-3.0 |
 | [nanoDNS](https://github.com/drakmor/nanoDNS) | 0.4 | GPL-3.0 |
 | [kstuff-lite](https://github.com/EchoStretch/kstuff-lite) | v1.11 | sin declarar |

@@ -7,6 +7,7 @@
 #include "shellui_payload_state.hpp"
 #include "shellui_state.hpp"
 #include "shellui_types.hpp"
+#include "smp_watchdog.hpp"
 #include "toolbox_i18n.hpp"
 #include <onion/brand.h>
 #include <onion/payload.h>
@@ -589,12 +590,15 @@ std::string neo_smp_status() {
     }
     fclose(f);
   }
-  /* Same lines the daemon's watchdog reads (ShadowMount+ 1.7). */
-  const size_t installed = tail.rfind("[SHELLCORE] hooks installed:");
-  const size_t lost = tail.rfind("AppInstallAll hook is no longer installed");
-  if (installed == std::string::npos && lost == std::string::npos)
+  /* The same reading the daemon's watchdog does. */
+  using onion::daemon::smp::HookState;
+  switch (onion::daemon::smp::hook_state_from_log(tail)) {
+  case HookState::Unknown:
     return toolbox_i18n::tr("smp.status.unknown");
-  if (lost != std::string::npos && (installed == std::string::npos || lost > installed))
+  case HookState::Lost:
     return toolbox_i18n::tr("smp.status.lost");
+  case HookState::Installed:
+    break;
+  }
   return toolbox_i18n::tr("smp.status.ok");
 }

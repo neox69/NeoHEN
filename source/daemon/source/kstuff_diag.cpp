@@ -1,9 +1,10 @@
 /* NeoHEN: read-only diagnostic of kstuff's syscall-table switches.
  *
  * kstuff-lite marks its PS5 and PS4 sysentvec as active by writing 0xdeb7 at
- * sysentvec+14 (0xffff = paused); ShadowMount+ pauses/resumes kstuff by
- * toggling the same field. Logging both values explains messages such as
- * ShadowMount+'s "pause deadline reached ... kstuff was already disabled".
+ * sysentvec+14 (0xffff = paused). ShadowMount+ up to 1.7beta4 paused/resumed
+ * kstuff by toggling the same field (its "pause deadline reached ... kstuff
+ * was already disabled" messages); 1.7beta5 dropped that, so anything that
+ * changes it now is kstuff itself or another payload.
  * Only kernel reads; enabled by diagnostics.kstuff_tables (default false).
  */
 
@@ -21,7 +22,7 @@ namespace {
 constexpr intptr_t kToggleOffset = 14;
 
 /* Offsets from kstuff-lite prosper0gdb/offsets (13_20.h, 13_42.h), the same
- * values ShadowMount+ 1.7 uses. Other firmware: not known here. */
+ * values ShadowMount+ 1.7beta4 used. Other firmware: not known here. */
 bool sysentvec_offsets(uint32_t fw, intptr_t *ps5, intptr_t *ps4) {
   switch (fw & 0xffff0000u) {
   case 0x13200000:

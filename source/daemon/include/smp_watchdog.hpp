@@ -1,8 +1,9 @@
 /* NeoHEN: ShadowMount+ watchdog.
  *
  * ShadowMount+ (drakmor, GPLv3) hooks SceShellCore and logs its hook state in
- * /data/shadowmount/debug.log. It never reinstalls a lost hook by itself, but
- * a new instance replaces the old one. The watchdog only reads that log and
+ * /data/shadowmount/debug.log. Up to 1.7beta5 it never reinstalled a lost
+ * hook by itself; from 1.7beta6 it tries, and logs when that fails. A new
+ * instance replaces the old one either way. The watchdog only reads that log and
  * the process list; with shadowmount.watchdog=relaunch it starts
  * payloads/shadowmountplus.elf again.
  */

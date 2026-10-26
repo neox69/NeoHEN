@@ -12,12 +12,12 @@ Dentro de NeoHEN.elf, instalados en /data/neohen/payloads
 Inside NeoHEN.elf, installed to /data/neohen/payloads
 ---------------------------------------------------------
 
-ShadowMount+ 1.7-beta5fix1     payloads/shadowmountplus.elf
+ShadowMount+ 1.7beta8          payloads/shadowmountplus.elf
   drakmor y colaboradores
   Licencia / License: GPL-3.0
   Código / Source: https://github.com/drakmor/ShadowMountPlus
-  Binario / Binary: https://github.com/drakmor/ShadowMountPlus/releases/tag/1.7-beta5fix1
-  SHA-256: e85fd63b705498488f39c09c9aea6f9fa22e0df2e932865de49a8cedf25172d5
+  Binario / Binary: https://github.com/drakmor/ShadowMountPlus/releases/tag/1.7beta8
+  SHA-256: 7163472217a2390f5bcbe3b61a96963976f7b7bd84d960b8d926f35b9cbecf28
 
 ftpsrv v0.21.1                 payloads/ftpsrv.elf
   John Törnblom y colaboradores (ps5-payload-dev)

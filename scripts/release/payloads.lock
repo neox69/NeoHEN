@@ -6,6 +6,6 @@
 # match.
 #
 # name-in-payloads-dir  version   sha256  url
-shadowmountplus.elf  1.7-beta5fix1  e85fd63b705498488f39c09c9aea6f9fa22e0df2e932865de49a8cedf25172d5  https://github.com/drakmor/ShadowMountPlus/releases/download/1.7-beta5fix1/shadowmountplus.elf
+shadowmountplus.elf  1.7beta8  7163472217a2390f5bcbe3b61a96963976f7b7bd84d960b8d926f35b9cbecf28  https://github.com/drakmor/ShadowMountPlus/releases/download/1.7beta8/shadowmountplus.elf
 ftpsrv.elf           v0.21.1   7d4b31c83eae4e056580482a3a074e1db25922efc74ac1e439473b45d71a5938  https://github.com/ps5-payload-dev/ftpsrv/releases/download/v0.21.1/ftpsrv-ps5.elf
 nanodns.elf          0.4       fcfb7d47c3b295560ea1603dc015f7c4950353ef0faca16428bd425680ef1fc5  https://github.com/drakmor/nanoDNS/releases/download/0.4/nanodns.elf

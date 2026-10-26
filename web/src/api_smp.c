@@ -1,8 +1,9 @@
 /* NeoWEB - a door to ShadowMount+'s own HTTP/JSON service.
  *
- * ShadowMount+ answers on the console itself (127.0.0.1:10101 unless its
- * config.ini says otherwise), where nothing outside can reach it. NeoWEB
- * runs on the console, so it can ask on behalf of the page:
+ * ShadowMount+ answers on port 10101 unless its config.ini says otherwise.
+ * Up to 1.7beta7 it listened only on 127.0.0.1; from 1.7beta8 it listens on
+ * the LAN by default (api_bind_address=0.0.0.0). NeoWEB runs on the console
+ * and always asks on 127.0.0.1, so it works either way, on behalf of the page:
  *
  *   GET  /api/smp?path=/api/v1/...     passed on as a GET
  *   POST /api/smp?path=/api/v1/...     passed on with the body it came with
