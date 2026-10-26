@@ -744,6 +744,7 @@ if(/[?&]lite=1/.test(location.search)||/PlayStation/i.test(navigator.userAgent)&
       <section id="v-files" hidden></section>
       <section id="v-payloads" hidden></section>
       <section id="v-smp" hidden></section>
+      <section id="v-install" hidden></section>
       <section id="v-game" hidden></section>
       <section id="v-fixes" hidden></section>
       <section id="v-remote" hidden></section>
@@ -811,6 +812,7 @@ var P={
  up:"M12 19V5M5 12l7-7 7 7",
  upload:"M12 16V4M7 9l5-5 5 5M4 20h16",
  download:"M12 4v12M7 11l5 5 5-5M4 20h16",
+ install:"M21 8l-9-5-9 5v8l9 5 9-5zM12 7v7M9 11l3 3 3-3",
  trash:"M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13",
  edit:"M4 20h4L19 9l-4-4L4 16zM13 7l4 4",
  play:"M7 4l13 8-13 8z",
@@ -886,6 +888,7 @@ var VIEWS=[
  ["files",L("Ficheros","Files"),L("Explora, sube, descarga y edita","Browse, upload, download and edit"),1],
  ["payloads","Payloads",L("Lo que NeoHEN arranca y lo que puedes lanzar","What NeoHEN starts and what you can launch")],
  ["smp","ShadowMount+",L("Los juegos que monta y cómo le va","The games it mounts, and how it is doing"),1],
+ ["install",L("Instalar","Install"),L("PKG, parches, DLC y backports, desde los discos o desde el PC","PKG, patches, DLC and backports, from the drives or from the PC"),1],
  ["game","","",0,1],
  ["fixes","FIXES",L("Arreglos para juegos que no arrancan o se quedan parados","Fixes for games that do not start or get stuck"),1],
  ["remote","Remote Play",L("Cuentas sin PSN, ID de cuenta y PIN para Chiaki o PXPlay","Accounts without PSN, account ID and PIN for Chiaki or PXPlay"),1],
@@ -926,7 +929,7 @@ function show(v,push){
   decode($("vt"),def[1]);$("vs").textContent=def[2];
   if(push)history.replaceState(null,"","#"+(v==="game"?"game="+S.gp.id:v));
   $("side").className="side";paintNav();render();$("view").scrollTop=0;
-  if(v==="files")loadDir(S.cwd);if(v==="procs")loadProcs();if(v==="system"){loadLog();S.fanEdit=null;loadFan();loadLnch()}if(v==="transfers")loadJobs();if(v==="payloads"){loadPay();loadStore()}if(v==="themes")loadThemes();if(v==="saves")loadSaves();if(v==="captures")loadCaps();if(v==="cheats")loadCheats();if(v==="stats")loadStats();if(v==="trophies")loadTrophies();if(v==="smp")loadSmp();if(v==="fixes")loadFixes();if(v==="settings"&&S.full)api("/api/update/notice").then(function(j){S.updOn=j.enabled;if(S.view==="settings")paintCfg()}).catch(function(){});if(v==="remote")loadRemote();if(v==="game")loadGame();
+  if(v==="files")loadDir(S.cwd);if(v==="procs")loadProcs();if(v==="system"){loadLog();S.fanEdit=null;loadFan();loadLnch()}if(v==="transfers")loadJobs();if(v==="payloads"){loadPay();loadStore()}if(v==="themes")loadThemes();if(v==="saves")loadSaves();if(v==="captures")loadCaps();if(v==="cheats")loadCheats();if(v==="stats")loadStats();if(v==="trophies")loadTrophies();if(v==="smp")loadSmp();if(v==="install")loadInst();if(v==="fixes")loadFixes();if(v==="settings"&&S.full)api("/api/update/notice").then(function(j){S.updOn=j.enabled;if(S.view==="settings")paintCfg()}).catch(function(){});if(v==="remote")loadRemote();if(v==="game")loadGame();
 }
 $("nav").onclick=function(e){var b=e.target.closest("button[data-v]");if(b)show(b.getAttribute("data-v"),true)};
 window.addEventListener("hashchange",function(){var h=location.hash.slice(1);if(h!==S.view&&h!=="game="+S.gp.id)show(h)});
@@ -934,7 +937,7 @@ $("burger").innerHTML=ic("menu");$("reload").innerHTML=ic("refresh");
 $("burger").onclick=function(){$("side").className="side open"};
 $("view").addEventListener("click",function(){$("side").className="side"});
 $("reload").onclick=function(){fast();slow();show(S.view);toast(L("Actualizado","Refreshed"))};
-function render(){({panel:paintPanel,library:paintLib,files:paintFiles,payloads:paintPay,themes:paintThemes,saves:paintSaves,captures:paintCaps,cheats:paintCheats,stats:paintStats,trophies:paintTrophies,smp:paintSmp,fixes:paintFixes,remote:paintRemote,game:paintGameView,transfers:paintTr,procs:paintProcs,system:paintSys,settings:paintCfg})[S.view]()}
+function render(){({panel:paintPanel,library:paintLib,files:paintFiles,payloads:paintPay,themes:paintThemes,saves:paintSaves,captures:paintCaps,cheats:paintCheats,stats:paintStats,trophies:paintTrophies,smp:paintSmp,install:paintInst,fixes:paintFixes,remote:paintRemote,game:paintGameView,transfers:paintTr,procs:paintProcs,system:paintSys,settings:paintCfg})[S.view]()}
 
 /* ------------------------------------------------------------ dashboard */
 function tcol(v){return v>=88?"var(--bad)":v>=78?"var(--warn)":"var(--ok)"}
@@ -1026,6 +1029,11 @@ function launch(id){var n=title(id);
 /* ------------------------------------------------------------ library */
 var PKGDIR="/data/pkg";
 function installPkg(src,name){
+  if(src.charAt(0)==="/")return inCaps().then(function(ok){if(!ok)return installPkgOld(src,name);
+    return ask(L("Instalar este PKG","Install this PKG"),src+"\n\n"+L("Lo instala ShadowMount+; el progreso se ve en Instalar.","ShadowMount+ installs it; progress shows under Install."),L("Instalar","Install")).then(function(ok){
+      if(ok)smp("/packages/install",{path:src}).then(function(){toast(L("Instalando…","Installing…"));show("install",true)}).catch(fail)})})
+  return installPkgOld(src,name)}
+function installPkgOld(src,name){
   return ask(L("Instalar este PKG","Install this PKG"),src+"\n\n"+L("La consola lo instala como una descarga más: el progreso se ve en Descargas, en la propia PS5. Función experimental, aún sin probar en consola.","The console installs it like any download: progress shows under Downloads, on the PS5 itself. Experimental, not yet tested on a console."),L("Instalar","Install")).then(function(ok){
     if(!ok)return;
     return api("/api/apps/install-pkg",{url:src,name:name||base(src).replace(/\.pkg$/i,"")}).then(function(j){toast(L("Instalación pedida a la consola","Install requested from the console")+(j.contentId?" · "+j.contentId:""))},
@@ -1088,7 +1096,7 @@ function paintLib(){
       '<div class="seg" id="lib-s"><button data-s="name" class="on">A–Z</button><button data-s="id">ID</button></div>'+
       (S.full?'<select class="in" id="lib-st"><option value="">'+L("Cualquier estado","Any status")+'</option>'+STS.map(function(x){return '<option value="'+x[0]+'">'+x[1]+'</option>'}).join("")+'<option value="none">'+L("Sin marcar","Not marked")+'</option></select>':"")+
       '<span class="sp"></span><span class="chip" id="lib-n"></span>'+(S.full?'<button class="btn pri" id="lib-add">'+ic("upload")+L("Añadir juego","Add a game")+'</button><button class="btn" id="lib-pkg">'+ic("download")+L("Instalar PKG","Install PKG")+'</button>':"")+'</div><div id="addbox"></div><div id="pkgbox"></div><div class="grid" id="grid"></div>';
-    if($("lib-pkg"))$("lib-pkg").onclick=function(){S.pkgOpen=!S.pkgOpen;paintPkg()};
+    if($("lib-pkg"))$("lib-pkg").onclick=function(){inCaps().then(function(ok){if(ok)show("install",true);else{S.pkgOpen=!S.pkgOpen;paintPkg()}})};
     if($("lib-add"))$("lib-add").onclick=function(){S.add.open=!S.add.open;if(S.add.open)addRoots();paintAdd()};
     $("lib-q").oninput=function(){S.q=this.value.trim().toLowerCase();paintGrid()};
     $("lib-f").onclick=function(e){var b=e.target.closest("button");if(!b)return;S.filter=b.getAttribute("data-f");seg(this,b);paintGrid()};
@@ -2371,11 +2379,143 @@ function smFlSel(x,id){var cur=x.fakelib_mode_override||(x.fakelib_mode?"default
   return '<select class="in" style="padding:4px 8px;font-size:12.5px" data-smfl="'+id+'"'+(S.ro?" disabled":"")+' title="'+L("Ahora: ","Now: ")+esc(x.fakelib_mode||(x.fakelib_enabled?"full":"disabled"))+'">'+
     [["default",L("Por defecto","Default")],["full",L("Completo","Full")],["emulators",L("Solo emuladores","Emulators only")],["disabled",L("Desactivado","Disabled")]].map(function(o){return '<option value="'+o[0]+'"'+(cur===o[0]?" selected":"")+'>'+o[1]+'</option>'}).join("")+'</select>'}
 
+/* ------------------------------------------------------------ install
+ * PKG, patches, DLC and backports, from ShadowMount+ 1.7beta8. It does the
+ * installing; NeoWEB lists the drives, shows its queue and the job, and for a
+ * file on the PC streams it over ShadowMount+'s own WebSocket, so nothing is
+ * written to a drive first. */
+S.in={loaded:false,err:"",caps:null,path:"",parent:"",roots:[],entries:[],offset:0,truncated:false,q:null,job:null,tm:0,pc:null};
+function inSmUrl(p){return "/api/smp?path="+enc(p)}
+function inIcon(x){return x.backport?(x.icon_url?inSmUrl(x.icon_url):""):x.has_icon?inSmUrl("/api/v1/packages/icon?path="+enc(x.path)+"&v="+enc(x.icon_revision||"0")):""}
+function inKind(k){return k==="patch"?L("Parche","Patch"):k==="dlc"?"DLC":k==="base"?L("Juego","Game"):L("Desconocido","Unknown")}
+function inCan(){var c=S.in.caps;return !!(c&&c.indexOf("pkg_install")>=0)}
+function inCaps(){return (S.in.caps?Promise.resolve():smp("/version").then(function(j){S.in.caps=j.capabilities||[]})).then(inCan,function(){return false})}
+function loadInst(path,offset){
+  var n=S.in;if(!S.full)return Promise.resolve();
+  if(path!=null){n.path=path;n.offset=offset||0}
+  return (n.caps?Promise.resolve(n.caps):smp("/version").then(function(j){return j.capabilities||[]})).then(function(c){n.caps=c;
+      if(!inCan())throw new Error(L("Hace falta ShadowMount+ 1.7beta8 o posterior.","ShadowMount+ 1.7beta8 or later is needed."));
+      return smp("/packages",{path:n.path,offset:n.offset})}).then(function(j){
+      n.path=j.path||"";n.parent=j.parent||"";n.roots=j.roots||[];n.entries=j.entries||[];n.offset=j.offset||0;n.truncated=!!j.truncated;n.err="";n.loaded=true;return inPoll()},
+    function(e){n.err=e.message;n.loaded=true}).then(function(){if(S.view==="install")paintInst()});
+}
+/* the queue and the job; while something runs, again every second */
+function inPoll(){
+  var n=S.in;clearTimeout(n.tm);
+  return Promise.all([smp("/packages/queue",{action:"status"}).catch(function(){return null}),smp("/games/storage/status",{}).catch(function(){return null})]).then(function(x){
+    var was=n.job&&n.job.active;n.q=x[0];n.job=x[1];
+    if(was&&n.job&&!n.job.active){var ok=n.job.state==="completed";
+      toast(ok?(n.job.title_name||n.job.title_id||L("Hecho","Done"))+L(": instalado",": installed"):L("No se pudo: ","It failed: ")+(n.job.result_error||n.job.state)+(n.job.native_status?" (0x"+("0000000"+(n.job.native_status>>>0).toString(16)).slice(-8)+")":""),!ok);
+      if(S.view==="install")smp("/packages",{path:n.path,offset:n.offset}).then(function(j){n.entries=j.entries||[];paintInst()}).catch(function(){})}
+    if(S.view==="install")paintInst();
+    if((n.job&&n.job.active)||(n.q&&n.q.queue_running)||n.pc)n.tm=setTimeout(inPoll,1000)});
+}
+function inAct(x){
+  /* what the row offers, as ShadowMount+ labels it */
+  if(x.backport)return [x.backport_installed?L("Reemplazar backport","Replace backport"):L("Instalar backport","Install backport"),"bp",true];
+  if(!x.installable)return [L("No es un PKG válido","Not a valid PKG"),"",false];
+  if(x.kind==="base")return x.installed?[L("Instalado","Installed"),"",false]:[x.base_installed?L("Reemplazar","Replace"):L("Instalar","Install"),"pkg",true];
+  if(!x.base_installed&&!x.base_queued)return [L("Sin juego base","No base game"),"",false];
+  return [x.kind==="patch"?L("Actualizar","Update"):L("Instalar","Install"),"pkg",true];
+}
+function paintInst(){
+  var n=S.in,box=$("v-install");if(!box)return;
+  if(!n.loaded){box.innerHTML='<div class="empty">'+L("Preguntando a ShadowMount+…","Asking ShadowMount+…")+'</div>';return}
+  if(n.err){box.innerHTML='<div class="card pad"><div class="empty">'+ic("install")+'<div>'+esc(n.err)+'</div></div></div>';return}
+  var j=n.job,busy=j&&j.active,q=n.q||{entries:[]},ro=S.ro;
+  var job=busy?'<div class="card pad" style="margin-bottom:16px"><h3 class="h">'+(j.operation==="install"?L("Instalando","Installing"):j.operation==="delete"?L("Borrando","Deleting"):L("Copiando","Copying"))+' <em>'+esc(j.title_name||j.title_id||j.source||"")+'</em>'+
+      (j.queue_total>1?'<span class="chip" style="margin-left:8px">'+(j.queue_completed+1)+" / "+j.queue_total+'</span>':"")+'<span class="sp" style="flex:1"></span>'+
+      (j.cancellable&&!j.cancel_requested?'<button class="btn sm danger" data-in="cancel">'+ic("x")+L("Cancelar","Cancel")+'</button>':"")+'</h3>'+
+      '<div class="prog"><i style="width:'+Math.max(1,Math.min(100,j.progress_percent||0))+'%"></i></div>'+
+      '<p style="margin:8px 0 0;color:var(--dim);font:500 12px var(--mono)">'+(j.progress_percent||0)+"% · "+size(j.processed_bytes)+" / "+size(j.total_bytes)+(j.speed_bytes_per_second?" · "+size(j.speed_bytes_per_second)+"/s":"")+" · "+esc(({preparing:L("preparando","preparing"),measuring:L("midiendo","measuring"),transferring:L("copiando","copying"),deleting:L("borrando","deleting"),finalizing:L("terminando","finishing"),installing:L("instalando","installing")})[j.state]||j.state)+
+      (n.pc?" · "+L("desde el PC: no cierres esta página","from the PC: do not close this page"):"")+'</p></div>':"";
+  var qu=q.entries&&q.entries.length?'<div class="card pad" style="margin-bottom:16px"><h3 class="h">'+L("En cola","Queued")+' <em>'+q.entries.length+'</em><span class="sp" style="flex:1"></span>'+
+      (!busy?'<button class="btn sm pri" data-in="qstart"'+(ro?" disabled":"")+'>'+ic("play")+L("Instalar la cola","Install the queue")+'</button>':"")+'<button class="btn sm ghost" data-in="qclear"'+(ro?" disabled":"")+'>'+L("Vaciar","Clear")+'</button></h3>'+
+      q.entries.map(function(x){return '<div class="item" style="padding:8px 0"><div class="t"><b>'+esc(x.title_name||x.title_id)+'</b><small>'+inKind(x.kind)+(x.version?" · v"+esc(x.version):"")+" · "+esc(x.path)+'</small></div><button class="btn sm ghost" data-in="qrm" data-v="'+esc(x.path)+'"'+(ro?" disabled":"")+'>'+ic("x")+'</button></div>'}).join("")+'</div>':"";
+  var crumbs='<button class="btn sm'+(n.path?"":" pri")+'" data-in="go" data-v="">'+ic("disk")+L("Discos","Drives")+'</button>'+
+      n.roots.map(function(r){return '<button class="btn sm'+(n.path===r?" pri":"")+'" data-in="go" data-v="'+esc(r)+'">'+esc(r)+'</button>'}).join("")+
+      '<button class="btn sm" data-in="go" data-v="/data/pkgs">/data/pkgs</button><button class="btn sm" data-in="go" data-v="/data/homebrew/backports">'+L("Backports instalados","Installed backports")+'</button>';
+  var rows=n.entries.map(function(x){var p=esc(x.path),ico=inIcon(x),a;
+    if(x.directory&&!x.backport)return '<tr><td class="n" colspan="3"><a data-in="go" data-v="'+p+'" style="cursor:pointer">'+ic("files")+" "+esc(x.name)+'</a></td><td></td></tr>';
+    a=inAct(x);
+    var del=x.backport&&n.path.indexOf("/data/homebrew/backports")===0;
+    return '<tr><td class="n">'+(ico?'<img class="svi" loading="lazy" alt="" src="'+ico+'">':'<span class="svi"></span>')+'<span>'+esc(x.title_name||(x.backport?L("Juego desconocido","Unknown game"):x.name))+'</span><small>'+esc(x.title_id||"")+(x.title_id?" · ":"")+esc(x.name)+'</small></td>'+
+      '<td><span class="chip">'+(x.backport?"backport":inKind(x.kind))+'</span>'+(x.version?' <span class="chip">v'+esc(x.version)+'</span>':"")+'</td><td>'+(x.directory?"":size(x.size_bytes))+'</td>'+
+      '<td style="white-space:nowrap">'+(a[2]?'<button class="btn sm pri" data-in="'+a[1]+'" data-v="'+p+'"'+(busy||ro?" disabled":"")+'>'+a[0]+'</button>'+(a[1]==="pkg"?' <button class="btn sm" data-in="qadd" data-v="'+p+'"'+(ro?" disabled":"")+' title="'+L("Añadir a la cola","Add to the queue")+'">'+ic("plus")+'</button>':""):'<span class="chip">'+a[0]+'</span>')+
+      (del?' <button class="btn sm danger" data-in="bpdel" data-v="'+p+'"'+(busy||ro?" disabled":"")+'>'+ic("trash")+'</button>':"")+'</td></tr>'}).join("");
+  box.innerHTML=job+qu+
+    '<div class="card svbar" style="margin-bottom:16px"><label class="btn pri"'+(busy||ro?' style="opacity:.5;pointer-events:none"':"")+'>'+ic("upload")+L("Instalar un PKG desde este PC","Install a PKG from this PC")+'<input type="file" id="in-pc" accept=".pkg" hidden></label>'+
+      '<span class="sp"></span><small style="color:var(--faint)">'+L("Va directo a la consola, sin guardarse en ningún disco.","It goes straight to the console, without being saved on any drive.")+'</small></div>'+
+    '<div class="tools" style="flex-wrap:wrap;gap:8px">'+crumbs+'</div>'+
+    (n.path?'<p style="margin:6px 2px 10px;font:500 12px var(--mono);color:var(--dim)">'+(n.parent?'<a data-in="go" data-v="'+esc(n.parent)+'" style="cursor:pointer">'+ic("up")+'</a> ':"")+esc(n.path)+'</p>':"")+
+    '<div class="card" style="overflow:auto"><table class="t"><thead><tr><th>'+L("Nombre","Name")+'</th><th>'+L("Tipo","Kind")+'</th><th>'+L("Tamaño","Size")+'</th><th></th></tr></thead><tbody>'+
+      (rows||'<tr><td colspan="4"><div class="empty">'+(n.path?L("Aquí no hay PKG ni carpetas.","No PKG or folders here."):L("Elige un disco.","Pick a drive."))+'</div></td></tr>')+'</tbody></table></div>'+
+    (n.truncated||n.offset?'<div class="tools" style="justify-content:center;margin-top:10px">'+(n.offset?'<button class="btn sm" data-in="page" data-v="'+(n.offset-256)+'">'+L("Anteriores","Previous")+'</button>':"")+(n.truncated?'<button class="btn sm" data-in="page" data-v="'+(n.offset+256)+'">'+L("Siguientes","Next")+'</button>':"")+'</div>':"")+
+    '<p style="margin:14px 2px 0;font:500 11.5px var(--mono);color:var(--faint)">'+L("Lo instala ShadowMount+. Los parches y DLC necesitan el juego base instalado. Un backport se copia a /data/homebrew/backports y el original se queda donde está.","ShadowMount+ installs it. Patches and DLC need the base game installed. A backport is copied to /data/homebrew/backports and the original stays where it is.")+'</p>';
+  var f=$("in-pc");if(f)f.onchange=function(){if(this.files&&this.files[0])inFromPc(this.files[0]);this.value=""};
+}
+function inJob(p,msg){return p.then(function(){if(msg)toast(msg);return inPoll()}).catch(function(e){fail(e);inPoll()})}
+$("v-install").addEventListener("click",function(e){
+  var t=e.target.closest("[data-in]");if(!t||t.disabled)return;var k=t.getAttribute("data-in"),v=t.getAttribute("data-v"),n=S.in;
+  if(k==="go"){loadInst(v,0);return}
+  if(k==="page"){loadInst(n.path,Math.max(0,+v));return}
+  if(k==="pkg")inJob(smp("/packages/install",{path:v}),L("Instalando…","Installing…"));
+  else if(k==="qadd")inJob(smp("/packages/queue",{action:"add",path:v}),L("Añadido a la cola","Added to the queue"));
+  else if(k==="qrm")inJob(smp("/packages/queue",{action:"remove",path:v}));
+  else if(k==="qclear")inJob(smp("/packages/queue",{action:"clear"}),L("Cola vaciada","Queue cleared"));
+  else if(k==="qstart")inJob(smp("/packages/queue",{action:"start"}),L("Instalando la cola…","Installing the queue…"));
+  else if(k==="cancel")inJob(smp("/games/storage/cancel",{job_id:n.job&&n.job.job_id}),L("Cancelando…","Cancelling…"));
+  else if(k==="bp")inJob(smp("/backports/install",{path:v}),L("Copiando el backport…","Copying the backport…"));
+  else if(k==="bpdel")ask(L("Borrar backport","Delete backport"),L("Se borra entera esta carpeta, sin vuelta atrás: ","This whole folder is deleted, with no way back: ")+v,L("Borrar","Delete"),true).then(function(ok){
+    if(ok)inJob(smp("/backports/delete",{path:v}),L("Borrando…","Deleting…")).then(function(){return wait(1500)}).then(function(){loadInst(n.path,n.offset)})});
+});
+/* a PKG on the PC: ShadowMount+ asks for ranges over a WebSocket on its own
+ * port and the page answers each one with the 8-byte range id and the bytes */
+function inFromPc(f){
+  var n=S.in;
+  ask(L("Instalar ","Install ")+f.name,size(f.size)+". "+L("Deja esta página abierta hasta que termine; si se cierra, la instalación se corta.","Keep this page open until it ends; if it closes, the install stops."),L("Instalar","Install")).then(function(ok){if(!ok)return;
+    smp("/packages/stream",{name:f.name,size:f.size}).then(function(j){
+      var ws,read=function(o,len){return new Promise(function(res,rej){var r=new FileReader();r.onload=function(){res(r.result)};r.onerror=function(){rej(r.error)};r.readAsArrayBuffer(f.slice(o,o+len))})};
+      try{ws=new WebSocket("ws://"+location.hostname+":"+j.stream_port+"/"+j.token+"/ws")}catch(er){fail(er);return}
+      ws.binaryType="arraybuffer";n.pc={ws:ws,name:f.name};
+      ws.onmessage=function(ev){var m;try{m=JSON.parse(ev.data)}catch(_){return}
+        if(m.op!=="range")return;
+        read(m.offset,m.size).then(function(buf){var out=new Uint8Array(8+buf.byteLength),dv=new DataView(out.buffer);
+          dv.setUint32(0,m.id>>>0,true);dv.setUint32(4,Math.floor(m.id/4294967296)>>>0,true);out.set(new Uint8Array(buf),8);
+          if(ws.readyState===1)ws.send(out.buffer)}).catch(function(er){fail(er);ws.close()})};
+      ws.onerror=function(){toast(L("No se puede abrir la conexión con ShadowMount+ (puerto ","Cannot open the connection to ShadowMount+ (port ")+j.stream_port+L("). ¿Escucha solo en la consola (api_bind_address=127.0.0.1)?","). Is it listening on the console only (api_bind_address=127.0.0.1)?"),true)};
+      ws.onclose=function(){n.pc=null;inPoll()};
+      toast(L("Enviando ","Sending ")+f.name+"…");inPoll();
+    }).catch(fail)});
+}
+window.addEventListener("beforeunload",function(e){if(S.in.pc){e.preventDefault();e.returnValue=""}});
+/* a game's patch and DLC, on its page */
+function gameContent(id){
+  var box=$("gmc");if(!box||!S.full)return;
+  smp("/games/info",{title_id:id}).then(function(j){
+    if(S.gmId!==id||!$("gmc"))return;
+    var p=j.patch||{},d=j.dlc||[],h="",ro=S.ro||S.running===id;
+    h+=j.patch_info_status?'<p style="margin:0;color:var(--faint)">'+L("No se puede saber si tiene parche.","Whether it has a patch cannot be told.")+'</p>'
+      :p.installed?'<div class="item" style="padding:8px 0"><div class="t"><b>'+L("Parche","Patch")+(p.version?" v"+esc(p.version):"")+'</b><small>'+size(p.size_bytes)+'</small></div><button class="btn sm danger" data-gc="patch"'+(ro?" disabled":"")+'>'+ic("trash")+L("Quitar","Remove")+'</button></div>'
+      :'<p style="margin:0;color:var(--faint)">'+L("Sin parche instalado.","No patch installed.")+'</p>';
+    h+=j.dlc_info_status?'<p style="margin:8px 0 0;color:var(--faint)">'+L("No se pueden leer sus DLC.","Its DLC cannot be read.")+'</p>'
+      :d.length?d.map(function(x){return '<div class="item" style="padding:8px 0"><div class="t"><b>'+esc(x.title_name||x.content_id)+'</b><small>DLC'+(x.version?" · v"+esc(x.version):"")+(x.size_bytes?" · "+size(x.size_bytes):"")+'</small></div><button class="btn sm danger" data-gc="dlc" data-v="'+esc(x.content_id)+'"'+(ro?" disabled":"")+'>'+ic("trash")+'</button></div>'}).join("")+(j.dlc_info_truncated?'<p style="margin:6px 0 0;color:var(--faint)">'+L("Hay más DLC de los que caben aquí.","There are more DLC than fit here.")+'</p>':"")
+      :'<p style="margin:8px 0 0;color:var(--faint)">'+L("Sin DLC instalados.","No DLC installed.")+'</p>';
+    box.innerHTML=h+(S.running===id?'<p style="margin:8px 0 0">'+L("Cierra el juego para quitar algo.","Close the game to remove anything.")+'</p>':"")+
+      '<div style="margin-top:14px"><button class="btn sm" data-gp="install">'+ic("install")+L("Instalar PKG","Install PKG")+'</button></div>';
+  }).catch(function(e){if($("gmc"))$("gmc").innerHTML='<p style="margin:0;color:var(--faint)">'+esc(e.message)+'</p>'});
+}
+$("v-game").addEventListener("click",function(e){
+  var b=e.target.closest("button[data-gc]"),id=S.gp.id;if(!b||b.disabled)return;
+  var k=b.getAttribute("data-gc"),cid=b.getAttribute("data-v"),what=k==="patch"?L("el parche","the patch"):L("este DLC","this DLC");
+  ask(L("Quitar ","Remove ")+what,L("Se desinstala ","This uninstalls ")+what+L(" de "," of ")+title(id)+L(". El juego se queda.",". The game stays."),L("Quitar","Remove"),true).then(function(ok){if(!ok)return;
+    smp("/games/content/uninstall",k==="patch"?{title_id:id,kind:"patch"}:{title_id:id,kind:"dlc",content_id:cid}).then(function(){toast(L("Quitado","Removed"));return wait(1500)}).then(function(){gameContent(id)}).catch(fail)})});
+
 /* ------------------------------------------------------------ one game, everything */
 function loadGame(){
   var id=S.gp.id;S.gp.tro=null;S.gmId=id;$("drawer").className="drawer";
   var ps=[];if(!S.tr.loaded)ps.push(loadTrophies());if(!S.sv.loaded)ps.push(loadSaves());if(!S.cp.loaded)ps.push(loadCaps());if(!S.ch.loaded)ps.push(loadCheats());else ps.push(loadLive());
-  Promise.all(ps).then(function(){if(S.view!=="game"||S.gp.id!==id)return;paintGameView();gameBox(id);
+  Promise.all(ps).then(function(){if(S.view!=="game"||S.gp.id!==id)return;paintGameView();gameBox(id);gameContent(id);
     var t=gpSet(id);if(t)api("/api/trophies/set?user="+t.u.id+"&id="+t.s.id+"&lang="+TLANG).then(function(j){S.gp.tro=j;if(S.view==="game"&&S.gp.id===id){paintGameView();paintGame(id)}}).catch(function(){})});
 }
 function gpSet(id){for(var i=0;i<S.tr.users.length;i++){var u=S.tr.users[i];for(var k=0;k<u.sets.length;k++)if((" "+(u.sets[k].games||"")+" ").indexOf(" "+id+" ")>=0&&(u.sets[k].local||u.sets[k].progress>0||i===S.tr.users.length-1))return{u:u,s:u.sets[k]}}
@@ -2384,7 +2524,7 @@ function paintGameView(){
   var id=S.gp.id,a=app(id),box=$("v-game");
   if(!a){box.innerHTML='<div class="card"><div class="empty">'+L("Ese juego no está en la consola.","That game is not on the console.")+'</div></div>';return}
   $("vt").textContent=a.title||id;$("vs").textContent=id+(a.version?" · v"+a.version:"");
-  var run=S.running===id,e=esc(id),pl=S.play.games[id],td=S.play.today,keepBox=$("gmb")&&box.contains($("gmb"))?$("gmb").innerHTML:"";
+  var run=S.running===id,e=esc(id),pl=S.play.games[id],td=S.play.today,keepBox=$("gmb")&&box.contains($("gmb"))?$("gmb").innerHTML:"",keepC=$("gmc")&&box.contains($("gmc"))?$("gmc").innerHTML:'<p style="margin:0;color:var(--faint)">'+L("Preguntando a ShadowMount+…","Asking ShadowMount+…")+'</p>';
   function card(t,body,foot){return '<div class="card pad"><h3 class="h">'+t+'</h3>'+body+(foot?'<div style="margin-top:14px">'+foot+'</div>':"")+'</div>'}
   function none(t){return '<p style="margin:0;color:var(--faint)">'+t+'</p>'}
   function go(k,t){return '<button class="btn sm" data-gp="'+k+'">'+t+'</button>'}
@@ -2425,6 +2565,7 @@ function paintGameView(){
       card(L("Partidas","Saves"),sav,go("saves",L("Copias y restaurar","Backups and restore")+(bks?" · "+bks:"")))+
       card(L("Trucos","Cheats"),chs,go("cheats",run?L("Encender y apagar","Switch on and off"):L("Ver los ficheros","See the files")))+
       card(L("Capturas","Captures"),cap,cps.length?go("captures",L("Verlas","See them")):"")+
+      (S.full?card(L("Parche y DLC","Patch and DLC"),'<div id="gmc">'+keepC+'</div>'):"")+
       '<div class="card pad"><div class="gmb" id="gmb" style="border:0;padding:0;margin:0">'+keepBox+'</div></div></div>';
 }
 $("v-game").addEventListener("click",function(e){
