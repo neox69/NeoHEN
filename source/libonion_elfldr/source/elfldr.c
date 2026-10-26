@@ -630,12 +630,60 @@ elfldr_rfork_entry(void* argv) {
 }
 
 
+/**
+ * Run the process until it reaches brkpoint, then put the original
+ * instruction back with the instruction pointer on it. From elfldr v0.27
+ * pt_breakat(); NeoHEN also moves rip back over the int3, so the instruction
+ * at brkpoint runs as it would without the breakpoint.
+ **/
+static int
+elfldr_breakat(pid_t pid, intptr_t brkpoint) {
+  uint8_t int3instr = 0xcc;
+  uint8_t orginstr;
+  struct reg r;
+
+  if(kernel_mprotect(pid, brkpoint, PAGE_SIZE,
+                     PROT_READ | PROT_WRITE | PROT_EXEC)) {
+    return -1;
+  }
+  if(pt_copyout(pid, brkpoint, &orginstr, sizeof(orginstr))) {
+    return -1;
+  }
+  if(pt_copyin(pid, &int3instr, brkpoint, sizeof(int3instr))) {
+    return -1;
+  }
+
+  // Continue execution until we hit the breakpoint, then remove it.
+  if(pt_continue(pid, SIGCONT)) {
+    return -1;
+  }
+  if(waitpid(pid, 0, 0) == -1) {
+    return -1;
+  }
+  if(pt_copyin(pid, &orginstr, brkpoint, sizeof(orginstr))) {
+    return -1;
+  }
+  if(pt_getregs(pid, &r)) {
+    return -1;
+  }
+  if(r.r_rip == brkpoint + 1) {
+    r.r_rip = brkpoint;
+    if(pt_setregs(pid, &r)) {
+      return -1;
+    }
+  }
+
+  return 0;
+}
+
+
 pid_t
 elfldr_spawn(int stdio, char* const argv[], uint8_t* elf, size_t payload_size) {
-  uint8_t int3instr = 0xcc;
+  intptr_t libkernel_entry;
+  off_t need_reloc_offset;
+  intptr_t eboot_entry;
+  off_t main_offset;
   struct kevent evt;
-  intptr_t brkpoint;
-  uint8_t orginstr;
   void *stack;
   pid_t pid;
   int kq;
@@ -683,51 +731,44 @@ elfldr_spawn(int stdio, char* const argv[], uint8_t* elf, size_t payload_size) {
   free(stack);
   close(kq);
 
-  if(pt_syscall(pid, 599)) {
-    LOG_PT_PERROR(pid, "sys_dynlib_process_needed_and_relocate");
-    pt_detach(pid, SIGKILL);
-    return -1;
-  }
-
-  elfldr_set_heap_size(pid, -1);
-
-  if(!(brkpoint=kernel_dynlib_entry_addr(pid, 0))) {
+  // The proc is now in the STOP state, with the instruction pointer pointing
+  // at the libkernel entry. libkernel makes the syscall
+  // sys_dynlib_process_needed_and_relocate itself, so it is not made a second
+  // time here (elfldr v0.27).
+  if(!(libkernel_entry=kernel_dynlib_entry_addr(pid, 1))) {
     LOG_PUTS("kernel_dynlib_entry_addr failed");
     pt_detach(pid, SIGKILL);
     return -1;
   }
-  brkpoint += 58;
 
-  if(kernel_mprotect(pid, brkpoint, PAGE_SIZE,
-                     PROT_READ | PROT_WRITE | PROT_EXEC)) {
-    LOG_PUTS("kernel_mprotect failed");
+  if(!(eboot_entry=kernel_dynlib_entry_addr(pid, 0))) {
+    LOG_PUTS("kernel_dynlib_entry_addr failed");
     pt_detach(pid, SIGKILL);
     return -1;
   }
 
-  if(pt_copyout(pid, brkpoint, &orginstr, sizeof(orginstr))) {
-    LOG_PERROR("pt_copyout");
-    pt_detach(pid, SIGKILL);
-    return -1;
+  if(kernel_get_fw_version() < 0x14000000) {
+    need_reloc_offset = 15;
+    main_offset = 58;
+  } else {
+    need_reloc_offset = 15;
+    main_offset = 63;
   }
-  if(pt_copyin(pid, &int3instr, brkpoint, sizeof(int3instr))) {
-    LOG_PERROR("pt_copyin");
+
+  // Continue execution until just after libkernel makes the syscall
+  // sys_dynlib_process_needed_and_relocate.
+  if(elfldr_breakat(pid, libkernel_entry + need_reloc_offset)) {
+    LOG_PERROR("elfldr_breakat");
     pt_detach(pid, SIGKILL);
     return -1;
   }
 
-  if(pt_continue(pid, SIGCONT)) {
-    LOG_PERROR("pt_continue");
-    pt_detach(pid, SIGKILL);
-    return -1;
-  }
-  if(waitpid(pid, 0, 0) == -1) {
-    LOG_PERROR("waitpid");
-    pt_detach(pid, SIGKILL);
-    return -1;
-  }
-  if(pt_copyin(pid, &orginstr, brkpoint, sizeof(orginstr))) {
-    LOG_PERROR("pt_copyin");
+  // Allow libc to allocate arbitrary amount of memory.
+  elfldr_set_heap_size(pid, -1);
+
+  // Continue execution until just before main() is invoked.
+  if(elfldr_breakat(pid, eboot_entry + main_offset)) {
+    LOG_PERROR("elfldr_breakat");
     pt_detach(pid, SIGKILL);
     return -1;
   }
