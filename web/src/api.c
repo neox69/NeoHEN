@@ -641,6 +641,7 @@ static const api_route_t g_routes[] = {
   {"GET",  "/api/store",            api_store},
   {"POST", "/api/store/fetch",      api_store_fetch},
   {NULL,   "/api/store/auto",       api_store_auto},
+  {NULL,   "/api/apps/store",        api_apps_store},
   {"GET",  "/api/cheats/live",      api_cheats_live},
   {"POST", "/api/cheats/toggle",    api_cheats_toggle},
   {"GET",  "/api/stats/playtime",   api_stats_playtime},

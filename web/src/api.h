@@ -100,6 +100,7 @@ void api_launcher_init(void);
 void api_store(http_req_t *req);
 void api_store_auto(http_req_t *req);
 void api_store_fetch(http_req_t *req);
+void api_apps_store(http_req_t *req);
 void api_cheats_live(http_req_t *req);
 void api_cheats_toggle(http_req_t *req);
 void api_stats_init(void);

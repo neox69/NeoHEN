@@ -168,3 +168,85 @@ api_store_auto(http_req_t *req) {
   jw_kbool(&w, "enabled", stat(local, &st) != 0);
   api_finish(req, &w);
 }
+
+/* The app store: homebrew apps (a release zip with one PPSA12345 folder) that
+ * NeoHEN's util service downloads and unpacks into /data/homebrew in the
+ * background (BREW_UTIL_APP_STORE); ShadowMount+ then registers them.
+ *
+ * GET  /api/apps/store   {"installed": {id: {tag, url, time}}, "job": {...}}
+ * POST /api/apps/store   {"action": "install", "url", "id", "tag"} or
+ *                        {"action": "cancel"}; answers with the job */
+#define APPS       PS5AIO_DATA_DIR "/apps.json"
+#define CMD_APPS   0x800001Bu /* BREW_UTIL_APP_STORE */
+
+static void
+apps_job(jw_t *w, const char *var) {
+  jval_t *j = json_parse(var, strlen(var));
+
+  jw_key(w, "job");
+  if(j && j->type == J_OBJ) {
+    json_write(w, j);
+  } else {
+    jw_null(w);
+  }
+  json_free(j);
+}
+
+void
+api_apps_store(http_req_t *req) {
+  char var[512], local[PATH_MAX];
+  char *data = NULL;
+  size_t len = 0;
+  jval_t *b = NULL, *list = NULL;
+  jw_t q, w;
+  int rc;
+
+  jw_init(&q);
+  jw_obj(&q);
+  if(!strcmp(req->method, "POST")) {
+    const char *action;
+    if(!(b = api_body(req))) {
+      jw_free(&q);
+      return;
+    }
+    action = json_get_str(b, "action", "");
+    if(strcmp(action, "install") && strcmp(action, "cancel")) {
+      json_free(b);
+      jw_free(&q);
+      http_send_error(req, 400, "action is install or cancel");
+      return;
+    }
+    jw_kstr(&q, "action", action);
+    jw_kstr(&q, "url", json_get_str(b, "url", ""));
+    jw_kstr(&q, "id", json_get_str(b, "id", ""));
+    jw_kstr(&q, "tag", json_get_str(b, "tag", ""));
+  } else {
+    jw_kstr(&q, "action", "status");
+  }
+  jw_obj_end(&q);
+  rc = neohen_util_call(CMD_APPS, &q, var, sizeof(var), 10);
+  jw_free(&q);
+  json_free(b);
+  if(rc < 0) {
+    http_send_error(req, 502, "NeoHEN's service is not answering (this needs NeoHEN 0.1.0-rc13 or later)");
+    return;
+  }
+  if(rc) {
+    http_send_error(req, 409, "%s", var[0] && strcmp(var, "Nothing") ? var : "the console said no");
+    return;
+  }
+  api_begin(&w);
+  apps_job(&w, var);
+  plat_path(APPS, local, sizeof(local));
+  jw_key(&w, "installed");
+  if(!fs_read_file(local, &data, &len, 1 << 20) && (list = json_parse(data, len)) &&
+     json_get(list, "installed")) {
+    json_write(&w, json_get(list, "installed"));
+  } else {
+    jw_obj(&w);
+    jw_obj_end(&w);
+  }
+  json_free(list);
+  free(data);
+  api_finish(req, &w);
+}

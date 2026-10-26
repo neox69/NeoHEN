@@ -78,6 +78,9 @@ enum DaemonCommands : unsigned int {
   // NeoHEN: fetch one release file from GitHub into the payloads folder.
   // NeoWEB's payload store asks for it; the page cannot download it itself.
   BREW_UTIL_DOWNLOAD_FILE = 0x800001Au,
+  // NeoHEN: install a homebrew app (a release zip with one PPSA folder) from
+  // GitHub into /data/homebrew, in the background; NeoWEB's app store.
+  BREW_UTIL_APP_STORE = 0x800001Bu,
 
   // Crit daemon plugin management. Payloads contain only validated plugin IDs;
   // filesystem paths never cross the IPC boundary.

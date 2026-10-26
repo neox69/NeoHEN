@@ -26,6 +26,7 @@ extern "C" {
 #include "cheats/runtime.h"
 #include "cheats/sync/cheat_sync_service.hpp"
 #include "cheats/sync/http_transport_ps5.hpp"
+#include "app_store.hpp"
 #include <cstdio>
 #include <cerrno>
 #include <cstdlib>
@@ -432,6 +433,12 @@ void handleIPC(clientArgs *client, std::string &inputStr,
     chmod(dest.c_str(), 0777);
     LOG_INFO("[store] %s <- %s (%zu bytes)", dest.c_str(), url.c_str(), bytes);
     reply(sender_app, false, std::to_string(bytes));
+    break;
+  }
+  case BREW_UTIL_APP_STORE: {
+    std::string out;
+    const bool ok = util_app_store(my_json.get(), out);
+    reply(sender_app, !ok, out);
     break;
   }
   case BREW_RELOAD_SETTINGS: {
