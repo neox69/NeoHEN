@@ -4,6 +4,8 @@
  * sce_sys/param.json. util downloads it, unpacks it beside its final place
  * and swaps it into /data/homebrew, where ShadowMount+ registers it like any
  * game folder. One job at a time, in its own thread; NeoWEB asks how it goes.
+ * When the catalog gives the zip's SHA-256, a download that differs is thrown
+ * away before anything is unpacked.
  * What was installed, and which release, is kept in web/apps.json. */
 
 #include "app_store.hpp"
@@ -17,6 +19,9 @@
 #include <onion/tree.h>
 
 #include <miniz.h>
+extern "C" {
+#include <sha256.h>
+}
 
 #include <atomic>
 #include <cctype>
@@ -41,7 +46,7 @@ constexpr mz_uint kMaxEntries = 60000;
 
 struct Job {
   std::string state = "idle"; /* idle download unpack done failed */
-  std::string id, tag, url, err;
+  std::string id, tag, url, sha, err;
   size_t got = 0, total = 0;
 };
 
@@ -57,6 +62,25 @@ bool id_ok(const std::string &id) {
               : !std::isdigit(static_cast<unsigned char>(id[i])))
       return false;
   return true;
+}
+
+bool sha_ok(const std::string &s) {
+  if (s.size() != 64)
+    return false;
+  for (char c : s)
+    if (!std::isdigit(static_cast<unsigned char>(c)) && (c < 'a' || c > 'f'))
+      return false;
+  return true;
+}
+
+std::string hex(const uint8_t *d, size_t n) {
+  static const char k[] = "0123456789abcdef";
+  std::string s;
+  for (size_t i = 0; i < n; ++i) {
+    s += k[d[i] >> 4];
+    s += k[d[i] & 15];
+  }
+  return s;
 }
 
 /* no absolute paths, no "..", no backslashes, no empty parts */
@@ -208,6 +232,8 @@ void *job_thread(void *) {
 
   using namespace onion::cheats::sync;
   FILE *out = fopen(zip.c_str(), "wb");
+  SHA256_CTX sha;
+  sha256_init(&sha);
   SyncStatus st = out ? SyncStatus::Ok : SyncStatus::Io;
   if (out) {
     HttpRequest request;
@@ -219,6 +245,7 @@ void *job_thread(void *) {
     request.should_cancel = cancelled;
     Ps5HttpTransport http;
     st = http.perform(request, [&](const void *data, size_t n) {
+      sha256_update(&sha, static_cast<const uint8_t *>(data), n);
       return fwrite(data, 1, n, out) == n ? SyncStatus::Ok : SyncStatus::Io;
     });
     if (fclose(out) != 0 && st == SyncStatus::Ok)
@@ -228,6 +255,14 @@ void *job_thread(void *) {
     unlink(zip.c_str());
     LOG_ERROR("[apps] %s: download failed: %s", j.id.c_str(), sync_status_name(st));
     set("failed", g_cancel.load() ? "cancelled" : std::string("download: ") + sync_status_name(st));
+    return nullptr;
+  }
+  uint8_t digest[SHA256_BLOCK_SIZE];
+  sha256_final(&sha, digest);
+  if (!j.sha.empty() && hex(digest, sizeof(digest)) != j.sha) {
+    unlink(zip.c_str());
+    LOG_ERROR("[apps] %s: SHA-256 mismatch, the download was thrown away", j.id.c_str());
+    set("failed", "the download does not match the catalog's SHA-256");
     return nullptr;
   }
 
@@ -293,7 +328,8 @@ bool util_app_store(const cJSON *request, std::string &out) {
   const std::string url = onion_cjson::string_item(request, "url", "");
   const std::string id = onion_cjson::string_item(request, "id", "");
   const std::string tag = onion_cjson::string_item(request, "tag", "");
-  if (!id_ok(id) || tag.size() > 60 || url.compare(0, 19, "https://github.com/") != 0 ||
+  const std::string sha = onion_cjson::string_item(request, "sha256", "");
+  if (!id_ok(id) || tag.size() > 60 || (!sha.empty() && !sha_ok(sha)) || url.compare(0, 19, "https://github.com/") != 0 ||
       url.size() > 400) {
     out = "rejected";
     return false;
@@ -309,6 +345,7 @@ bool util_app_store(const cJSON *request, std::string &out) {
     g_job.id = id;
     g_job.tag = tag;
     g_job.url = url;
+    g_job.sha = sha;
   }
   g_cancel.store(false);
   pthread_t thread{};

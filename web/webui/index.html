@@ -709,6 +709,20 @@ html.lite *,html.lite *::before,html.lite *::after{animation:none!important;tran
 html.lite .card::before,html.lite .card::after,html.lite .cover::after,html.lite .holo::before,html.lite .holo::after{display:none!important}
 html.lite :focus-visible{box-shadow:none!important;outline:3px solid var(--cyan)!important}
 .apgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:14px}.apc{display:flex;flex-direction:column;gap:12px;padding:18px;min-height:190px}.apt{display:flex;gap:14px;align-items:center}.apt img,.apt .api{width:56px;height:56px;border-radius:14px;flex:none;object-fit:cover}.apt .api{display:grid;place-items:center;background:var(--grad);color:#fff}.apt .api svg{width:26px;height:26px}.apt b{display:block;font-size:15.5px}.apt small{color:var(--dim);font-size:12.5px;line-height:1.35}.apm{display:flex;gap:6px;flex-wrap:wrap}
+.apc[data-psd]{cursor:pointer;transition:border-color .2s,transform .2s}.apc[data-psd]:hover{border-color:color-mix(in srgb,var(--cyan) 45%,transparent)}
+.aptools{flex-wrap:wrap;gap:10px}.aptools .seg small{opacity:.6;font:600 10.5px var(--mono);margin-left:3px}.aptools #ap-q{flex:1 1 220px;min-width:0;max-width:340px}.aptools select{max-width:200px}
+.chip.new{border-color:color-mix(in srgb,var(--cyan) 55%,transparent);color:var(--cyan)}
+html[data-theme] nav button em.new,nav button em.new{background:var(--cyan);color:#04121A}
+.apfoot{margin:16px 2px 0;font:500 11.5px/1.6 var(--mono);color:var(--faint);max-width:110ch}.apfoot a{color:var(--dim)}
+.apdesc{margin:12px 0 0;font-size:14px;line-height:1.55;color:var(--dim)}
+.apnotes{white-space:pre-wrap;word-break:break-word;max-height:300px;overflow:auto;font:500 12px/1.55 var(--mono);color:var(--dim);background:rgba(0,0,0,.25);border:1px solid var(--line2);border-radius:12px;padding:12px 14px}
+.drawer .art.ps{overflow:hidden;background:#05080F}.drawer .art.ps i{position:absolute;inset:-40px;background:center/cover no-repeat;filter:blur(30px) saturate(150%);opacity:.75}
+.pspanel{margin-top:16px}.psrow{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:12px}
+.psrow button{display:flex;flex-direction:column;gap:8px;align-items:flex-start;padding:10px;border-radius:14px;border:1px solid var(--line2);background:rgba(255,255,255,.02);color:inherit;text-align:left;cursor:pointer;font:inherit;min-width:0;transition:transform .2s,border-color .2s}
+.psrow button:hover{transform:translateY(-3px);border-color:color-mix(in srgb,var(--cyan) 50%,transparent)}
+.psrow img,.psrow .ph{width:100%;aspect-ratio:1;border-radius:11px;object-fit:cover;background:#05080F;display:grid;place-items:center;color:var(--faint)}
+.psrow b{font-size:13.5px;line-height:1.2;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.psrow small{color:var(--dim);font:500 11px var(--mono)}
+
 /* ============================================================ NEO v3 — themes
  * html[data-theme] picks a whole look, html[data-bg] what moves behind it
  * (resolved from the theme when the user leaves it on "auto"). "holo" is the
@@ -1209,7 +1223,7 @@ var VIEWS=[
  ["smp","ShadowMount+",L("Los juegos que monta y cómo le va","The games it mounts, and how it is doing"),1],
  ["game","","",0,1],
  ["install",L("Instalar","Install"),L("PKG, parches, DLC y backports, desde los discos o desde el PC","PKG, patches, DLC and backports, from the drives or from the PC"),1],
- ["apps",L("Tienda de apps","App store"),L("Emuladores y apps homebrew, de GitHub a tu menú","Emulators and homebrew apps, from GitHub to your home screen"),1],
+ ["apps",L("Tienda de apps","App store"),L("Todo el catálogo de ProsperoStore, en directo, de GitHub a tu menú","ProsperoStore's whole catalog, live, from GitHub to your home screen"),1],
  ["payloads","Payloads",L("Lo que NeoHEN arranca y lo que puedes lanzar","What NeoHEN starts and what you can launch")],
  ["themes",L("Temas","Themes"),L("Fondo y música del menú de la PS5","Background and music of the PS5 menu"),1],
  ["remote","Remote Play",L("Cuentas sin PSN, ID de cuenta y PIN para Chiaki o PXPlay","Accounts without PSN, account ID and PIN for Chiaki or PXPlay"),1],
@@ -1239,10 +1253,10 @@ function navOk(k){var v=VIEWS.filter(function(x){return x[0]===k})[0];return !!v
 function paintNav(){
   paintTabs();
   var act=upRows().filter(function(r){var st=r.b?r.a.st:r.u.st;return st==="run"||st==="wait"}).length+S.jobs.filter(function(j){return j.state==="running"}).length;
-  var badge={library:games().length||"",payloads:S.pay.length?S.pay.filter(function(p){return p.running}).length+"/"+S.pay.length:"",transfers:act||""};
+  var badge={library:games().length||"",payloads:S.pay.length?S.pay.filter(function(p){return p.running}).length+"/"+S.pay.length:"",transfers:act||"",apps:S.ap&&S.ap.cat&&!S.ap.seen?psFresh().length||"":""};
   function item(k){var v=VIEWS.filter(function(x){return x[0]===k})[0],pin=CFG.pins.indexOf(k)>=0;
     return '<button data-v="'+k+'" class="'+(S.view===k?"on":"")+'" title="'+esc(v[1])+'">'+ic(k)+'<span>'+v[1]+'</span>'+
-      (badge[k]?'<em class="'+(k==="transfers"?"hot":"")+'">'+badge[k]+'</em>':"")+
+      (badge[k]?'<em class="'+(k==="transfers"?"hot":k==="apps"?"new":"")+'">'+badge[k]+'</em>':"")+
       '<i class="pin'+(pin?" on":"")+'" data-pin="'+k+'" title="'+(pin?L("Quitar de favoritos","Unpin"):L("Fijar en favoritos","Pin to favourites"))+'">'+ic(pin?"star":"pin")+'</i></button>'}
   var seen={settings:1,game:1},h="",pins=CFG.pins.filter(navOk);
   if(pins.length)h+='<div class="ng"><h6>'+ic("star")+'<span>'+L("Favoritos","Favourites")+'</span></h6>'+pins.map(item).join("")+'</div>';
@@ -1341,11 +1355,12 @@ function paintPanel(){
       (S.full?"":'<button data-go="payloads">'+ic("payloads")+'<b>Payloads</b><small>'+L("Gestionar","Manage")+'</small></button>')+'</div></div>'+
     '<div class="card pad"><h3 class="h">Payloads<span class="sp"></span><button class="btn sm ghost" data-go="payloads">'+L("Gestionar","Manage")+'</button></h3>'+(pay||'<div class="empty">–</div>')+'</div>'+
     '<div class="card pad"><h3 class="h">'+L("Actividad","Activity")+(S.full?'<span class="sp"></span><button class="btn sm ghost" data-go="transfers">'+L("Ver todo","See all")+'</button>':"")+'</h3>'+
-      (act||'<div class="empty">'+L("Sin actividad reciente","No recent activity")+'</div>')+'</div></div>';
+      (act||'<div class="empty">'+L("Sin actividad reciente","No recent activity")+'</div>')+'</div></div>'+psPanel();
 }
 $("v-panel").addEventListener("click",function(e){
   var b=e.target.closest("button");if(!b)return;var v;
-  if((v=b.getAttribute("data-go")))show(v,true);
+  if((v=b.getAttribute("data-psd")))psDetail(v);
+  else if((v=b.getAttribute("data-go")))show(v,true);
   else if((v=b.getAttribute("data-open"))){S.cwd=v;show("files",true)}
   else if((v=b.getAttribute("data-act"))==="close")closeGame();
   else if(v==="detail")detail(b.getAttribute("data-id"));
@@ -2939,10 +2954,15 @@ $("v-game").addEventListener("click",function(e){
     smp("/games/content/uninstall",k==="patch"?{title_id:id,kind:"patch"}:{title_id:id,kind:"dlc",content_id:cid}).then(function(){toast(L("Quitado","Removed"));return wait(1500)}).then(function(){gameContent(id)}).catch(fail)})});
 
 /* ------------------------------------------------------------ app store
- * Homebrew apps published on GitHub as a zip with one PPSA folder. The page
- * asks GitHub for the latest release; NeoHEN's service downloads it and puts
- * the folder in /data/homebrew, and ShadowMount+ adds it to the home screen.
- * [id, name, repo, asset, what it is, group, id fallback] */
+ * The catalog is ProsperoStore's, read live by this page every time NeoWEB
+ * opens: its index lists every app, and one file per app gives the release
+ * zip on its author's GitHub and that zip's SHA-256. NeoHEN's service
+ * downloads the zip, checks it, and puts the PPSA folder in /data/homebrew;
+ * ShadowMount+ then adds it to the home screen. Nothing of the catalog is
+ * kept here, so what is new shows up without a NeoHEN update. When the
+ * catalog cannot be reached, the few apps below are looked up on GitHub.
+ * [id, name, repo, asset, what it is, group] */
+var PSAPI="https://prosperostore.net/api/v1/";
 var APPS=[
  ["PPSA99169","RetroArch","mihawk-99/PS5_RetroArch",/^PS5_RetroArch-.*\.zip$/,L("35 núcleos y 44 sistemas en una sola app","35 cores and 44 systems in one app"),"emu"],
  ["PPSA98510","SwanStation","darkxex/SwanStationPS5",/^PPSA\d{5}\.zip$/,L("PlayStation 1, con estantería de carátulas","PlayStation 1, with a cover shelf"),"emu"],
@@ -2953,19 +2973,54 @@ var APPS=[
  ["PPSA99925","Beetle PCE","MisterTemaki/beetlepcePS5",/-PPSA\d{5}\.zip$/,"PC Engine / TurboGrafx-16","emu"],
  ["PPSA76677","RommPS","s0liton/RommPS",/^PPSA\d{5}\.zip$/,L("Cliente de RomM: baja juegos de tu servidor y sincroniza partidas","RomM client: downloads games from your server and syncs saves"),"app"],
  ["PPSA92000","RecompStore","elripalda/RecompStore",/^PPSA\d{5}\.zip$/,L("Tienda de juegos recompilados, que se montan desde tu propio disco","Store of recompiled games, set up from your own disc"),"app"]];
-S.ap={rel:{},inst:{},job:null,err:"",asked:false,tm:0,g:"all"};
-function apId(x,a){var m=/(PPSA\d{5})\.zip$/.exec(a.name);return m?m[1]:x[0]}
+var PSCAT={emulators:L("Emuladores","Emulators"),"console-ports":L("Ports de consola","Console ports"),"pc-ports":L("Ports de PC","PC ports"),utilities:L("Utilidades","Utilities"),
+  video:L("Vídeo","Video"),ai:L("IA","AI"),music:L("Música","Music"),streaming:"Streaming","homebrew-games":L("Juegos homebrew","Homebrew games"),tools:L("Herramientas","Tools")};
+S.ap={cat:null,det:{},rel:{},inst:{},job:null,err:"",gh:"",tm:0,k:"all",c:"",q:"",o:"new",last:0,seen:false};
+/* what came after the last visit to the store is new; the first time, the last week */
+(function(){var t=0;try{t=+localStorage.getItem("nw-ps-last")||0}catch(_){}S.ap.last=t||Date.now()-7*864e5})();
+/* "v1.2" and "1.2" read the same; a long one is cut */
+function psV(v){v=String(v||"?").replace(/^v(?=\d)/,"");return (/^\d/.test(v)?"v":"")+(v.length>18?v.slice(0,17)+"…":v)}
+function psT(s){var t=Date.parse(s||"");return isNaN(t)?0:t}
+function psNew(a){return psT(a.added)>S.ap.last}
+function psUpd(a){return !psNew(a)&&psT(a.released)>S.ap.last}
+function psFresh(){return (S.ap.cat||[]).filter(function(a){return a.status==="available"&&(psNew(a)||psUpd(a))})}
+function psUrl(u,hosts){return typeof u==="string"&&hosts.some(function(h){return u.indexOf("https://"+h+"/")===0})?u:""}
+function psIcon(a){return psUrl(a.icon_small||a.icon||a.icon_url,["prosperostore.net","raw.githubusercontent.com"])}
+/* "01.000.002" against "01.000.010": numeric, part by part */
+function vcmp(a,b){a=String(a||"").split(".");b=String(b||"").split(".");for(var i=0;i<Math.max(a.length,b.length);i++){var d=(parseInt(a[i],10)||0)-(parseInt(b[i],10)||0);if(d)return d}return 0}
+/* where an app stands on this console: none, ok (up to date) or old */
+function psState(a){
+  var have=app(a.id),it=S.ap.inst[a.id];if(!have&&!it)return "none";
+  if(it&&it.tag)return it.tag.replace(/^v/,"")===String(a.version||"").replace(/^v/,"")?"ok":"old";
+  return have&&have.version&&a.content_version&&vcmp(a.content_version,have.version)>0?"old":"ok";
+}
+function psLoad(){
+  var ap=S.ap;if(!S.full)return Promise.resolve();
+  return fetch(PSAPI+"index.json",{cache:"no-cache"}).then(function(r){if(!r.ok)throw new Error("ProsperoStore "+r.status);return r.json()}).then(function(j){
+    if(!j||!Array.isArray(j.apps))throw new Error(L("ProsperoStore devolvió algo que no es su catálogo","ProsperoStore answered with something that is not its catalog"));
+    ap.cat=j.apps.filter(function(a){return a&&typeof a.id==="string"&&/^[A-Z]{4}\d{5}$/.test(a.id)&&a.name});ap.err="";
+    paintNav();if(S.view==="panel")paintPanel();else if(S.view==="apps")paintApps();
+  },function(e){ap.err=e.message||String(e);if(!ap.cat)ghLoad();if(S.view==="apps")paintApps()});
+}
+function psDet(id){
+  var ap=S.ap;if(ap.det[id])return Promise.resolve(ap.det[id]);
+  return fetch(PSAPI+"apps/"+enc(id)+".json",{cache:"no-cache"}).then(function(r){if(!r.ok)throw new Error("ProsperoStore "+r.status);return r.json()}).then(function(d){ap.det[id]=d;return d});
+}
 function loadApps(){
   if(!S.full)return Promise.resolve();
-  var ap=S.ap;ap.asked=true;ap.err="";
+  var ap=S.ap;ap.seen=true;try{localStorage.setItem("nw-ps-last",String(Date.now()))}catch(_){}
+  paintNav();
+  return Promise.all([apPoll(),psLoad()]);
+}
+/* without the catalog: the latest release of each app in APPS, from GitHub */
+function ghLoad(){
+  var ap=S.ap;ap.gh="";
   try{var c=JSON.parse(sessionStorage.getItem("nw-apps")||"null");if(c&&Date.now()-c.t<36e5)ap.rel=c.rel}catch(_){}
-  var ps=[apPoll()];
-  APPS.forEach(function(x){if(ap.rel[x[0]])return;
-    ps.push(fetch("https://api.github.com/repos/"+x[2]+"/releases?per_page=1").then(function(r){if(!r.ok)throw new Error("GitHub "+r.status);return r.json()}).then(function(j){
-      var rl=j[0],a=rl&&rl.assets.filter(function(y){return x[3].test(y.name)})[0];
-      if(a)ap.rel[x[0]]={tag:rl.tag_name,url:a.browser_download_url,size:a.size,date:(rl.published_at||"").slice(0,10),id:apId(x,a),notes:(rl.body||"").slice(0,600)}},
-      function(e){ap.err=e.message}))});
-  return Promise.all(ps).then(function(){try{if(Object.keys(ap.rel).length)sessionStorage.setItem("nw-apps",JSON.stringify({t:Date.now(),rel:ap.rel}))}catch(_){}if(S.view==="apps")paintApps()});
+  return Promise.all(APPS.map(function(x){if(ap.rel[x[0]])return;
+    return fetch("https://api.github.com/repos/"+x[2]+"/releases?per_page=1").then(function(r){if(!r.ok)throw new Error("GitHub "+r.status);return r.json()}).then(function(j){
+      var rl=j[0],a=rl&&rl.assets.filter(function(y){return x[3].test(y.name)})[0],m=a&&/(PPSA\d{5})\.zip$/.exec(a.name);
+      if(a)ap.rel[x[0]]={tag:rl.tag_name,url:a.browser_download_url,size:a.size,date:(rl.published_at||"").slice(0,10),id:m?m[1]:x[0],sha:/^sha256:[0-9a-f]{64}$/.test(a.digest||"")?a.digest.slice(7):""}},
+      function(e){ap.gh=e.message})})).then(function(){try{if(Object.keys(ap.rel).length)sessionStorage.setItem("nw-apps",JSON.stringify({t:Date.now(),rel:ap.rel}))}catch(_){}if(S.view==="apps")paintApps()});
 }
 function apPoll(){
   var ap=S.ap;clearTimeout(ap.tm);
@@ -2977,36 +3032,140 @@ function apPoll(){
     if(now)ap.tm=setTimeout(apPoll,1000);
   },function(e){ap.svc=e.message}).then(function(){if(S.view==="apps")paintApps()});
 }
-function apName(id){var x=APPS.filter(function(y){return y[0]===id||(S.ap.rel[y[0]]||{}).id===id})[0];return x?x[1]:id}
+function apName(id){
+  var a=(S.ap.cat||[]).filter(function(y){return y.id===id})[0];if(a)return a.name;
+  var x=APPS.filter(function(y){return y[0]===id||(S.ap.rel[y[0]]||{}).id===id})[0];return x?x[1]:id}
+function apBusy(){var j=S.ap.job;return !!j&&(j.state==="download"||j.state==="unpack")}
+function apTop(){
+  var ap=S.ap,j=ap.job,pct=j&&j.total?Math.round(j.got/j.total*100):0;
+  return (apBusy()?'<div class="card pad" style="margin-bottom:16px"><h3 class="h">'+(j.state==="download"?L("Descargando","Downloading"):L("Descomprimiendo","Unpacking"))+' <em>'+esc(apName(j.id))+" "+esc(j.tag)+'</em><span class="sp" style="flex:1"></span><button class="btn sm danger" data-ap="cancel">'+ic("x")+L("Cancelar","Cancel")+'</button></h3>'+
+      '<div class="prog"><i style="width:'+Math.max(1,pct)+'%"></i></div><p style="margin:8px 0 0;color:var(--dim);font:500 12px var(--mono)">'+pct+"% · "+size(j.got)+" / "+size(j.total)+'</p></div>':"")+
+    (ap.svc?'<div class="note">'+esc(ap.svc)+'</div>':"")+
+    (ap.err?'<div class="note">'+L("No se ha podido leer el catálogo de ProsperoStore (","ProsperoStore's catalog could not be read (")+esc(ap.err)+L("). Abajo, las apps de siempre, mirando GitHub directamente.","). Below, the usual apps, looked up on GitHub directly.")+'</div>':"")+
+    (ap.gh?'<div class="note">'+L("GitHub no ha contestado a todo: ","GitHub did not answer everything: ")+esc(ap.gh)+'</div>':"");
+}
+function psList(){
+  var ap=S.ap,q=ap.q.toLowerCase().trim();
+  var l=(ap.cat||[]).filter(function(a){
+    if(ap.k==="new"){if(a.status!=="available"||!(psNew(a)||psUpd(a)))return false}
+    else if(ap.k==="mine"){if(psState(a)==="none")return false}
+    else if(ap.k!=="all"&&a.kind!==ap.k)return false;
+    if(ap.c&&a.category!==ap.c)return false;
+    return !q||(a.name+" "+(a.author||"")+" "+a.id+" "+(PSCAT[a.category]||"")).toLowerCase().indexOf(q)>=0});
+  var key={new:function(a){return -Math.max(psT(a.added),psT(a.released))},name:function(a){return a.name.toLowerCase()},size:function(a){return -(a.size||0)}}[ap.o];
+  return l.sort(function(a,b){var x=key(a),y=key(b);return x<y?-1:x>y?1:0});
+}
+function psCard(a){
+  var st=psState(a),have=app(a.id),soon=a.status!=="available",ok=!soon&&a.format==="zip",icon=psIcon(a),busy=apBusy()||S.ro;
+  var btn=!ok?"":st==="none"?'<button class="btn sm pri" data-ap="ps" data-v="'+esc(a.id)+'"'+(busy?" disabled":"")+'>'+ic("download")+L("Instalar","Install")+'</button>'
+    :st==="old"?'<button class="btn sm" data-ap="ps" data-v="'+esc(a.id)+'"'+(busy?" disabled":"")+'>'+ic("download")+L("Actualizar","Update")+'</button>':"";
+  return '<div class="card apc" data-psd="'+esc(a.id)+'"><div class="apt">'+(icon?'<img alt="" loading="lazy" src="'+esc(icon)+'">':'<span class="api">'+ic(a.kind==="game"?"game":"apps")+'</span>')+
+      '<div><b>'+esc(a.name)+'</b><small>'+esc(a.author||"")+(PSCAT[a.category]?" · "+esc(PSCAT[a.category]):"")+'</small></div></div>'+
+    '<div class="apm">'+(psNew(a)&&!soon?'<span class="chip new">'+L("nueva","new")+'</span>':psUpd(a)?'<span class="chip new">'+L("actualizada","updated")+'</span>':"")+
+      (soon?'<span class="chip">'+L("próximamente","coming soon")+'</span>':'<span class="chip" title="'+esc(a.version||"")+'">'+esc(psV(a.version))+(a.size?" · "+size(a.size):"")+'</span>')+
+      (st==="ok"?'<span class="chip ok">'+L("al día","up to date")+'</span>':st==="old"?'<span class="chip warn">'+L("hay versión nueva","newer version")+'</span>':"")+
+      (!soon&&a.format!=="zip"?'<span class="chip">'+L("no se instala desde aquí","not installable here")+'</span>':"")+'</div>'+
+    '<div class="row" style="margin-top:auto">'+btn+(have?'<button class="btn sm ghost" data-ap="open" data-v="'+esc(a.id)+'">'+ic("play")+L("Abrir","Open")+'</button>':"")+'</div></div>';
+}
+function ghCard(x){
+  var ap=S.ap,r=ap.rel[x[0]],id=r?r.id:x[0],it=ap.inst[id],have=!!app(id),same=it&&r&&it.tag===r.tag,busy=apBusy()||S.ro;
+  var btn=r&&!same?'<button class="btn sm'+(have||it?"":" pri")+'" data-ap="get" data-v="'+x[0]+'"'+(busy?" disabled":"")+'>'+ic("download")+(it||have?L("Actualizar a ","Update to ")+esc(r.tag):L("Instalar","Install"))+'</button>':"";
+  return '<div class="card apc"><div class="apt">'+(have&&app(id).hasIcon?'<img alt="" loading="lazy" src="/apps/icon?id='+esc(id)+'">':'<span class="api">'+ic(x[5]==="emu"?"game":"library")+'</span>')+
+      '<div><b>'+esc(x[1])+'</b><small>'+esc(x[4])+'</small></div></div>'+
+    '<div class="apm"><span class="chip">'+esc(id)+'</span>'+(r?'<span class="chip" title="'+esc(r.date)+'">'+esc(r.tag)+" · "+size(r.size)+'</span>':'<span class="chip">'+(ap.gh?"?":"…")+'</span>')+
+      (same?'<span class="chip ok">'+L("al día","up to date")+'</span>':it?'<span class="chip warn">'+L("tienes ","you have ")+esc(it.tag)+'</span>':have?'<span class="chip">'+L("en la consola","on the console")+'</span>':"")+'</div>'+
+    '<div class="row" style="margin-top:auto">'+btn+(have?'<button class="btn sm ghost" data-ap="open" data-v="'+esc(id)+'">'+ic("play")+L("Abrir","Open")+'</button>':"")+
+      '<a class="btn sm ghost" href="https://github.com/'+x[2]+'" target="_blank" rel="noopener">GitHub</a></div></div>';
+}
+function apGrid(){
+  var ap=S.ap,g=$("ap-grid");if(!g)return;
+  if(!ap.cat){g.innerHTML=ap.err?'<div class="apgrid">'+APPS.map(ghCard).join("")+'</div>':'<div class="card"><div class="empty">'+L("Leyendo el catálogo de ProsperoStore…","Reading ProsperoStore's catalog…")+'</div></div>';return}
+  var l=psList();
+  g.innerHTML=l.length?'<div class="apgrid">'+l.map(psCard).join("")+'</div>':'<div class="card"><div class="empty">'+(ap.k==="new"?L("Nada nuevo desde tu última visita.","Nothing new since your last visit."):L("Ninguna app coincide.","No app matches."))+'</div></div>';
+}
 function paintApps(){
   var box=$("v-apps"),ap=S.ap;if(!box)return;
-  var j=ap.job,busy=j&&(j.state==="download"||j.state==="unpack"),pct=j&&j.total?Math.round(j.got/j.total*100):0;
-  var GR=[["all",L("Todo","All")],["emu",L("Emuladores","Emulators")],["app",L("Apps","Apps")]];
-  box.innerHTML=(busy?'<div class="card pad" style="margin-bottom:16px"><h3 class="h">'+(j.state==="download"?L("Descargando","Downloading"):L("Descomprimiendo","Unpacking"))+' <em>'+esc(apName(j.id))+" "+esc(j.tag)+'</em><span class="sp" style="flex:1"></span><button class="btn sm danger" data-ap="cancel">'+ic("x")+L("Cancelar","Cancel")+'</button></h3>'+
-      '<div class="prog"><i style="width:'+Math.max(1,pct)+'%"></i></div><p style="margin:8px 0 0;color:var(--dim);font:500 12px var(--mono)">'+pct+"% · "+size(j.got)+" / "+size(j.total)+'</p></div>':"")+
-    (ap.svc?'<div class="note">'+esc(ap.svc)+'</div>':"")+(ap.err?'<div class="note">'+L("GitHub no ha contestado a todo: ","GitHub did not answer everything: ")+esc(ap.err)+'</div>':"")+
-    '<div class="tools"><div class="seg">'+GR.map(function(g){return '<button data-apg="'+g[0]+'" class="'+(ap.g===g[0]?"on":"")+'">'+g[1]+'</button>'}).join("")+'</div><span class="sp"></span><button class="btn sm ghost" data-ap="re">'+ic("refresh")+L("Mirar versiones","Check versions")+'</button></div>'+
-    '<div class="apgrid">'+APPS.filter(function(x){return ap.g==="all"||x[5]===ap.g}).map(function(x){
-      var r=ap.rel[x[0]],id=r?r.id:x[0],it=ap.inst[id],have=!!app(id),same=it&&r&&it.tag===r.tag;
-      var btn=r&&!same?'<button class="btn sm'+(have||it?"":" pri")+'" data-ap="get" data-v="'+x[0]+'"'+(busy||S.ro?" disabled":"")+'>'+ic("download")+(it||have?L("Actualizar a ","Update to ")+esc(r.tag):L("Instalar","Install"))+'</button>':"";
-      return '<div class="card apc"><div class="apt">'+(have&&app(id).hasIcon?'<img alt="" loading="lazy" src="/apps/icon?id='+esc(id)+'">':'<span class="api">'+ic(x[5]==="emu"?"game":"library")+'</span>')+
-        '<div><b>'+esc(x[1])+'</b><small>'+esc(x[4])+'</small></div></div>'+
-        '<div class="apm"><span class="chip">'+esc(id)+'</span>'+(r?'<span class="chip" title="'+esc(r.date)+'">'+esc(r.tag)+" · "+size(r.size)+'</span>':'<span class="chip">'+(ap.err?"?":"…")+'</span>')+
-          (same?'<span class="chip ok">'+L("al día","up to date")+'</span>':it?'<span class="chip warn">'+L("tienes ","you have ")+esc(it.tag)+'</span>':have?'<span class="chip">'+L("en la consola","on the console")+'</span>':"")+'</div>'+
-        '<div class="row" style="margin-top:auto">'+btn+(have?'<button class="btn sm ghost" data-ap="open" data-v="'+esc(id)+'">'+ic("play")+L("Abrir","Open")+'</button>':"")+
-          '<a class="btn sm ghost" href="https://github.com/'+x[2]+'" target="_blank" rel="noopener">GitHub</a></div></div>'}).join("")+'</div>'+
-    '<p style="margin:14px 2px 0;font:500 11.5px var(--mono);color:var(--faint)">'+L("La consola descarga la última versión de GitHub y deja la app en /data/homebrew; ShadowMount+ la pone en el menú. Necesita salida a internet y sitio libre para el zip y la app. Si actualizas, la versión vieja se cambia por la nueva de una vez: tus partidas y ajustes, que van aparte, no se tocan.","The console downloads the latest release from GitHub and leaves the app in /data/homebrew; ShadowMount+ puts it on the home screen. It needs internet access and room for the zip and the app. Updating swaps the old version for the new one at once: your saves and settings, kept elsewhere, are not touched.")+'</p>';
+  /* while typing a search only the list and the job change, not the field */
+  if($("ap-q")&&document.activeElement===$("ap-q")){$("ap-top").innerHTML=apTop();apGrid();return}
+  var cat=ap.cat||[],fresh=psFresh().length,mine=cat.filter(function(a){return psState(a)!=="none"}).length;
+  var K=[["all",L("Todo","All"),cat.length],["new",L("Novedades","What's new"),fresh],["app",L("Apps","Apps")],["game",L("Juegos","Games")],["tool",L("Herramientas","Tools")],["mine",L("En la consola","On the console"),mine]];
+  var cats=Object.keys(PSCAT).filter(function(c){return cat.some(function(a){return a.category===c})});
+  box.innerHTML='<div id="ap-top">'+apTop()+'</div>'+
+    (ap.cat?'<div class="tools aptools"><div class="seg">'+K.map(function(k){return '<button data-apk="'+k[0]+'" class="'+(ap.k===k[0]?"on":"")+'">'+k[1]+(k[2]?' <small>'+k[2]+'</small>':"")+'</button>'}).join("")+'</div>'+
+      '<input class="in" id="ap-q" type="search" placeholder="'+L("Buscar por nombre, autor o ID","Search by name, author or ID")+'" value="'+esc(ap.q)+'">'+
+      '<select class="in" id="ap-c"><option value="">'+L("Todas las categorías","All categories")+'</option>'+cats.map(function(c){return '<option value="'+c+'"'+(ap.c===c?" selected":"")+'>'+esc(PSCAT[c])+'</option>'}).join("")+'</select>'+
+      '<select class="in" id="ap-o">'+[["new",L("Lo último primero","Newest first")],["name","A–Z"],["size",L("Más grandes","Largest")]].map(function(o){return '<option value="'+o[0]+'"'+(ap.o===o[0]?" selected":"")+'>'+o[1]+'</option>'}).join("")+'</select>'+
+      '<span class="sp"></span><button class="btn sm ghost" data-ap="re">'+ic("refresh")+L("Releer","Reload")+'</button></div>'
+     :'<div class="tools"><span class="sp"></span><button class="btn sm ghost" data-ap="re">'+ic("refresh")+L("Reintentar","Retry")+'</button></div>')+
+    '<div id="ap-grid"></div>'+
+    '<p class="apfoot">'+L("Catálogo de <a href=\"https://prosperostore.net/\" target=\"_blank\" rel=\"noopener\">ProsperoStore</a>, leído en directo cada vez que abres NeoWEB. Ni NeoHEN ni ProsperoStore alojan las apps: cada una baja del GitHub de su autor, la consola comprueba su SHA-256 y la deja en /data/homebrew, y ShadowMount+ la pone en el menú. Al actualizar, la versión vieja se cambia por la nueva de una vez; tus partidas y ajustes, que van aparte, no se tocan. Un listado no es una auditoría: instala lo que conozcas.",
+      "Catalog by <a href=\"https://prosperostore.net/\" target=\"_blank\" rel=\"noopener\">ProsperoStore</a>, read live every time you open NeoWEB. Neither NeoHEN nor ProsperoStore hosts the apps: each one comes from its author's GitHub, the console checks its SHA-256 and leaves it in /data/homebrew, and ShadowMount+ puts it on the home screen. Updating swaps the old version for the new one at once; your saves and settings, kept elsewhere, are not touched. A listing is not an audit: install what you know.")+'</p>';
+  apGrid();
+}
+function psInstall(id){
+  var a=(S.ap.cat||[]).filter(function(y){return y.id===id})[0];
+  psDet(id).then(function(d){
+    var url=psUrl(d.artifact_url,["github.com"]),tid=d.titleid||d.id;
+    if(d.format!=="zip"||!url||!/^[0-9a-f]{64}$/.test(d.sha256||"")||tid!==id)throw new Error(L("Esta app no trae un zip de GitHub con su SHA-256","This app has no GitHub zip with its SHA-256"));
+    var up=psState(a||d)!=="none";
+    return ask((up?L("Actualizar ","Update "):L("Instalar ","Install "))+d.name+" "+String(d.version||""),L("La consola descarga ","The console downloads ")+size(d.size)+L(" del GitHub de "," from the GitHub of ")+(d.author||"?")+L(", comprueba su SHA-256 y lo descomprime en /data/homebrew/",", checks its SHA-256 and unpacks it into /data/homebrew/")+id+".",up?L("Actualizar","Update"):L("Instalar","Install")).then(function(ok){if(!ok)return;
+      return api("/api/apps/store",{action:"install",url:url,id:id,tag:String(d.version||d.tag||"").slice(0,60),sha256:d.sha256}).then(function(j){S.ap.job=j.job;toast(L("Descargando ","Downloading ")+d.name+"…");apPoll();if($("drawer").className==="drawer on"&&S.psd===id)psDetail(id)})});
+  }).catch(fail);
+}
+function psDetail(id){
+  var a=(S.ap.cat||[]).filter(function(y){return y.id===id})[0];if(!a)return;S.psd=id;
+  function draw(d){
+    var x=d||a,icon=psIcon(x),st=psState(a),have=app(id),soon=a.status!=="available",page=psUrl(x.page,["prosperostore.net"]),src=psUrl(x.source_repo,["github.com","gitlab.com","codeberg.org"]),
+      sb=d&&d.safety&&d.safety.sandbox,busy=apBusy()||S.ro;
+    $("drawer-p").innerHTML='<div class="art ps">'+(icon?'<i style="background-image:url(&quot;'+esc(icon)+'&quot;)"></i>':"")+'<button class="btn ic" data-x>'+ic("x")+'</button></div>'+
+      '<div class="bd">'+(icon?'<img alt="" src="'+esc(icon)+'">':"")+'<h2>'+esc(x.name)+'</h2>'+
+      '<div class="apm">'+(psNew(a)&&!soon?'<span class="chip new">'+L("nueva","new")+'</span>':psUpd(a)?'<span class="chip new">'+L("actualizada","updated")+'</span>':"")+
+        '<span class="chip">'+esc(PSCAT[a.category]||a.category||"")+'</span>'+(st==="ok"?'<span class="chip ok">'+L("al día","up to date")+'</span>':st==="old"?'<span class="chip warn">'+L("hay versión nueva","newer version")+'</span>':"")+'</div>'+
+      (d&&d.description?'<p class="apdesc">'+esc(d.description)+'</p>':!d?'<p class="apdesc" style="color:var(--faint)">'+L("Leyendo la ficha…","Reading the details…")+'</p>':"")+
+      '<dl class="kv"><dt>'+L("Autor","Author")+'</dt><dd>'+esc(x.author||"–")+'</dd><dt>'+L("Versión","Version")+'</dt><dd>'+esc(x.version||"–")+(x.prerelease?" ("+L("beta","pre-release")+")":"")+'</dd>'+
+        (x.size?'<dt>'+L("Tamaño","Size")+'</dt><dd>'+size(x.size)+'</dd>':"")+(x.released?'<dt>'+L("Publicada","Released")+'</dt><dd>'+esc(String(x.released).slice(0,10))+'</dd>':"")+
+        (d&&d.license?'<dt>'+L("Licencia","License")+'</dt><dd>'+esc(d.license)+'</dd>':"")+'<dt>Title ID</dt><dd>'+esc(id)+'</dd>'+
+        (have&&have.version?'<dt>'+L("En la consola","On the console")+'</dt><dd>'+esc(have.version)+'</dd>':"")+
+        (sb?'<dt>Sandbox</dt><dd>'+(sb==="stays"?L("se queda dentro","stays inside"):sb==="leaves"?L("sale fuera (usa ayudantes del sistema)","leaves it (uses system helpers)"):esc(sb))+'</dd>':"")+
+        (d&&d.sha256?'<dt>SHA-256</dt><dd>'+esc(d.sha256)+'</dd>':"")+'</dl>'+
+      '<div style="display:flex;gap:10px;flex-wrap:wrap">'+
+        (!soon&&a.format==="zip"&&st!=="ok"?'<button class="btn pri" data-k="ps"'+(busy?" disabled":"")+'>'+ic("download")+(st==="old"?L("Actualizar","Update"):L("Instalar","Install"))+'</button>':"")+
+        (st==="ok"&&!soon&&a.format==="zip"?'<button class="btn" data-k="ps"'+(busy?" disabled":"")+'>'+ic("refresh")+L("Reinstalar","Reinstall")+'</button>':"")+
+        (have?'<button class="btn" data-k="launch">'+ic("play")+L("Abrir","Open")+'</button>':"")+
+        (page?'<a class="btn ghost" href="'+esc(page)+'" target="_blank" rel="noopener">ProsperoStore</a>':"")+(src?'<a class="btn ghost" href="'+esc(src)+'" target="_blank" rel="noopener">'+L("Código","Source")+'</a>':"")+'</div>'+
+      (d&&d.release_notes?'<h3 class="h" style="margin-top:22px">'+L("Novedades de esta versión","What's new in this version")+'</h3><div class="apnotes">'+esc(String(d.release_notes).slice(0,4000))+'</div>':"")+'</div>';
+  }
+  draw(S.ap.det[id]);
+  $("drawer").className="drawer on";
+  if(!S.ap.det[id])psDet(id).then(function(d){if(S.psd===id)draw(d)},function(){});
+  $("drawer-p").onclick=function(ev){var b=ev.target.closest("button");if(!b||b.disabled)return;var k=b.getAttribute("data-k");
+    if(k==="ps"){psInstall(id);return}
+    if(k==="launch")launch(id);
+    $("drawer").className="drawer"};
 }
 $("v-apps").addEventListener("click",function(e){
-  var g=e.target.closest("[data-apg]");if(g){S.ap.g=g.getAttribute("data-apg");paintApps();return}
-  var b=e.target.closest("button[data-ap]");if(!b||b.disabled)return;var k=b.getAttribute("data-ap"),v=b.getAttribute("data-v"),ap=S.ap;
-  if(k==="re"){try{sessionStorage.removeItem("nw-apps")}catch(_){}ap.rel={};loadApps();return}
+  var g=e.target.closest("[data-apk]");if(g){S.ap.k=g.getAttribute("data-apk");apGrid();Array.prototype.forEach.call(document.querySelectorAll("[data-apk]"),function(x){x.classList.toggle("on",x===g)});return}
+  var b=e.target.closest("button[data-ap]"),ap=S.ap;
+  if(!b){var c=e.target.closest("[data-psd]");if(c&&!e.target.closest("a"))psDetail(c.getAttribute("data-psd"));return}
+  if(b.disabled)return;var k=b.getAttribute("data-ap"),v=b.getAttribute("data-v");
+  if(k==="re"){try{sessionStorage.removeItem("nw-apps")}catch(_){}ap.rel={};ap.det={};ap.cat=null;ap.err="";paintApps();psLoad();apPoll();return}
   if(k==="cancel"){api("/api/apps/store",{action:"cancel"}).then(apPoll).catch(fail);return}
   if(k==="open"){launch(v);return}
+  if(k==="ps"){psInstall(v);return}
   if(k==="get"){var x=APPS.filter(function(y){return y[0]===v})[0],r=ap.rel[v];if(!x||!r)return;
     ask(L("Instalar ","Install ")+x[1]+" "+r.tag,L("La consola descarga ","The console downloads ")+size(r.size)+L(" de GitHub y lo descomprime en /data/homebrew/"," from GitHub and unpacks it into /data/homebrew/")+r.id+".",L("Instalar","Install")).then(function(ok){if(!ok)return;
-      api("/api/apps/store",{action:"install",url:r.url,id:r.id,tag:r.tag}).then(function(j){ap.job=j.job;toast(L("Descargando ","Downloading ")+x[1]+"…");apPoll()}).catch(fail)})}
+      api("/api/apps/store",{action:"install",url:r.url,id:r.id,tag:r.tag,sha256:r.sha}).then(function(j){ap.job=j.job;toast(L("Descargando ","Downloading ")+x[1]+"…");apPoll()}).catch(fail)})}
 });
+$("v-apps").addEventListener("input",function(e){if(e.target.id==="ap-q"){S.ap.q=e.target.value;apGrid()}});
+$("v-apps").addEventListener("change",function(e){if(e.target.id==="ap-c"){S.ap.c=e.target.value;apGrid()}else if(e.target.id==="ap-o"){S.ap.o=e.target.value;apGrid()}});
+/* the dashboard's window on the store: what is new, or else the latest */
+function psPanel(){
+  var ap=S.ap;if(!S.full||!ap.cat||!ap.cat.length)return "";
+  var f=psFresh(),l=(f.length?f:ap.cat.filter(function(a){return a.status==="available"})).slice().sort(function(a,b){return Math.max(psT(b.added),psT(b.released))-Math.max(psT(a.added),psT(a.released))}).slice(0,8);
+  return '<div class="card pad pspanel"><h3 class="h">'+(f.length?L("Novedades en la tienda","New in the store")+' <em>'+f.length+'</em>':L("Lo último en la tienda","Latest in the store"))+'<span class="sp"></span><button class="btn sm ghost" data-go="apps">'+L("Ver tienda","Open the store")+'</button></h3>'+
+    '<div class="psrow">'+l.map(function(a){var icon=psIcon(a);return '<button data-psd="'+esc(a.id)+'">'+(icon?'<img alt="" loading="lazy" src="'+esc(icon)+'">':'<span class="ph">'+ic("apps")+'</span>')+
+      '<b>'+esc(a.name)+'</b><small>'+(psNew(a)?L("nueva","new"):psUpd(a)?L("actualizada","updated"):esc(PSCAT[a.category]||""))+" · "+esc(psV(a.version))+'</small></button>'}).join("")+'</div></div>';
+}
 /* ------------------------------------------------------------ one game, everything */
 function loadGame(){
   var id=S.gp.id;S.gp.tro=null;S.gmId=id;$("drawer").className="drawer";
@@ -3510,7 +3669,7 @@ function clock(){$("clock").textContent=new Date().toLocaleTimeString(undefined,
 clock();setInterval(clock,20000);
 
 paintNav();paintPanel();$("vt").textContent=VIEWS[0][1];$("vs").textContent=VIEWS[0][2];
-probe().then(function(){show(location.hash.slice(1)||CFG.start||"panel");return fast()}).then(cfgPull).then(slow).then(function(){loadPay();loadJobs()});
+probe().then(function(){show(location.hash.slice(1)||CFG.start||"panel");return fast()}).then(cfgPull).then(slow).then(function(){loadPay();loadJobs();psLoad()});
 (function tickFast(){setTimeout(function(){
   if(!document.hidden){fast();
     if(S.view==="payloads")loadPay();if(S.view==="procs")loadProcs();

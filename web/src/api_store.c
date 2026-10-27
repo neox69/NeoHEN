@@ -174,7 +174,7 @@ api_store_auto(http_req_t *req) {
  * background (BREW_UTIL_APP_STORE); ShadowMount+ then registers them.
  *
  * GET  /api/apps/store   {"installed": {id: {tag, url, time}}, "job": {...}}
- * POST /api/apps/store   {"action": "install", "url", "id", "tag"} or
+ * POST /api/apps/store   {"action": "install", "url", "id", "tag", "sha256"} or
  *                        {"action": "cancel"}; answers with the job */
 #define APPS       PS5AIO_DATA_DIR "/apps.json"
 #define CMD_APPS   0x800001Bu /* BREW_UTIL_APP_STORE */
@@ -220,6 +220,7 @@ api_apps_store(http_req_t *req) {
     jw_kstr(&q, "url", json_get_str(b, "url", ""));
     jw_kstr(&q, "id", json_get_str(b, "id", ""));
     jw_kstr(&q, "tag", json_get_str(b, "tag", ""));
+    jw_kstr(&q, "sha256", json_get_str(b, "sha256", ""));
   } else {
     jw_kstr(&q, "action", "status");
   }
