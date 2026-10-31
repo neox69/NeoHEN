@@ -55,8 +55,7 @@ crash(int sig, siginfo_t *si, void *uc) {
   int fd = log_fd();
   (void)uc;
   if(fd >= 0) {
-    int n = snprintf(line, sizeof(line), "crash: signal %d (code %d) at %p
-",
+    int n = snprintf(line, sizeof(line), "crash: signal %d (code %d) at %p\n",
                      sig, si ? si->si_code : 0, si ? si->si_addr : NULL);
     if(n > 0) {
       ssize_t w = write(fd, line, (size_t)n);

@@ -82,8 +82,7 @@ log_write(int level, const char *fmt, ...) {
     char line[320];
     struct tm tm;
     localtime_r(&e->ts, &tm);
-    int n = snprintf(line, sizeof(line), "%04d-%02d-%02d %02d:%02d:%02d %s: %s
-",
+    int n = snprintf(line, sizeof(line), "%04d-%02d-%02d %02d:%02d:%02d %s: %s\n",
                      tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday, tm.tm_hour,
                      tm.tm_min, tm.tm_sec, g_names[level & 3], msg);
     if(n > 0) {
