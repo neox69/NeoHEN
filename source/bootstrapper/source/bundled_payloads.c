@@ -114,6 +114,7 @@ static const struct {
     {"shadowmountplus.elf", "fc4e5f715e76660ce34bde2adb10eaf1d069cb2cdf06f7a380896dfb62bd0c4a"}, /* 1.7beta4 */
     {"shadowmountplus.elf", "e85fd63b705498488f39c09c9aea6f9fa22e0df2e932865de49a8cedf25172d5"}, /* 1.7-beta5fix1 */
     {"shadowmountplus.elf", "7163472217a2390f5bcbe3b61a96963976f7b7bd84d960b8d926f35b9cbecf28"}, /* 1.7beta8 */
+    {"shadowmountplus.elf", "08c843018750bef013fe3a4de5f80c5c9738c6c2dafa2406e6b6e68d7585f3da"}, /* 1.7beta11 */
     {"ftpsrv.elf", "7d4b31c83eae4e056580482a3a074e1db25922efc74ac1e439473b45d71a5938"},          /* v0.21.1 */
     {"nanodns.elf", "fcfb7d47c3b295560ea1603dc015f7c4950353ef0faca16428bd425680ef1fc5"},         /* 0.4 */
 };
