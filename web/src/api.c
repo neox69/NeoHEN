@@ -505,17 +505,23 @@ api_net_down(http_req_t *req) {
 
 static void
 api_net_up(http_req_t *req) {
-  static __thread char sink[256 * 1024];
+  const size_t cap = 256 * 1024;
+  char *sink = malloc(cap);
   struct timeval t0, t1;
   int64_t got = 0;
   ssize_t n;
   jw_t w;
 
+  if(!sink) {
+    http_send_error(req, 500, "out of memory");
+    return;
+  }
   gettimeofday(&t0, NULL);
-  while((n = http_read_body(req, sink, sizeof(sink))) > 0) {
+  while((n = http_read_body(req, sink, cap)) > 0) {
     got += n;
   }
   gettimeofday(&t1, NULL);
+  free(sink);
   jw_init(&w);
   jw_obj(&w);
   jw_kbool(&w, "ok", 1);
