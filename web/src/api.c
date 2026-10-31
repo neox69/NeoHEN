@@ -480,6 +480,52 @@ report_text(zlist_t *z, const char *name, jw_t *w) {
   jw_free(w);
 }
 
+/* NeoHEN: how fast the network is between this browser and the console, as
+ * PS5Upload's "Diagnose slow transfers". GET /api/net/down?mb=N sends N MiB
+ * of zeros (at most 1024); POST /api/net/up reads the body and says how long
+ * that took on this side. Nothing touches a drive. */
+static void
+api_net_down(http_req_t *req) {
+  static char zero[256 * 1024];
+  int64_t mb = http_query_int(req, "mb", 64);
+  if(mb < 1) {
+    mb = 1;
+  } else if(mb > 1024) {
+    mb = 1024;
+  }
+  int64_t total = mb * 1024 * 1024;
+  http_send_head(req, 200, "application/octet-stream", total,
+                 "Cache-Control: no-store\r\n");
+  for(int64_t sent = 0; sent < total; sent += sizeof(zero)) {
+    if(http_send_all(req->fd, zero, sizeof(zero))) {
+      break;
+    }
+  }
+}
+
+static void
+api_net_up(http_req_t *req) {
+  static __thread char sink[256 * 1024];
+  struct timeval t0, t1;
+  int64_t got = 0;
+  ssize_t n;
+  jw_t w;
+
+  gettimeofday(&t0, NULL);
+  while((n = http_read_body(req, sink, sizeof(sink))) > 0) {
+    got += n;
+  }
+  gettimeofday(&t1, NULL);
+  jw_init(&w);
+  jw_obj(&w);
+  jw_kbool(&w, "ok", 1);
+  jw_kint(&w, "bytes", got);
+  jw_kint(&w, "ms", (int64_t)(t1.tv_sec - t0.tv_sec) * 1000 + (t1.tv_usec - t0.tv_usec) / 1000);
+  jw_obj_end(&w);
+  http_send_json(req, 200, &w);
+  jw_free(&w);
+}
+
 static void
 api_sys_report(http_req_t *req) {
   static const char *files[][2] = {
@@ -602,6 +648,9 @@ static const api_route_t g_routes[] = {
   {"POST", "/api/apps/kill",        api_apps_kill},
   {"GET",  "/api/apps/running",     api_apps_running},
 
+  {"GET",  "/api/net/down",          api_net_down},
+  {"POST", "/api/net/up",            api_net_up},
+
   {"GET",  "/api/payloads/list",      api_payloads_list},
   {"PUT",  "/api/payloads/upload",    api_payloads_upload},
   {"POST", "/api/payloads/upload",    api_payloads_upload},
@@ -675,6 +724,7 @@ static const api_route_t g_routes[] = {
   {"POST", "/api/fs/delete",        api_fs_delete},
   {"POST", "/api/fs/rename",        api_fs_rename},
   {"POST", "/api/fs/copy",          api_fs_copy},
+  {"POST", "/api/fs/extract",       api_fs_extract},
   {"POST", "/api/fs/chmod",         api_fs_chmod},
   {"POST", "/api/fs/hash",          api_fs_hash},
   {NULL,   "/fs/get",               api_fs_get},

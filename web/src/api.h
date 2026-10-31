@@ -52,6 +52,7 @@ void api_fs_mkdir(http_req_t *req);
 void api_fs_delete(http_req_t *req);
 void api_fs_rename(http_req_t *req);
 void api_fs_copy(http_req_t *req);
+void api_fs_extract(http_req_t *req);
 void api_fs_chmod(http_req_t *req);
 void api_fs_size(http_req_t *req);
 void api_fs_get(http_req_t *req);
