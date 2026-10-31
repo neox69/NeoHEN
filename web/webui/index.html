@@ -2826,7 +2826,12 @@ function smFlSel(x,id){var cur=x.fakelib_mode_override||(x.fakelib_mode?"default
  * installing; NeoWEB lists the drives, shows its queue and the job, and for a
  * file on the PC streams it over ShadowMount+'s own WebSocket, so nothing is
  * written to a drive first. */
-S.in={loaded:false,err:"",caps:null,path:"",parent:"",roots:[],entries:[],offset:0,truncated:false,q:null,job:null,tm:0,pc:null};
+S.in={loaded:false,err:"",caps:null,path:"",parent:"",roots:[],entries:[],offset:0,limit:256,truncated:false,q:null,job:null,tm:0,pc:null,smb:null,smbF:null};
+/* network folders (SMB2/SMB3), from ShadowMount+ 1.7beta9: saved there, and
+ * an active one shows up among the drives as smb://<name> */
+function inSmbCan(){var c=S.in.caps;return !!(c&&c.indexOf("smb")>=0)}
+function inSmbList(){if(!inSmbCan())return Promise.resolve();
+  return smp("/smb",{action:"list"}).then(function(j){S.in.smb=j.connections||[]},function(){S.in.smb=null})}
 function inSmUrl(p){return "/api/smp?path="+enc(p)}
 function inIcon(x){return x.backport?(x.icon_url?inSmUrl(x.icon_url):""):x.has_icon?inSmUrl("/api/v1/packages/icon?path="+enc(x.path)+"&v="+enc(x.icon_revision||"0")):""}
 function inKind(k){return k==="patch"?L("Parche","Patch"):k==="dlc"?"DLC":k==="base"?L("Juego","Game"):L("Desconocido","Unknown")}
@@ -2838,7 +2843,7 @@ function loadInst(path,offset){
   return (n.caps?Promise.resolve(n.caps):smp("/version").then(function(j){return j.capabilities||[]})).then(function(c){n.caps=c;
       if(!inCan())throw new Error(L("Hace falta ShadowMount+ 1.7beta8 o posterior.","ShadowMount+ 1.7beta8 or later is needed."));
       return smp("/packages",{path:n.path,offset:n.offset})}).then(function(j){
-      n.path=j.path||"";n.parent=j.parent||"";n.roots=j.roots||[];n.entries=j.entries||[];n.offset=j.offset||0;n.truncated=!!j.truncated;n.err="";n.loaded=true;return inPoll()},
+      n.path=j.path||"";n.parent=j.parent||"";n.roots=j.roots||[];n.entries=j.entries||[];n.offset=j.offset||0;n.limit=j.limit||256;n.truncated=!!j.truncated;n.err="";n.loaded=true;return Promise.all([inPoll(),inSmbList()])},
     function(e){n.err=e.message;n.loaded=true}).then(function(){if(S.view==="install")paintInst()});
 }
 /* the queue and the job; while something runs, again every second */
@@ -2878,24 +2883,50 @@ function paintInst(){
       n.roots.map(function(r){return '<button class="btn sm'+(n.path===r?" pri":"")+'" data-in="go" data-v="'+esc(r)+'">'+esc(r)+'</button>'}).join("")+
       '<button class="btn sm" data-in="go" data-v="/data/pkgs">/data/pkgs</button><button class="btn sm" data-in="go" data-v="/data/homebrew/backports">'+L("Backports instalados","Installed backports")+'</button>';
   var rows=n.entries.map(function(x){var p=esc(x.path),ico=inIcon(x),a;
-    if(x.directory&&!x.backport)return '<tr><td class="n" colspan="3"><a data-in="go" data-v="'+p+'" style="cursor:pointer">'+ic("files")+" "+esc(x.name)+'</a></td><td></td></tr>';
+    if(x.directory&&!x.backport)return '<tr><td class="n" colspan="3"><a data-in="go" data-v="'+p+'" style="cursor:pointer">'+ic("files")+" "+esc(x.name)+'</a></td><td>'+
+      (x.can_delete?'<button class="btn sm ghost" data-in="sdel" data-v="'+p+'"'+(busy||ro?" disabled":"")+' title="'+L("Borrar","Delete")+'">'+ic("trash")+'</button>':"")+'</td></tr>';
     a=inAct(x);
-    var del=x.backport&&n.path.indexOf("/data/homebrew/backports")===0;
+    var del=x.backport&&n.path.indexOf("/data/homebrew/backports")===0,sdel=!del&&x.can_delete;
     return '<tr><td class="n">'+(ico?'<img class="svi" loading="lazy" alt="" src="'+ico+'">':'<span class="svi"></span>')+'<span>'+esc(x.title_name||(x.backport?L("Juego desconocido","Unknown game"):x.name))+'</span><small>'+esc(x.title_id||"")+(x.title_id?" · ":"")+esc(x.name)+'</small></td>'+
       '<td><span class="chip">'+(x.backport?"backport":inKind(x.kind))+'</span>'+(x.version?' <span class="chip">v'+esc(x.version)+'</span>':"")+'</td><td>'+(x.directory?"":size(x.size_bytes))+'</td>'+
       '<td style="white-space:nowrap">'+(a[2]?'<button class="btn sm pri" data-in="'+a[1]+'" data-v="'+p+'"'+(busy||ro?" disabled":"")+'>'+a[0]+'</button>'+(a[1]==="pkg"?' <button class="btn sm" data-in="qadd" data-v="'+p+'"'+(ro?" disabled":"")+' title="'+L("Añadir a la cola","Add to the queue")+'">'+ic("plus")+'</button>':""):'<span class="chip">'+a[0]+'</span>')+
-      (del?' <button class="btn sm danger" data-in="bpdel" data-v="'+p+'"'+(busy||ro?" disabled":"")+'>'+ic("trash")+'</button>':"")+'</td></tr>'}).join("");
+      (del?' <button class="btn sm danger" data-in="bpdel" data-v="'+p+'"'+(busy||ro?" disabled":"")+'>'+ic("trash")+'</button>':"")+
+      (sdel?' <button class="btn sm ghost" data-in="sdel" data-v="'+p+'"'+(busy||ro?" disabled":"")+' title="'+L("Borrar","Delete")+'">'+ic("trash")+'</button>':"")+'</td></tr>'}).join("");
   box.innerHTML=job+qu+
     '<div class="card svbar" style="margin-bottom:16px"><label class="btn pri"'+(busy||ro?' style="opacity:.5;pointer-events:none"':"")+'>'+ic("upload")+L("Instalar un PKG desde este PC","Install a PKG from this PC")+'<input type="file" id="in-pc" accept=".pkg" hidden></label>'+
       '<span class="sp"></span><small style="color:var(--faint)">'+L("Va directo a la consola, sin guardarse en ningún disco.","It goes straight to the console, without being saved on any drive.")+'</small></div>'+
+    inSmbCard()+
     '<div class="tools" style="flex-wrap:wrap;gap:8px">'+crumbs+'</div>'+
     (n.path?'<p style="margin:6px 2px 10px;font:500 12px var(--mono);color:var(--dim)">'+(n.parent?'<a data-in="go" data-v="'+esc(n.parent)+'" style="cursor:pointer">'+ic("up")+'</a> ':"")+esc(n.path)+'</p>':"")+
     '<div class="card" style="overflow:auto"><table class="t"><thead><tr><th>'+L("Nombre","Name")+'</th><th>'+L("Tipo","Kind")+'</th><th>'+L("Tamaño","Size")+'</th><th></th></tr></thead><tbody>'+
       (rows||'<tr><td colspan="4"><div class="empty">'+(n.path?L("Aquí no hay PKG ni carpetas.","No PKG or folders here."):L("Elige un disco.","Pick a drive."))+'</div></td></tr>')+'</tbody></table></div>'+
-    (n.truncated||n.offset?'<div class="tools" style="justify-content:center;margin-top:10px">'+(n.offset?'<button class="btn sm" data-in="page" data-v="'+(n.offset-256)+'">'+L("Anteriores","Previous")+'</button>':"")+(n.truncated?'<button class="btn sm" data-in="page" data-v="'+(n.offset+256)+'">'+L("Siguientes","Next")+'</button>':"")+'</div>':"")+
+    (n.truncated||n.offset?'<div class="tools" style="justify-content:center;margin-top:10px">'+(n.offset?'<button class="btn sm" data-in="page" data-v="'+(n.offset-n.limit)+'">'+L("Anteriores","Previous")+'</button>':"")+(n.truncated?'<button class="btn sm" data-in="page" data-v="'+(n.offset+n.limit)+'">'+L("Siguientes","Next")+'</button>':"")+'</div>':"")+
     '<p style="margin:14px 2px 0;font:500 11.5px var(--mono);color:var(--faint)">'+L("Lo instala ShadowMount+. Los parches y DLC necesitan el juego base instalado. Un backport se copia a /data/homebrew/backports y el original se queda donde está.","ShadowMount+ installs it. Patches and DLC need the base game installed. A backport is copied to /data/homebrew/backports and the original stays where it is.")+'</p>';
   var f=$("in-pc");if(f)f.onchange=function(){if(this.files&&this.files[0])inFromPc(this.files[0]);this.value=""};
 }
+function inSmbCard(){
+  var n=S.in,ro=S.ro,f=n.smbF;if(!inSmbCan()||!n.smb)return "";
+  var rows=n.smb.map(function(c){var nm=esc(c.name);
+    return '<div class="item" style="padding:8px 0"><div class="t"><b>'+nm+(c.active?"":' <span class="chip">'+L("apagada","off")+'</span>')+(c.read_only?' <span class="chip">'+L("solo lectura","read-only")+'</span>':"")+'</b><small>'+esc(c.path)+" · "+(c.username?esc(c.username):L("invitado","guest"))+'</small></div>'+
+      (c.active?'<button class="btn sm" data-in="go" data-v="smb://'+nm+'">'+ic("files")+L("Abrir","Open")+'</button> ':"")+
+      '<button class="btn sm ghost" data-in="smbed" data-v="'+nm+'"'+(ro?" disabled":"")+'>'+L("Editar","Edit")+'</button> <button class="btn sm ghost" data-in="smbrm" data-v="'+nm+'"'+(ro?" disabled":"")+'>'+ic("trash")+'</button></div>'}).join("");
+  var form=f?'<div class="card pad" style="margin-top:10px;display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">'+
+      '<label>'+L("Nombre","Name")+'<input class="in" id="smb-n" maxlength="63" value="'+esc(f.name||"")+'" placeholder="NAS"></label>'+
+      '<label>'+L("Dirección","Address")+'<input class="in" id="smb-p" value="'+esc(f.path||"")+'" placeholder="smb://192.168.1.10/juegos"></label>'+
+      '<label>'+L("Usuario (vacío = invitado)","User (empty = guest)")+'<input class="in" id="smb-u" value="'+esc(f.username||"")+'" autocomplete="off"></label>'+
+      '<label>'+L("Contraseña","Password")+'<input class="in" id="smb-w" type="password" autocomplete="new-password" placeholder="'+(f.password_set?L("(sin cambiar)","(unchanged)"):"")+'"></label>'+
+      '<label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="smb-a"'+(f.active!==false?" checked":"")+'> '+L("Activa","Active")+'</label>'+
+      '<label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="smb-r"'+(f.read_only?" checked":"")+'> '+L("Solo lectura","Read-only")+'</label>'+
+      '<div class="tools" style="grid-column:1/-1;gap:8px"><button class="btn sm pri" data-in="smbsave">'+L("Guardar","Save")+'</button><button class="btn sm" data-in="smbcheck">'+L("Probar","Test")+'</button><button class="btn sm ghost" data-in="smbcancel">'+L("Cancelar","Cancel")+'</button>'+
+      '<small style="color:var(--faint)">'+L("La contraseña la guarda ShadowMount+ en la consola y no se vuelve a mostrar.","ShadowMount+ keeps the password on the console and never shows it again.")+'</small></div></div>':"";
+  return '<div class="card pad" style="margin-bottom:16px"><h3 class="h">'+ic("disk")+L("Carpetas de red (SMB)","Network folders (SMB)")+' <em>'+n.smb.length+'</em><span class="sp" style="flex:1"></span>'+
+    (f?"":'<button class="btn sm" data-in="smbadd"'+(ro?" disabled":"")+'>'+ic("plus")+L("Añadir","Add")+'</button>')+'</h3>'+
+    (rows||'<p style="margin:4px 0;color:var(--dim)">'+L("Instala PKG o copia juegos desde un NAS o desde una carpeta compartida del PC, sin pasarlos antes a un disco.","Install PKGs or copy games from a NAS or a shared folder on the PC, without putting them on a drive first.")+'</p>')+form+'</div>';
+}
+function inSmbForm(){var v=function(id){var e=$(id);return e?e.value.trim():""},f=S.in.smbF||{},o={name:v("smb-n"),path:v("smb-p"),username:v("smb-u"),active:$("smb-a").checked,read_only:$("smb-r").checked};
+  var w=$("smb-w").value;if(w||!f.password_set)o.password=w;if(f.name)o.previous_name=f.name;
+  /* \\NAS\share as Windows writes it, or a bare host/share */
+  if(o.path&&o.path.indexOf("smb://")!==0)o.path="smb://"+o.path.replace(/^[\\\/]+/,"").replace(/\\/g,"/");return o}
 function inJob(p,msg){return p.then(function(){if(msg)toast(msg);return inPoll()}).catch(function(e){fail(e);inPoll()})}
 $("v-install").addEventListener("click",function(e){
   var t=e.target.closest("[data-in]");if(!t||t.disabled)return;var k=t.getAttribute("data-in"),v=t.getAttribute("data-v"),n=S.in;
@@ -2908,6 +2939,17 @@ $("v-install").addEventListener("click",function(e){
   else if(k==="qstart")inJob(smp("/packages/queue",{action:"start"}),L("Instalando la cola…","Installing the queue…"));
   else if(k==="cancel")inJob(smp("/games/storage/cancel",{job_id:n.job&&n.job.job_id}),L("Cancelando…","Cancelling…"));
   else if(k==="bp")inJob(smp("/backports/install",{path:v}),L("Copiando el backport…","Copying the backport…"));
+  else if(k==="sdel")ask(L("Borrar","Delete"),L("Se borra para siempre: ","Deleted for good: ")+v,L("Borrar","Delete"),true).then(function(ok){
+    if(ok)inJob(smp("/sources/delete",{path:v,confirm:true}),L("Borrando…","Deleting…")).then(function(){return wait(1500)}).then(function(){loadInst(n.path,n.offset)})});
+  else if(k==="smbadd"){n.smbF={};paintInst()}
+  else if(k==="smbed"){n.smbF=(n.smb||[]).filter(function(c){return c.name===v})[0]||{};paintInst()}
+  else if(k==="smbcancel"){n.smbF=null;paintInst()}
+  else if(k==="smbcheck"){var o=inSmbForm();o.action="check";
+    smp("/smb",o).then(function(j){toast(L("Conecta","It connects")+(j.dialect?" (SMB "+(j.dialect>>8).toString(16)+"."+("0"+(j.dialect&255).toString(16)).slice(-2)+")":""))}).catch(fail)}
+  else if(k==="smbsave"){var o2=inSmbForm();o2.action="save";
+    smp("/smb",o2).then(function(j){n.smb=j.connections||[];n.smbF=null;toast(L("Guardada","Saved"));loadInst(n.path,n.offset)}).catch(fail)}
+  else if(k==="smbrm")ask(L("Quitar carpeta de red","Remove network folder"),v+L(": solo se olvida la conexión, no se borra nada del NAS.",": only the connection is forgotten; nothing on the NAS is deleted."),L("Quitar","Remove"),true).then(function(ok){
+    if(ok)smp("/smb",{action:"remove",name:v}).then(function(j){n.smb=j.connections||[];toast(L("Quitada","Removed"));loadInst(n.path.indexOf("smb://"+v)===0?"":n.path,0)}).catch(fail)});
   else if(k==="bpdel")ask(L("Borrar backport","Delete backport"),L("Se borra entera esta carpeta, sin vuelta atrás: ","This whole folder is deleted, with no way back: ")+v,L("Borrar","Delete"),true).then(function(ok){
     if(ok)inJob(smp("/backports/delete",{path:v}),L("Borrando…","Deleting…")).then(function(){return wait(1500)}).then(function(){loadInst(n.path,n.offset)})});
 });
