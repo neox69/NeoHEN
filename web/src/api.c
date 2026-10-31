@@ -654,9 +654,6 @@ static const api_route_t g_routes[] = {
   {"POST", "/api/apps/kill",        api_apps_kill},
   {"GET",  "/api/apps/running",     api_apps_running},
 
-  {"GET",  "/api/net/down",          api_net_down},
-  {"POST", "/api/net/up",            api_net_up},
-
   {"GET",  "/api/payloads/list",      api_payloads_list},
   {"PUT",  "/api/payloads/upload",    api_payloads_upload},
   {"POST", "/api/payloads/upload",    api_payloads_upload},
@@ -674,6 +671,8 @@ static const api_route_t g_routes[] = {
   {"POST", "/api/sys/fan",          api_sys_fan_set},
   {"POST", "/api/sys/browser",      api_sys_browser},
   {"POST", "/api/sys/menu",         api_sys_menu},
+  {"GET",  "/api/net/down",         api_net_down},
+  {"POST", "/api/net/up",           api_net_up},
 
   {"GET",  "/api/trophies",         api_trophies},
   {"GET",  "/api/trophies/set",     api_trophies_set},
