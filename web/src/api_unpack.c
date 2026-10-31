@@ -331,13 +331,36 @@ untar(job_t *job, const unpack_arg_t *a, int gz) {
       snprintf(name, sizeof(name), "%.100s", (char *)h);
     }
 
-    if(type == 'L') { /* GNU long name: the next header's name */
+    /* the next header's name: GNU long name (L), or the path record of a
+     * POSIX extended header (x), as Python and bsdtar write them */
+    if(type == 'L' || type == 'x') {
       size_t n = size < sizeof(longname) - 1 ? (size_t)size : sizeof(longname) - 1;
       if(tin_read(&t, longname, n)) {
         r = job_fail(job, "the archive is cut short");
         break;
       }
       longname[n] = 0;
+      if(type == 'x') {
+        /* records are "<len> <key>=<value>\n" */
+        char *rec = longname, *path = NULL;
+        while(rec < longname + n) {
+          char *sp = strchr(rec, ' ');
+          long len = strtol(rec, NULL, 10);
+          if(!sp || len <= 0 || rec + len > longname + n) {
+            break;
+          }
+          if(!strncmp(sp + 1, "path=", 5)) {
+            path = sp + 6;
+            rec[len - 1] = 0;
+          }
+          rec += len;
+        }
+        if(path) {
+          memmove(longname, path, strlen(path) + 1);
+        } else {
+          longname[0] = 0;
+        }
+      }
       for(uint64_t left = size - n + pad; left;) {
         size_t k = left < CHUNK ? (size_t)left : CHUNK;
         if(tin_read(&t, buf, k)) {
