@@ -366,6 +366,7 @@ struct IPCMessage {
 | `/data/OnionHEN/OnionHEN_crash.log` | 崩溃信号与回溯日志；daemon / util / bootstrapper 写入，跨重启追加保留。超过 1 MiB 时下一次配置 sink 会把它移到 `.1`（仅保留一代），避免 `/data` 被无界占满 |
 | `/data/OnionHEN/payloads/` | 用户 payload `.elf`（启动时 stage 到同目录） |
 | `/data/OnionHEN/plugins/` | OnionHEN plugin `.elf`（含 `.onion_plugin` descriptor） |
+| `pkg.search_path_0`…`pkg.search_path_7` | Custom PKG folders; ShellUI scans their `/user/data` or `/usb*` views and submits the system-visible paths to AppInstUtil |
 | `/system_tmp/onionhen/ipc/*` | Unix IPC socket |
 | `/system_tmp/onionhen/ready/<name>` | ready/runtime 标记；`toolbox` 内容为 SceShellUI PID |
 | `/system_tmp/onionhen/pid/<key>.PID` | 用户 Payload PID 状态 |

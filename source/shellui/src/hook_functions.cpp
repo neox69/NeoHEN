@@ -224,19 +224,23 @@ void CheckRunningOnMainThread() {
 }
 void Patch_Main_thread_Check(MonoImage * image_core) {
 
-    uint64_t real_addr = Get_Address_of_Method(image_core, "Sce.PlayStation.Core.Runtime", "Diagnostics", "CheckRunningOnMainThread", 0);
+    uint64_t real_addr = Get_Address_of_Method(
+        image_core, "Sce.PlayStation.Core.Runtime", "Diagnostics",
+        "CheckRunningOnMainThread", 0, false);
     if (!real_addr) {
-        LOG_ERROR("Failed to get method address");
+        LOG_WARN("Optional hook target unavailable: "
+                 "Diagnostics.CheckRunningOnMainThread");
         return;
     }
     LOG_DEBUG("changing permissions on (0x%llx).", (unsigned long long)real_addr);
     
-    if (!DetourFunction(real_addr, (void*)&CheckRunningOnMainThread)) {
+    if (!DetourFunction(real_addr, (void*)&CheckRunningOnMainThread, false)) {
         if (DetourLastFailureWasAlreadyPatched()) {
             LOG_DEBUG("Main thread check already patched");
             return;
         }
-        LOG_ERROR("Main thread check detour failed");
+        LOG_WARN("Optional hook detour failed: "
+                 "Diagnostics.CheckRunningOnMainThread");
         return;
     }
     LOG_DEBUG("Main thread check patched");

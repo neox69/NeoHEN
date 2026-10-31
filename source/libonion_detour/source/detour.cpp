@@ -159,6 +159,11 @@ void PatchInJump(uint64_t address, void *destination) {
 }
 
 bool PrepareDetour(uint64_t address, void *destination, DetourHandle *handle) {
+  return PrepareDetour(address, destination, handle, true);
+}
+
+bool PrepareDetour(uint64_t address, void *destination, DetourHandle *handle,
+                   bool log_failure) {
   if (!address || !destination || !handle) {
     return false;
   }
@@ -186,7 +191,11 @@ bool PrepareDetour(uint64_t address, void *destination, DetourHandle *handle) {
 
   /* PS5 xotext is execute-only. Never decode/copy it before this succeeds. */
   if (mprotect_range_rwx(address, kRelocationReadLength) < 0) {
-    LOG_ERROR("DetourFunction: failed to mprotect target decoder window");
+    if (log_failure) {
+      LOG_ERROR("DetourFunction: failed to mprotect target decoder window");
+    } else {
+      LOG_DEBUG("DetourFunction: failed to mprotect target decoder window");
+    }
     return false;
   }
 
@@ -206,9 +215,15 @@ bool PrepareDetour(uint64_t address, void *destination, DetourHandle *handle) {
           reinterpret_cast<uint8_t *>(executableAddress),
           reinterpret_cast<uintptr_t>(executableAddress), HOOK_LENGTH,
           stubLength, &relocation)) {
-    LOG_ERROR("DetourFunction: relocation failed at +%zu: %s",
+    if (log_failure) {
+      LOG_ERROR("DetourFunction: relocation failed at +%zu: %s",
                 relocation.error_offset,
                 onion_x64_relocate_error_string(relocation.error));
+    } else {
+      LOG_DEBUG("DetourFunction: relocation failed at +%zu: %s",
+                relocation.error_offset,
+                onion_x64_relocate_error_string(relocation.error));
+    }
     return false;
   }
 
@@ -216,7 +231,11 @@ bool PrepareDetour(uint64_t address, void *destination, DetourHandle *handle) {
   if (!onion_x64_build_atomic_patch(
           address, reinterpret_cast<const uint8_t *>(address),
           reinterpret_cast<uintptr_t>(destination), &patch)) {
-    LOG_ERROR("PrepareDetour: failed to build atomic patch");
+    if (log_failure) {
+      LOG_ERROR("PrepareDetour: failed to build atomic patch");
+    } else {
+      LOG_DEBUG("PrepareDetour: failed to build atomic patch");
+    }
     return false;
   }
 
@@ -232,13 +251,22 @@ bool PrepareDetour(uint64_t address, void *destination, DetourHandle *handle) {
 }
 
 bool CommitDetour(DetourHandle *handle) {
+  return CommitDetour(handle, true);
+}
+
+bool CommitDetour(DetourHandle *handle, bool log_failure) {
   if (!handle || !handle->prepared || handle->committed) {
     return false;
   }
 
   if (!compare_exchange_patch(handle->target, handle->patch)) {
-    LOG_ERROR("CommitDetour: target changed or atomic patch failed: %#02lx",
+    if (log_failure) {
+      LOG_ERROR("CommitDetour: target changed or atomic patch failed: %#02lx",
                 handle->target);
+    } else {
+      LOG_DEBUG("CommitDetour: target changed or atomic patch failed: %#02lx",
+                handle->target);
+    }
     return false;
   }
 
@@ -261,8 +289,13 @@ void AbortDetour(DetourHandle *handle) {
 
 bool InstallDetour(uint64_t address, void *destination,
                    void **original_storage) {
+  return InstallDetour(address, destination, original_storage, true);
+}
+
+bool InstallDetour(uint64_t address, void *destination,
+                   void **original_storage, bool log_failure) {
   DetourHandle handle{};
-  if (!PrepareDetour(address, destination, &handle)) {
+  if (!PrepareDetour(address, destination, &handle, log_failure)) {
     return false;
   }
 
@@ -272,7 +305,7 @@ bool InstallDetour(uint64_t address, void *destination,
                 sizeof(handle.trampoline));
   }
 
-  if (!CommitDetour(&handle)) {
+  if (!CommitDetour(&handle, log_failure)) {
     if (original_storage) {
       void *null_original = nullptr;
       std::memcpy(original_storage, &null_original, sizeof(null_original));
@@ -284,11 +317,15 @@ bool InstallDetour(uint64_t address, void *destination,
 }
 
 void *DetourFunction(uint64_t address, void *destination) {
+  return DetourFunction(address, destination, true);
+}
+
+void *DetourFunction(uint64_t address, void *destination, bool log_failure) {
   DetourHandle handle{};
-  if (!PrepareDetour(address, destination, &handle)) {
+  if (!PrepareDetour(address, destination, &handle, log_failure)) {
     return nullptr;
   }
-  if (!CommitDetour(&handle)) {
+  if (!CommitDetour(&handle, log_failure)) {
     AbortDetour(&handle);
     return nullptr;
   }

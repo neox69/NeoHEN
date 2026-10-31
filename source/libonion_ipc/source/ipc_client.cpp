@@ -277,7 +277,8 @@ bool IPC_Client::IPCSendCommand(DaemonCommands cmd, std::string &ipc_msg1,
   IPC_Ret error =
       static_cast<IPC_Ret>(IPCReceiveData(msg, ipc_msg1, recv_timeout_ms));
   if (error == IPC_Ret::NO_ERROR) {
-    LOG_TRACE("[Daemon] Daemon returned NO ERROR");
+    LOG_TRACE("Daemon reply status for command 0x%X: NO_ERROR",
+              static_cast<unsigned>(cmd));
     return true;
   }
   LOG_ERROR("[Daemon] Daemon returned an ERROR");

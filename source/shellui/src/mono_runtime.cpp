@@ -120,19 +120,28 @@ uint64_t Find_Method_Address_Quiet(MonoImage *Assembly_Image, const char *Name_S
   return Method ? mono_compile_method(Method) : 0;
 }
 
-uint64_t Get_Address_of_Method(MonoImage *Assembly_Image, const char *Name_Space, const char *Class_Name, const char *Method_Name, int Param_Count)
+uint64_t Get_Address_of_Method(MonoImage *Assembly_Image, const char *Name_Space,
+                               const char *Class_Name, const char *Method_Name,
+                               int Param_Count, bool log_failure)
 {
+  (void)log_failure;
   MonoClass *klass = mono_class_from_name(Assembly_Image, Name_Space, Class_Name);
   if (!klass)
   {
-    LOG_ERROR("Get_Address_of_Method: failed to open class \"%s\" in namespace \"%s\"", Class_Name, Name_Space);
+#if SHELL_DEBUG == 1
+    if (log_failure)
+      LOG_ERROR("Get_Address_of_Method: failed to open class \"%s\" in namespace \"%s\"", Class_Name, Name_Space);
+#endif
     return 0;
   }
 
   MonoMethod *Method = mono_class_get_method_from_name(klass, Method_Name, Param_Count);
   if (!Method)
   {
-    LOG_ERROR("Get_Address_of_Method: failed to find method \"%s\" in class \"%s\"", Method_Name, Class_Name);
+#if SHELL_DEBUG == 1
+    if (log_failure)
+      LOG_ERROR("Get_Address_of_Method: failed to find method \"%s\" in class \"%s\"", Method_Name, Class_Name);
+#endif
     return 0;
   }
 
