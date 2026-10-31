@@ -25,6 +25,7 @@ along with this program; see the file COPYING. If not, see
 #include <onion/proc_query.h>
 #include <onion/platform.h>
 #include "daemon_ops.hpp"
+#include "neoweb_watchdog.hpp"
 #include "smp_watchdog.hpp"
 #include <onion/version.h>
 #include <stdio.h>
@@ -193,6 +194,7 @@ void start_worker_threads(pthread_t* app_jailbreak_thr, pthread_t* msg_thr) {
   pthread_t resume_thr = nullptr;
   pthread_create(&resume_thr, nullptr, resume_recovery_thread, nullptr);
   onion::daemon::smp::watchdog_start();
+  onion::daemon::neoweb::watchdog_start();
   kstuff_diag_start();
   pthread_detach(resume_thr);
 }

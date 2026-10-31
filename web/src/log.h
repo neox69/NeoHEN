@@ -8,6 +8,8 @@ enum { LOG_LVL_DEBUG, LOG_LVL_INFO, LOG_LVL_WARN, LOG_LVL_ERROR };
 
 void log_write(int level, const char *fmt, ...) __attribute__((format(printf, 2, 3)));
 void log_dump_json(jw_t *w, unsigned since); /* entries with seq > since */
+void log_open_file(const char *path);        /* also append every line there */
+int  log_fd(void);                            /* that file, or -1 */
 
 #define LOG_DEBUG(...) log_write(LOG_LVL_DEBUG, __VA_ARGS__)
 #define LOG_INFO(...)  log_write(LOG_LVL_INFO, __VA_ARGS__)

@@ -487,6 +487,8 @@ api_sys_report(http_req_t *req) {
     {"/data/neohen/NeoHEN.log.1", "NeoHEN.log.1"},
     {"/data/neohen/NeoHEN_util_daemon.log", "NeoHEN_util_daemon.log"},
     {"/data/neohen/NeoHEN_crash.log", "NeoHEN_crash.log"},
+    {PS5AIO_DATA_DIR "/neoweb.log", "neoweb.log"},
+    {PS5AIO_DATA_DIR "/neoweb.log.1", "neoweb.log.1"},
     {"/data/neohen/config.ini", "config.ini"},
     {"/data/neohen/themes/neotheme.log", "themes/neotheme.log"},
     {"/data/neohen/themes/state.txt", "themes/state.txt"},

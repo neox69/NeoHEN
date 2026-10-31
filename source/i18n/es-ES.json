@@ -499,6 +499,8 @@
     "notify.smp.hook_lost": "ShadowMount+ ha perdido su hook (no instalará juegos). Relánzalo o pon shadowmount.watchdog=relaunch",
     "notify.smp.not_running": "ShadowMount+ no está en ejecución. Relánzalo o pon shadowmount.watchdog=relaunch",
     "notify.smp.relaunched": "ShadowMount+ relanzado por {brand}",
+    "notify.neoweb.relaunched": "NeoWEB se había parado; relanzado por {brand}",
+    "notify.neoweb.relaunch_failed": "NeoWEB se ha parado y no se pudo relanzar",
     "notify.smp.relaunch_failed": "{brand} no pudo relanzar ShadowMount+",
     "notify.smp.relaunch_limited": "ShadowMount+ sigue fallando; {brand} deja de relanzarlo hasta el próximo arranque",
     "notify.smp.relaunch_waits": "ShadowMount+ ha perdido su hook; {brand} lo relanzará cuando cierres el juego",
