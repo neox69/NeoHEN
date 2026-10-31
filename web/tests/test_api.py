@@ -1273,6 +1273,50 @@ class PayloadTest(unittest.TestCase):
         ids = [x["id"] for x in j["jobs"]]
         self.assertEqual(ids, sorted(ids, reverse=True))
 
+    def test_extract(self):
+        import io
+        import tarfile
+        import zipfile
+        d = os.path.join(self.root, "data", "unz")
+        os.makedirs(d, exist_ok=True)
+        big = os.urandom(300000) * 4
+        with zipfile.ZipFile(os.path.join(d, "a.zip"), "w", zipfile.ZIP_DEFLATED) as z:
+            z.writestr("top.txt", "hola")
+            z.writestr("sub/dir/big.bin", big)
+            z.writestr("../evil.txt", "no")
+        for name, mode in (("b.tar", "w"), ("c.tar.gz", "w:gz")):
+            with tarfile.open(os.path.join(d, name), mode) as t:
+                for n, data in (("x/" + "l" * 120 + ".txt", b"long"), ("x/big.bin", big),
+                                ("/abs.txt", b"no")):
+                    info = tarfile.TarInfo(n)
+                    info.size = len(data)
+                    t.addfile(info, io.BytesIO(data))
+        for arc, check in (("a.zip", "sub/dir/big.bin"), ("b.tar", "x/big.bin"),
+                           ("c.tar.gz", "x/big.bin")):
+            out = "/data/unz/out-" + arc.split(".")[0]
+            st, j = self.api.post("/api/fs/extract", {"path": "/data/unz/" + arc, "to": out})
+            self.assertEqual(st, 200, j)
+            job = self.api.wait_job(j["job"])
+            self.assertEqual(job["state"], "done", job)
+            local = os.path.join(self.root, out.lstrip("/"))
+            with open(os.path.join(local, check), "rb") as f:
+                self.assertEqual(f.read(), big)
+            self.assertFalse(os.path.exists(os.path.join(self.root, "data", "unz", "evil.txt")))
+            self.assertFalse(os.path.exists(os.path.join(local, "abs.txt")))
+        self.assertTrue(os.path.exists(os.path.join(self.root, "data", "unz", "out-b",
+                                                    "x", "l" * 120 + ".txt")))
+        st, _ = self.api.post("/api/fs/extract", {"path": "/data/unz/a.rar", "to": "/data/x"})
+        self.assertEqual(st, 400)
+
+    def test_net(self):
+        st, body, _ = self.api.req("GET", "/api/net/down?mb=2")
+        self.assertEqual(st, 200)
+        self.assertEqual(len(body), 2 * 1024 * 1024)
+        st, body, _ = self.api.req("POST", "/api/net/up", raw=b"\0" * 3000000,
+                                   headers={"Content-Type": "application/octet-stream"})
+        self.assertEqual(st, 200)
+        self.assertEqual(json.loads(body)["bytes"], 3000000)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
