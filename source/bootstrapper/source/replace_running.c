@@ -35,6 +35,9 @@
 #define CTRL_PORT 9048
 #define CTRL_MAGIC 0x4F4E494Fu
 #define CTRL_CMD_SHUTDOWN 1u
+#ifndef MSG_NOSIGNAL
+#define MSG_NOSIGNAL 0x20000 /* a daemon that exits must not SIGPIPE us */
+#endif
 
 #define DAEMON_NAME "onion_daemon.elf"
 #define UTIL_NAME "onion_util.elf"
@@ -61,7 +64,7 @@ static bool ask_shutdown(void) {
   bool ok = false;
   if (connect(fd, (struct sockaddr *)&addr, sizeof(addr)) == 0) {
     const uint32_t frame[2] = {CTRL_MAGIC, CTRL_CMD_SHUTDOWN};
-    ok = send(fd, frame, sizeof(frame), 0) == (ssize_t)sizeof(frame);
+    ok = send(fd, frame, sizeof(frame), MSG_NOSIGNAL) == (ssize_t)sizeof(frame);
     unsigned char reply = 0xff;
     (void)recv(fd, &reply, 1, 0); /* the daemon may exit before replying */
   }

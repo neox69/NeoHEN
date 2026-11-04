@@ -25,7 +25,7 @@ bool touch_file(const char *path) {
     return false;
   }
   int fd = open(path, O_WRONLY | O_CREAT | O_TRUNC, 0777);
-  if (fd > 0) {
+  if (fd >= 0) {
     close(fd);
     return true;
   }

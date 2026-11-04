@@ -52,9 +52,13 @@ bool version_key(const std::string &text, long out[4]) {
       ++s;
     }
   }
+  /* "+sha" build metadata is still the final release; any other
+   * pre-release ("-beta1", an upstream tag) ranks below every rc. */
   out[3] = 1000000;
   if (std::string(s).rfind("-rc", 0) == 0)
     out[3] = std::strtol(s + 3, nullptr, 10);
+  else if (*s == '-')
+    out[3] = 0;
   return true;
 }
 
@@ -228,7 +232,9 @@ void store_check_once() {
     const std::string url = onion_cjson::string_value(src, "");
     /* https://github.com/OWNER/REPO/releases/download/TAG/ASSET */
     const std::string pre = "https://github.com/";
-    if (name.empty() || url.rfind(pre, 0) != 0)
+    /* the name becomes a file in the payloads folder: no paths */
+    if (name.empty() || name[0] == '.' || name.find('/') != std::string::npos ||
+        name.find('\\') != std::string::npos || url.rfind(pre, 0) != 0)
       continue;
     std::vector<std::string> parts;
     size_t from = pre.size();

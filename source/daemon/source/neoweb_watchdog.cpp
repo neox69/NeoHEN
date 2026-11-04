@@ -21,6 +21,10 @@
 #include <time.h>
 #include <unistd.h>
 
+#ifndef MSG_NOSIGNAL
+#define MSG_NOSIGNAL 0x20000 /* a peer that closed must not SIGPIPE the daemon */
+#endif
+
 namespace onion::daemon::neoweb {
 
 namespace {
@@ -54,7 +58,7 @@ bool answers() {
   if (connect(fd, reinterpret_cast<sockaddr *>(&addr), sizeof(addr)) == 0) {
     static const char kReq[] = "GET /api/ping HTTP/1.0\r\nHost: 127.0.0.1\r\n\r\n";
     char buf[16] = {};
-    if (send(fd, kReq, sizeof(kReq) - 1, 0) == (ssize_t)(sizeof(kReq) - 1) &&
+    if (send(fd, kReq, sizeof(kReq) - 1, MSG_NOSIGNAL) == (ssize_t)(sizeof(kReq) - 1) &&
         recv(fd, buf, sizeof(buf) - 1, 0) > 0)
       ok = strncmp(buf, "HTTP/", 5) == 0;
   }
@@ -130,14 +134,15 @@ void *watchdog_thread(void *) {
              resume_check ? " (after Rest Mode)" : "");
 
     const time_t now = time(nullptr);
-    if (relaunches >= kRelaunchMaxPerBoot ||
-        (last_relaunch && now - last_relaunch < kRelaunchMinGapSeconds)) {
+    if (relaunches >= kRelaunchMaxPerBoot) {
       if (!limited_said) {
         LOG_WARN("neoweb watchdog: relaunch limit reached (%d)", relaunches);
         limited_said = true;
       }
       continue;
     }
+    if (last_relaunch && now - last_relaunch < kRelaunchMinGapSeconds)
+      continue; /* too soon after the last one; the next check tries again */
     if (pid > 1) {
       (void)kill(pid, SIGKILL);
       for (int i = 0; i < 20 && onion_proc_is_alive(pid); ++i)

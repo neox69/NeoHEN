@@ -15,5 +15,11 @@ while read -r name version sha url; do
     rm -f "${OUT}/${name}"
     exit 1
   fi
+  # bundled_payloads.c must know it too, or a hand-placed copy of this
+  # release is never updated by the next NeoHEN.
+  if ! grep -q "{\"${name}\", \"${sha}\"}" "${HERE}/../../source/bootstrapper/source/bundled_payloads.c"; then
+    echo "[error] ${name} ${version}: add its sha256 to kKnownReleases in bundled_payloads.c" >&2
+    exit 1
+  fi
   echo "[ok] ${name} ${version}"
 done < "${HERE}/payloads.lock"
