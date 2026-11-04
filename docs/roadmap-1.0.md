@@ -169,7 +169,7 @@ PS5SX2 2.10, GTA VI con 14.10, bloqueo de PSN, contenido de ProsperoStore.
 | Paso | Contenido | Prueba |
 |---|---|---|
 | **rc15** | Todo §1.2–§1.5 (versiones, integridad, robustez, rendimiento) | tests host + consola 13.42 |
-| **rc16** | §2 (lanzadores, escudo de firmware, homebrew, emuladores, offact, PS5Debug) | 13.42 + 13.60 |
+| **rc16** | §2 completo (lanzadores, escudo de firmware, homebrew, emuladores, offact, PS5Debug, payloads) | 13.00–13.60 |
 | **rc17 = candidata final** | Congelación de funciones; solo arreglos; §1.1, §1.6, §1.7 | matriz de firmware completa, Rest Mode de 24 h+ |
 | **1.0.0** | Si rc17 aguanta una semana sin fallos nuevos | — |
 
@@ -180,13 +180,15 @@ pasada en hardware (al menos 13.42 y 13.60).
 
 ---
 
-## 6. Decisiones pendientes
+## 6. Decisiones (4 de noviembre de 2026)
 
-1. **SHA-256 obligatorio**: ¿rechazar apps sin hash o mantener una lista
-   propia de hashes en el repo?
-2. **ProsperoStore** en 1.0: ¿se mantiene como fuente principal tras
-   auditarla, o solo apps curadas por NeoHEN?
-3. **Firmware objetivo** de 1.0: ¿13.42 y 13.60 probados, o también rangos
-   anteriores (11.xx–12.xx)?
-4. **Aurora del tema Console**: ¿estática por defecto?
-5. **Funciones de §2**: ¿todas para 1.0 o alguna pasa a 1.1?
+1. **SHA-256**: se exige siempre que GitHub publique el digest del archivo
+   (todos los assets nuevos lo traen). Si no lo trae, la instalación pide
+   confirmación explícita y queda marcada como «sin verificar». Las
+   actualizaciones automáticas de payloads solo se aplican con hash.
+2. **ProsperoStore** sigue como fuente principal de la tienda.
+3. **Firmware**: 1.0 se da por probada de 13.00 a 13.60. Por debajo debería
+   funcionar, pero figura como «sin probar» en la matriz hasta que alguien lo
+   confirme.
+4. **Aurora del tema Console**: pendiente.
+5. **Funciones de §2**: todas entran en 1.0.
