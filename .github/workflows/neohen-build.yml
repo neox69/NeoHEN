@@ -1,7 +1,8 @@
 # Build NeoHEN.elf on every push to neohen-main or a neohen/* branch, and on
 # v* tags, and keep it as a workflow artifact (Actions run page -> Artifacts).
-# A v* tag (which must match the VERSION file) also publishes a GitHub
-# release with NeoHEN-<version>.zip, NeoHEN.elf, BUILD_INFO.txt and
+# A v* tag (which must match the VERSION file), or a manual run on
+# neohen-main with "release" ticked (which creates the tag v<VERSION>), also
+# publishes a GitHub release with NeoHEN-<version>.zip, NeoHEN.elf, BUILD_INFO.txt and
 # SHA256SUMS; a version with "-" (an rc) is marked as a pre-release.
 name: neohen-build
 
@@ -10,6 +11,11 @@ on:
     branches: ['neohen/**', 'neohen-main']
     tags: ['v*']
   workflow_dispatch:
+    inputs:
+      release:
+        description: 'On neohen-main: publish v<VERSION> as a GitHub release (creates the tag)'
+        type: boolean
+        default: false
 
 concurrency:
   group: neohen-build-${{ github.ref }}
@@ -186,7 +192,9 @@ jobs:
 
   release:
     needs: build
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: >-
+      startsWith(github.ref, 'refs/tags/v') ||
+      (github.event_name == 'workflow_dispatch' && inputs.release && github.ref == 'refs/heads/neohen-main')
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
@@ -207,9 +215,20 @@ jobs:
       - name: Publish the release
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ github.ref_name }}
         run: |
           set -euo pipefail
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            TAG="${GITHUB_REF_NAME}"
+            tagargs=(--verify-tag)
+          else
+            TAG="v$(tr -d '[:space:]' < VERSION)"
+            if gh release view "$TAG" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1 ||
+               git ls-remote --exit-code --tags "https://github.com/${GITHUB_REPOSITORY}" "refs/tags/${TAG}" >/dev/null; then
+              echo "::error::${TAG} already exists; bump VERSION first"
+              exit 1
+            fi
+            tagargs=(--target "${GITHUB_SHA}")
+          fi
           ver="${TAG#v}"
           (cd dist && sha256sum -c SHA256SUMS)
           test -f "dist/NeoHEN-${ver}.zip"
@@ -219,7 +238,7 @@ jobs:
           for f in "docs/release-notes-${ver}.md" "docs/release-notes-$(echo "${ver%%-*}" | cut -d. -f1,2).md"; do
             if [[ -f "$f" ]]; then notes="$f"; break; fi
           done
-          args=(--title "NeoHEN ${ver}" --verify-tag)
+          args=(--title "NeoHEN ${ver}" "${tagargs[@]}")
           if [[ -n "$notes" ]]; then args+=(--notes-file "$notes"); else args+=(--generate-notes); fi
           if [[ "$ver" == *-* ]]; then args+=(--prerelease); else args+=(--latest); fi
           gh release create "$TAG" --repo "${GITHUB_REPOSITORY}" "${args[@]}" \
