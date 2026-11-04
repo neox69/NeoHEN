@@ -12,6 +12,8 @@
 
 #include <ctype.h>
 #include <errno.h>
+#include <fcntl.h>
+#include <time.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -25,6 +27,39 @@
 
 #define STORE      PS5AIO_DATA_DIR "/store.json"
 #define CMD_DOWNLOAD 0x800001Au /* BREW_UTIL_DOWNLOAD_FILE */
+
+/* store.json has two writers: this one, and NeoHEN's util service when it
+ * updates a store payload by itself (update_check.cpp). Each takes
+ * store.json.lock (O_EXCL), reads the file afresh, changes its part and
+ * writes it through a temp file of its own before removing the lock. A lock
+ * older than 30 s is from a writer that died; after 5 s of waiting the write
+ * goes ahead anyway (it is still atomic). Same rules as util_store_lock. */
+static int
+store_lock(char *lock, size_t cap) {
+  char local[PATH_MAX];
+  struct stat st;
+  int fd, waited;
+
+  plat_path(STORE, local, sizeof(local));
+  snprintf(lock, cap, "%s.lock", local);
+  fs_mkparents(lock);
+  for(waited = 0; waited <= 5000; waited += 100) {
+    if((fd = open(lock, O_WRONLY | O_CREAT | O_EXCL, 0666)) >= 0) {
+      close(fd);
+      return 1;
+    }
+    if(errno != EEXIST) {
+      return 0;
+    }
+    if(!stat(lock, &st) && time(NULL) - st.st_mtime > 30) {
+      unlink(lock);
+      continue;
+    }
+    usleep(100 * 1000);
+  }
+  LOG_WARN("store: %s is held for too long, writing anyway", lock);
+  return 0;
+}
 
 static jval_t *
 store_load(void) {
@@ -122,7 +157,9 @@ api_store_fetch(http_req_t *req) {
     http_send_error(req, 502, "the console could not download it: %s",
                     var[0] && strcmp(var, "Nothing") ? var : "unknown command");
   } else {
-    s = store_load();
+    char lock[PATH_MAX + 8];
+    int held = store_lock(lock, sizeof(lock));
+    s = store_load(); /* read under the lock, not before the download */
     json_set_str(json_get_or_add_obj(s, "installed"), name, tag);
     /* where it came from, so NeoHEN can look for newer releases of it */
     json_set_str(json_get_or_add_obj(s, "sources"), name, url);
@@ -130,6 +167,9 @@ api_store_fetch(http_req_t *req) {
     json_write(&w, s);
     plat_path(STORE, local, sizeof(local));
     fs_write_file(local, w.data, w.len);
+    if(held) {
+      unlink(lock);
+    }
     jw_free(&w);
     json_free(s);
     api_begin(&w);
@@ -174,7 +214,8 @@ api_store_auto(http_req_t *req) {
  * background (BREW_UTIL_APP_STORE); ShadowMount+ then registers them.
  *
  * GET  /api/apps/store   {"installed": {id: {tag, url, time}}, "job": {...}}
- * POST /api/apps/store   {"action": "install", "url", "id", "tag", "sha256"} or
+ * POST /api/apps/store   {"action": "install", "url", "id", "tag", "sha256", "size"}
+ *                        (or "unverified": true in place of "sha256") or
  *                        {"action": "cancel"}; answers with the job */
 #define APPS       PS5AIO_DATA_DIR "/apps.json"
 #define CMD_APPS   0x800001Bu /* BREW_UTIL_APP_STORE */
@@ -218,10 +259,13 @@ api_apps_store(http_req_t *req) {
     }
     if(!strcmp(action, "install")) {
       /* What the page sends: a GitHub release file, a title id, and a
-       * SHA-256 that is either 64 hex digits or left out (older releases
-       * have none published). Anything else is refused here, before
-       * NeoHEN's service downloads it. */
+       * SHA-256 of 64 hex digits. Only a file GitHub publishes no digest
+       * for goes without one, and then the page has asked the user and
+       * says so with "unverified": true. Anything else is refused here,
+       * before NeoHEN's service downloads it (and the service checks the
+       * same again). */
       const char *url = json_get_str(b, "url", ""), *sha = json_get_str(b, "sha256", "");
+      int unverified = json_get_bool(b, "unverified", 0);
       size_t i;
       for(i = 0; sha[i] && isxdigit((unsigned char)sha[i]); i++) {
       }
@@ -232,6 +276,21 @@ api_apps_store(http_req_t *req) {
         jw_free(&q);
         http_send_error(req, 400, "a github.com release file, a title id and a SHA-256 are needed");
         return;
+      }
+      if(!i && !unverified) {
+        json_free(b);
+        jw_free(&q);
+        http_send_error(req, 400, "no SHA-256: installing without one needs \"unverified\": true");
+        return;
+      }
+      if(i) {
+        unverified = 0;
+      }
+      jw_kbool(&q, "unverified", unverified);
+      /* the zip's size as GitHub gives it, for the free space check */
+      jw_kint(&q, "size", json_get_int(b, "size", 0) > 0 ? json_get_int(b, "size", 0) : 0);
+      if(unverified) {
+        LOG_INFO("apps: %s installed without a SHA-256 (the user said yes)", json_get_str(b, "id", ""));
       }
     }
     jw_kstr(&q, "action", action);

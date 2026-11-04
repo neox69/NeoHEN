@@ -317,7 +317,8 @@ api_apps_icon(http_req_t *req) {
       }
     }
   }
-  http_send_file(req, local, 0);
+  /* the library shows dozens of these: with the ETag a revisit is a 304 */
+  http_send_file_ex(req, local, 0, "no-cache");
 }
 
 /* rewrite a title's name in every param file we can find */

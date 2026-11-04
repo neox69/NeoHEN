@@ -176,6 +176,9 @@ stable_seconds=30
 watchdog=relaunch             ; off, notify, relaunch
 watchdog_interval_seconds=60
 
+[neoweb]
+watchdog=relaunch             ; off, notify, relaunch
+
 [shellui]
 wait_for_tracer=true
 
@@ -203,6 +206,11 @@ asks to close the game and send it again.
 
 Logs are in `/data/neohen/`: `NeoHEN.log`, `NeoHEN_crash.log`,
 `NeoHEN_util_daemon.log`.
+
+If NeoHEN fails to finish starting 3 times in a row it starts in safe mode
+(no auto-start payloads except NeoWEB, no plugins); NeoWEB's dashboard says
+so and turns it off. That, the NeoWEB watchdog, the store's SHA-256 rule and
+the diagnostic report are described in `docs/robustness.md`.
 
 ## Build
 

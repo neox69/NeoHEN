@@ -24,6 +24,7 @@ along with this program; see the file COPYING. If not, see
 #include <onion/net.h>
 #include <onion/proc_query.h>
 #include <onion/platform.h>
+#include "boot_health.hpp"
 #include "daemon_ops.hpp"
 #include "neoweb_watchdog.hpp"
 #include "smp_watchdog.hpp"
@@ -195,6 +196,7 @@ void start_worker_threads(pthread_t* app_jailbreak_thr, pthread_t* msg_thr) {
   pthread_create(&resume_thr, nullptr, resume_recovery_thread, nullptr);
   onion::daemon::smp::watchdog_start();
   onion::daemon::neoweb::watchdog_start();
+  onion::daemon::boot_health::start();
   kstuff_diag_start();
   pthread_detach(resume_thr);
 }
@@ -325,7 +327,11 @@ int main() {
   // Load the catalog before the SceSysCore listener can publish an event.
   // Big App lifecycle events then use reconcile() against this initialized
   // catalog, rather than racing a second initial start().
-  onion::daemon::sprx_plugins::start();
+  /* safe mode (onion/safe_mode.h): no SPRX plugins into games this start */
+  if (onion::daemon::boot_health::safe_mode())
+    LOG_WARN("[sprx-manager] safe mode: SPRX plugins are not loaded");
+  else
+    onion::daemon::sprx_plugins::start();
   start_worker_threads(&app_jailbreak_thr, &msg_thr);
   for (int attempt = 0;
        attempt < 20 && !onion::daemon::plugin_ipc::is_listening(); ++attempt)

@@ -181,6 +181,9 @@ stable_seconds=30
 watchdog=relaunch             ; off, notify, relaunch
 watchdog_interval_seconds=60
 
+[neoweb]
+watchdog=relaunch             ; off, notify, relaunch
+
 [shellui]
 wait_for_tracer=true
 
@@ -207,6 +210,11 @@ juego abierto no cambia nada: pide cerrarlo y volver a mandarlo.
 
 Los logs están en `/data/neohen/`: `NeoHEN.log`, `NeoHEN_crash.log` y
 `NeoHEN_util_daemon.log`.
+
+Si NeoHEN no llega a terminar de arrancar 3 veces seguidas, arranca en modo
+seguro (sin payloads automáticos salvo NeoWEB, sin plugins); el panel de
+NeoWEB lo dice y lo quita. Eso, el vigilante de NeoWEB, la regla del SHA-256
+de la tienda y el informe de diagnóstico están en `docs/robustness.md`.
 
 ## Compilar
 

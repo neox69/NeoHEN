@@ -4,8 +4,12 @@
  * sce_sys/param.json. util downloads it, unpacks it beside its final place
  * and swaps it into /data/homebrew, where ShadowMount+ registers it like any
  * game folder. One job at a time, in its own thread; NeoWEB asks how it goes.
- * When the catalog gives the zip's SHA-256, a download that differs is thrown
- * away before anything is unpacked.
+ * A download that differs from the zip's SHA-256 is thrown away before
+ * anything is unpacked. A SHA-256 is required: only a release file GitHub
+ * publishes no digest for goes without one, and only when NeoWEB says the
+ * user agreed ("unverified": true); apps.json remembers it as unverified.
+ * Free space on /data is checked before the download (the zip's size) and
+ * again before unpacking (what the zip says it holds).
  * What was installed, and which release, is kept in web/apps.json. */
 
 #include "app_store.hpp"
@@ -32,6 +36,7 @@ extern "C" {
 #include <pthread.h>
 #include <string>
 #include <sys/stat.h>
+#include <sys/statvfs.h>
 #include <unistd.h>
 
 namespace {
@@ -43,11 +48,14 @@ constexpr const char *kList = ONION_USER_DATA_DIR "/web/apps.json";
 constexpr size_t kMaxZipBytes = 4ull << 30;
 constexpr mz_uint64 kMaxAppBytes = 12ull << 30;
 constexpr mz_uint kMaxEntries = 60000;
+/* left free on /data on top of what an install needs */
+constexpr unsigned long long kSpareBytes = 256ull << 20;
 
 struct Job {
   std::string state = "idle"; /* idle download unpack done failed */
   std::string id, tag, url, sha, err;
   size_t got = 0, total = 0;
+  bool unverified = false;
 };
 
 std::mutex g_mu;
@@ -117,7 +125,31 @@ void progress(size_t received, size_t total, void *) {
 
 bool cancelled(void *) { return g_cancel.load(); }
 
-void remember(const std::string &id, const std::string &tag, const std::string &url) {
+/* bytes free for us on the file system that holds path; ~0 when unknown */
+unsigned long long free_bytes(const char *path) {
+  struct statvfs st {};
+  if (statvfs(path, &st) != 0)
+    return ~0ull;
+  return static_cast<unsigned long long>(st.f_bavail) *
+         static_cast<unsigned long long>(st.f_frsize);
+}
+
+std::string gib(unsigned long long n) {
+  char b[32];
+  snprintf(b, sizeof(b), "%.1f GB", static_cast<double>(n) / (1024.0 * 1024.0 * 1024.0));
+  return b;
+}
+
+/* "" when there is room for need bytes (plus a margin) where path lives */
+std::string room_for(const char *path, unsigned long long need) {
+  const unsigned long long have = free_bytes(path);
+  if (have == ~0ull || have >= need + kSpareBytes)
+    return "";
+  return "not enough free space: " + gib(need + kSpareBytes) + " needed, " + gib(have) + " free";
+}
+
+void remember(const std::string &id, const std::string &tag, const std::string &url,
+              bool unverified) {
   char *text = nullptr;
   size_t len = 0;
   cJSON *root = nullptr;
@@ -136,6 +168,8 @@ void remember(const std::string &id, const std::string &tag, const std::string &
   cJSON_AddStringToObject(one, "tag", tag.c_str());
   cJSON_AddStringToObject(one, "url", url.c_str());
   cJSON_AddNumberToObject(one, "time", static_cast<double>(time(nullptr)));
+  if (unverified)
+    cJSON_AddBoolToObject(one, "unverified", true);
   cJSON_DeleteItemFromObjectCaseSensitive(installed, id.c_str());
   cJSON_AddItemToObject(installed, id.c_str(), one);
   char *out = cJSON_PrintUnformatted(root);
@@ -179,6 +213,9 @@ std::string unpack(const std::string &zip_path, const std::string &id,
     err = "no eboot.bin or sce_sys/param.json in " + id;
   if (err.empty() && total > kMaxAppBytes)
     err = "the app is too big";
+  /* the zip is still there while unpacking, so the whole app must fit */
+  if (err.empty())
+    err = room_for(kWork, static_cast<unsigned long long>(total));
   {
     std::lock_guard<std::mutex> lock(g_mu);
     g_job.got = 0;
@@ -259,7 +296,9 @@ void *job_thread(void *) {
   }
   uint8_t digest[SHA256_BLOCK_SIZE];
   sha256_final(&sha, digest);
-  if (!j.sha.empty() && hex(digest, sizeof(digest)) != j.sha) {
+  if (j.sha.empty()) {
+    LOG_WARN("[apps] %s: no SHA-256 published, installed unverified (user agreed)", j.id.c_str());
+  } else if (hex(digest, sizeof(digest)) != j.sha) {
     unlink(zip.c_str());
     LOG_ERROR("[apps] %s: SHA-256 mismatch, the download was thrown away", j.id.c_str());
     set("failed", "the download does not match the catalog's SHA-256");
@@ -286,7 +325,7 @@ void *job_thread(void *) {
     set("failed", err);
     return nullptr;
   }
-  remember(j.id, j.tag, j.url);
+  remember(j.id, j.tag, j.url, j.unverified);
   LOG_INFO("[apps] %s %s installed in %s", j.id.c_str(), j.tag.c_str(), dest.c_str());
   set("done");
   return nullptr;
@@ -329,9 +368,32 @@ bool util_app_store(const cJSON *request, std::string &out) {
   const std::string id = onion_cjson::string_item(request, "id", "");
   const std::string tag = onion_cjson::string_item(request, "tag", "");
   const std::string sha = onion_cjson::string_item(request, "sha256", "");
+  const cJSON *unv = cJSON_GetObjectItemCaseSensitive(request, "unverified");
+  const bool unverified = sha.empty() && cJSON_IsTrue(unv);
+  const cJSON *sz = cJSON_GetObjectItemCaseSensitive(request, "size");
+  const unsigned long long size =
+      cJSON_IsNumber(sz) && sz->valuedouble > 0 ? static_cast<unsigned long long>(sz->valuedouble) : 0;
   if (!id_ok(id) || tag.size() > 60 || (!sha.empty() && !sha_ok(sha)) || url.compare(0, 19, "https://github.com/") != 0 ||
       url.size() > 400) {
     out = "rejected";
+    return false;
+  }
+  /* decision 6.1 of the 1.0 plan: no SHA-256, no install, unless the user
+   * said yes to an unverified one */
+  if (sha.empty() && !unverified) {
+    out = "no SHA-256 for this file (install it as unverified from NeoWEB)";
+    return false;
+  }
+  if (size > kMaxZipBytes) {
+    out = "the zip is too big";
+    return false;
+  }
+  mkdir_tree(kWork);
+  /* the zip itself; what it unpacks to is checked once it is here */
+  const std::string room = room_for(kWork, size);
+  if (!room.empty()) {
+    LOG_ERROR("[apps] %s: %s", id.c_str(), room.c_str());
+    out = room;
     return false;
   }
   {
@@ -346,6 +408,7 @@ bool util_app_store(const cJSON *request, std::string &out) {
     g_job.tag = tag;
     g_job.url = url;
     g_job.sha = sha;
+    g_job.unverified = unverified;
   }
   g_cancel.store(false);
   pthread_t thread{};

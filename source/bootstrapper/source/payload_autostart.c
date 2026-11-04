@@ -215,7 +215,8 @@ static PayloadList find_autostart_payloads(void) {
   return list;
 }
 
-void bootstrap_payload_autostart(void) {
+/* only: start just the payload with this file name (safe mode), or all */
+static void autostart_run(const char *only) {
   if (!elfldr_remote_onion_available()) {
     LOG_WARN("Skipping user payload autostart: private elfldr :9020 unavailable");
     bootstrap_notify("notify.payload.autostart_skipped");
@@ -234,6 +235,10 @@ void bootstrap_payload_autostart(void) {
     const PayloadEntry *entry = &list.entries[i];
     if (strstr(entry->filename, "elfldr") != NULL)
       continue;
+    if (only && strcmp(entry->filename, only) != 0) {
+      LOG_INFO("Safe mode: not starting %s", entry->path);
+      continue;
+    }
 
     char identity[ONION_PAYLOAD_IDENTITY_SIZE];
     const char *key = onion_payload_identity_from_path(
@@ -246,6 +251,10 @@ void bootstrap_payload_autostart(void) {
     unsigned int remaining = (unsigned int)entry->config.delay_seconds;
     while (remaining)
       remaining = sleep(remaining);
+    /* started again: a "stopped by hand" mark from before no longer holds */
+    char stopped[ONION_PAYLOAD_PATH_SIZE + 16];
+    snprintf(stopped, sizeof(stopped), "%s.stopped", entry->path);
+    unlink(stopped);
     if (!onion_payload_load_with_key(entry->path, entry->filename, key)) {
       bootstrap_notify("notify.payload.load_failed_path", entry->path);
       LOG_ERROR("FAILED!");
@@ -257,4 +266,10 @@ void bootstrap_payload_autostart(void) {
 
   LOG_DEBUG("Successfully loaded %d payloads", loaded);
   payload_list_destroy(&list);
+}
+
+void bootstrap_payload_autostart(void) { autostart_run(NULL); }
+
+void bootstrap_payload_autostart_only(const char *filename) {
+  autostart_run(filename);
 }

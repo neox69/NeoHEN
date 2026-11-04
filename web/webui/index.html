@@ -1345,7 +1345,7 @@ function paintPanel(){
   var act=upRows().slice(0,3).map(function(r){var st=r.b?r.a.st:r.u.st;return '<div class="rowl"><i class="dot'+(st==="run"?" on":"")+'"></i><div class="t"><b>'+esc(r.b?r.a.name:r.u.name)+'</b><small>'+(r.b?batState(r.a):upState(r.u))+'</small></div></div>'}).join("")+
     S.jobs.slice(-3).reverse().map(function(j){return '<div class="rowl"><i class="dot'+(j.state==="running"?" on":"")+'"></i><div class="t"><b>'+esc(j.title)+'</b><small>'+esc(j.state)+'</small></div></div>'}).join("");
   var vp=$("v-panel"),first=!S.panelOnce&&i.model;if(first){S.panelOnce=1;vp.classList.add("first");setTimeout(function(){vp.classList.remove("first")},1600);setTimeout(countUp,0)}
-  $("v-panel").innerHTML=updNote()+hero+k+qrCard()+
+  $("v-panel").innerHTML=updNote()+healthNote()+hero+k+qrCard()+
     '<div class="g2"><div class="card pad chart"><h3 class="h">'+L("Temperatura","Temperature")+' <em>'+L("últimos 10 min","last 10 min")+'</em><span class="sp"></span><span class="lg"><b style="--c:#4DA3FF">CPU</b><b style="--c:#8E7BFF">SoC</b></span></h3>'+chart()+'</div>'+
     '<div class="card pad"><h3 class="h">'+L("Almacenamiento","Storage")+'</h3>'+(st||'<div class="empty">–</div>')+'</div></div>'+
     '<div class="g3"><div class="card pad"><h3 class="h">'+L("Accesos rápidos","Quick actions")+'</h3><div class="qa">'+
@@ -3168,7 +3168,7 @@ function psInstall(id){
     if(d.format!=="zip"||!url||!/^[0-9a-f]{64}$/.test(d.sha256||"")||tid!==id)throw new Error(L("Esta app no trae un zip de GitHub con su SHA-256","This app has no GitHub zip with its SHA-256"));
     var up=psState(a||d)!=="none";
     return ask((up?L("Actualizar ","Update "):L("Instalar ","Install "))+d.name+" "+String(d.version||""),L("La consola descarga ","The console downloads ")+size(d.size)+L(" del GitHub de "," from the GitHub of ")+(d.author||"?")+L(", comprueba su SHA-256 y lo descomprime en /data/homebrew/",", checks its SHA-256 and unpacks it into /data/homebrew/")+id+".",up?L("Actualizar","Update"):L("Instalar","Install")).then(function(ok){if(!ok)return;
-      return api("/api/apps/store",{action:"install",url:url,id:id,tag:String(d.version||d.tag||"").slice(0,60),sha256:d.sha256}).then(function(j){S.ap.job=j.job;toast(L("Descargando ","Downloading ")+d.name+"…");apPoll();if($("drawer").className==="drawer on"&&S.psd===id)psDetail(id)})});
+      return api("/api/apps/store",{action:"install",url:url,id:id,tag:String(d.version||d.tag||"").slice(0,60),sha256:d.sha256,size:d.size||0}).then(function(j){S.ap.job=j.job;toast(L("Descargando ","Downloading ")+d.name+"…");apPoll();if($("drawer").className==="drawer on"&&S.psd===id)psDetail(id)})});
   }).catch(fail);
 }
 function psDetail(id){
@@ -3212,8 +3212,14 @@ $("v-apps").addEventListener("click",function(e){
   if(k==="open"){launch(v);return}
   if(k==="ps"){psInstall(v);return}
   if(k==="get"){var x=APPS.filter(function(y){return y[0]===v})[0],r=ap.rel[v];if(!x||!r)return;
-    ask(L("Instalar ","Install ")+x[1]+" "+r.tag,L("La consola descarga ","The console downloads ")+size(r.size)+L(" de GitHub y lo descomprime en /data/homebrew/"," from GitHub and unpacks it into /data/homebrew/")+r.id+".",L("Instalar","Install")).then(function(ok){if(!ok)return;
-      api("/api/apps/store",{action:"install",url:r.url,id:r.id,tag:r.tag,sha256:r.sha}).then(function(j){ap.job=j.job;toast(L("Descargando ","Downloading ")+x[1]+"…");apPoll()}).catch(fail)})}
+    /* GitHub gives a SHA-256 for every new release file; one without it is
+     * only installed after saying so, and goes as "unverified" */
+    var nosha=!/^[0-9a-f]{64}$/.test(r.sha||"");
+    ask((nosha?L("Instalar sin verificar ","Install unverified "):L("Instalar ","Install "))+x[1]+" "+r.tag,L("La consola descarga ","The console downloads ")+size(r.size)+L(" de GitHub y lo descomprime en /data/homebrew/"," from GitHub and unpacks it into /data/homebrew/")+r.id+"."+
+      (nosha?L(" GitHub no publica el SHA-256 de este archivo, así que no se puede comprobar que llega intacto. Instálalo solo si confías en él."," GitHub publishes no SHA-256 for this file, so there is no way to check it arrives intact. Only install it if you trust it."):""),
+      nosha?L("Instalar sin verificar","Install unverified"):L("Instalar","Install"),nosha).then(function(ok){if(!ok)return;
+      var q={action:"install",url:r.url,id:r.id,tag:r.tag,size:r.size||0};if(nosha)q.unverified=true;else q.sha256=r.sha;
+      api("/api/apps/store",q).then(function(j){ap.job=j.job;toast((nosha?L("Descargando (sin verificar) ","Downloading (unverified) "):L("Descargando ","Downloading "))+x[1]+"…");apPoll()}).catch(fail)})}
 });
 $("v-apps").addEventListener("input",function(e){if(e.target.id==="ap-q"){S.ap.q=e.target.value;apGrid()}});
 $("v-apps").addEventListener("change",function(e){if(e.target.id==="ap-c"){S.ap.c=e.target.value;apGrid()}else if(e.target.id==="ap-o"){S.ap.o=e.target.value;apGrid()}});
@@ -3635,7 +3641,8 @@ function paintSys(){
   $("v-system").innerHTML='<div class="g2" style="margin-top:0"><div class="card pad"><h3 class="h">'+L("Consola","Console")+'</h3><dl class="kv" style="margin:0">'+
     kv(L("Modelo","Model"),i.model)+kv("Firmware",i.firmware)+kv("IP",(i.ips||[]).map(function(x){return x.iface+" "+x.ip}).join(", "))+
     kv(L("Encendida","Uptime"),i.uptime?dur(i.uptime):"")+kv("CPU",i.cpuTemp>0?tv(i.cpuTemp)+" "+TU()+" · "+(i.cpuFreqMhz||0)+" MHz":"")+kv("SoC",i.socTemp>0?tv(i.socTemp)+" "+TU():"")+
-    kv("NeoWEB",(i.version||"")+" · "+(S.full?L("completa","full"):L("restringida","restricted"))+(S.ro?" · "+L("solo lectura","read-only"):""))+'</dl></div>'+
+    kv("NeoWEB",(i.version||"")+(i.neohenBuild&&i.neohenBuild!=="unknown"?" · "+L("de NeoHEN ","from NeoHEN ")+i.neohenBuild:"")+" · "+(S.full?L("completa","full"):L("restringida","restricted"))+(S.ro?" · "+L("solo lectura","read-only"):""))+
+    kv("NeoHEN",i.neohen?String(i.neohen).replace(/\+.*$/,""):"")+'</dl></div>'+
     '<div class="card pad"><h3 class="h">'+L("Aviso en pantalla","On-screen notification")+'</h3><p style="margin:0 0 12px;color:var(--dim)">'+L("Envía un mensaje que aparece como notificación en la PS5.","Send a message that pops up as a notification on the PS5.")+'</p>'+
     '<div style="display:flex;gap:10px"><input class="in" id="nt" style="flex:1" maxlength="200" placeholder="'+L("Texto del aviso…","Notification text…")+'"><button class="btn pri" id="nb">'+ic("bell")+L("Enviar","Send")+'</button></div></div></div>'+
     (S.full?'<div class="g2"><div class="card pad"><h3 class="h">'+L("Ventilador","Fan")+' <em>'+(i.fanDuty!=null?L("girando al ","spinning at ")+i.fanDuty+"%":"")+'</em></h3>'+fanHtml()+'</div>'+
@@ -3649,7 +3656,7 @@ function paintSys(){
     mounts.map(function(m){var pct=Math.round((m.total-m.free)/m.total*100);
       return '<tr><td class="n"><a '+(S.full?'data-open="'+esc(m.path)+'"':'style="cursor:default"')+'>'+ic("disk")+'<span>'+esc(m.path)+'</span></a></td><td class="m hide-m">'+esc(m.fs)+(m.readonly?" · ro":"")+'</td><td class="m r">'+size(m.total)+'</td><td class="m r">'+size(m.free)+
       '</td><td style="min-width:130px"><div style="display:flex;align-items:center;gap:8px"><div class="prog '+(pct>=92?"bad":"")+'" style="flex:1"><i style="width:'+pct+'%"></i></div><span class="mono" style="font-size:11.5px;color:var(--dim)">'+pct+'%</span></div></td></tr>'}).join("")+'</tbody></table></div>'+
-    '<h3 class="h" style="margin-top:24px">'+L("Registro de NeoWEB","NeoWEB log")+' <em>'+S.log.length+'</em><span class="sp"></span><a class="btn sm" href="/api/sys/report" download title="'+L("Un ZIP con los registros de NeoHEN, su configuración y los datos de la consola, para enviar a quien te ayude. No incluye partidas ni nombres de usuario.","A ZIP with NeoHEN's logs, its settings and the console's details, to send to whoever is helping. No save data and no user names in it.")+'" style="text-decoration:none">'+ic("download")+L("Informe de diagnóstico","Diagnostic report")+'</a><button class="btn sm ghost" id="lr">'+ic("refresh")+'</button></h3><div class="card log">'+
+    '<h3 class="h" style="margin-top:24px">'+L("Registro de NeoWEB","NeoWEB log")+' <em>'+S.log.length+'</em><span class="sp"></span>'+(S.full?'<a class="btn sm" href="/api/sys/report" download title="'+L("Un ZIP con los registros de NeoHEN y NeoWEB (también los de cuelgues), su configuración sin claves ni tokens, el firmware, y cada payload con su versión y SHA-256, para enviar a quien te ayude. No incluye partidas ni nombres de usuario.","A ZIP with NeoHEN's and NeoWEB's logs (crash logs too), their settings without passwords or tokens, the firmware, and every payload with its version and SHA-256, to send to whoever is helping. No save data and no user names in it.")+'" style="text-decoration:none">'+ic("download")+L("Informe de diagnóstico","Diagnostic report")+'</a>':"")+'<button class="btn sm ghost" id="lr">'+ic("refresh")+'</button></h3><div class="card log">'+
     (S.log.length?S.log.slice().reverse().map(function(e){return '<div class="'+esc(e.level)+'"><time>'+new Date(e.ts*1000).toLocaleTimeString()+'</time>'+esc(e.msg)+'</div>'}).join(""):'<div style="color:var(--faint)">–</div>')+'</div>';
   fanWire();
   if($("ej"))$("ej").onclick=function(){ask(L("Expulsar el disco","Eject the disc"),L("Si hay un juego en marcha desde el disco, ciérralo antes.","If a game is running from the disc, close it first."),L("Expulsar","Eject")).then(function(ok){
@@ -3700,14 +3707,39 @@ function checkUpd(cur){
   S.upd={cur:cur};var mine=verKey(cur);if(!mine)return;
   var c=null;try{c=JSON.parse(sessionStorage.getItem("nw-upd")||"null")}catch(_){}
   (c&&Date.now()-c.t<6*36e5?Promise.resolve(c.rel):fetch("https://api.github.com/repos/neox69/NeoHEN/releases?per_page=10").then(function(r){if(!r.ok)throw new Error(r.status);return r.json()}).then(function(j){
-    var rel=j.filter(function(x){return !x.draft&&verKey(x.tag_name)}).map(function(x){return {tag:x.tag_name,url:x.html_url,date:(x.published_at||"").slice(0,10)}});
+    var rel=j.filter(function(x){return !x.draft&&verKey(x.tag_name)}).map(function(x){return {tag:x.tag_name,url:x.html_url,date:(x.published_at||"").slice(0,10),pre:!!x.prerelease}});
     try{sessionStorage.setItem("nw-upd",JSON.stringify({t:Date.now(),rel:rel}))}catch(_){}return rel}))
-  .then(function(rel){var best=null;rel.forEach(function(x){if(!best||verCmp(verKey(x.tag),verKey(best.tag))>0)best=x});
+  .then(function(rel){
+    /* NeoHEN's update.channel=stable rule: a final release first; a pre-release only to whoever runs one */
+    var any=null,fin=null;rel.forEach(function(x){var k=verKey(x.tag);if(!any||verCmp(k,verKey(any.tag))>0)any=x;if(!x.pre&&k[3]===1e6&&(!fin||verCmp(k,verKey(fin.tag))>0))fin=x});
+    var best=fin&&verCmp(verKey(fin.tag),mine)>0?fin:mine[3]!==1e6?any:null;
     if(best&&verCmp(verKey(best.tag),mine)>0){S.upd.new=best;
       if(!S.ev.some(function(e){return e.t.indexOf(best.tag)>=0}))note("ok",L("Hay NeoHEN ","NeoHEN ")+best.tag.replace(/^v/,"")+L(""," is out"),L("Tienes ","You have ")+cur);
       if(S.view==="panel")paintPanel()}})
   .catch(function(){});
 }
+/* ------------------------------------------------------------ health
+ * NeoHEN's safe mode (it did not finish starting 3 times in a row, so this
+ * start left auto-start payloads and plugins alone) and other homebrew that
+ * clashes with it. Only said here: nothing is stopped. */
+function loadHealth(){S.hlT=Date.now();
+  return api("/api/health").then(function(j){var was=JSON.stringify(S.hl||null);S.hl=j;
+    if(JSON.stringify(j)!==was){
+      if(j.safeMode&&j.safeMode.active)note("warn",L("NeoHEN en modo seguro","NeoHEN in safe mode"),L("Payloads y plugins sin arrancar","Payloads and plugins not started"));
+      if(j.conflicts&&j.conflicts.length)note("warn",L("También en marcha: ","Also running: ")+j.conflicts.join(", "),L("Puede chocar con NeoHEN","It can clash with NeoHEN"));
+      if(S.view==="panel")paintPanel()}}).catch(function(){})}
+function healthNote(){var h=S.hl,out="";if(!h)return "";
+  if(h.safeMode&&h.safeMode.active)out+='<div class="note" id="hl-safe" style="margin-bottom:16px"><span style="flex:1">'+
+    L("NeoHEN ha arrancado en <b>modo seguro</b>: no llegó a terminar de arrancar 3 veces seguidas, así que esta vez no ha arrancado los payloads ni los plugins que se arrancan solos. Quita o cambia el que falla (en Payloads) y vuelve al arranque normal.",
+      "NeoHEN started in <b>safe mode</b>: it did not finish starting 3 times in a row, so this time it left the auto-start payloads and plugins alone. Remove or change the one that fails (in Payloads) and go back to the normal start.")+'</span>'+
+    (S.ro?"":'<button class="btn sm" data-health="safe">'+L("Arranque normal","Normal start")+'</button>')+'</div>';
+  if(h.conflicts&&h.conflicts.length)out+='<div class="note" id="hl-conf" style="margin-bottom:16px"><span style="flex:1">'+L("También está en marcha: ","Also running: ")+'<b>'+esc(h.conflicts.join(", "))+'</b>'+
+    L(". Puede chocar con NeoHEN (cuelgues, juegos que no arrancan, trucos o montajes que fallan). NeoWEB no ha parado nada: si no lo cargaste tú a propósito, reinicia la consola sin él.",
+      ". It can clash with NeoHEN (hangs, games that do not start, cheats or mounts that fail). NeoWEB has stopped nothing: unless you loaded it on purpose, restart the console without it.")+'</span></div>';
+  return out}
+$("v-panel").addEventListener("click",function(e){var b=e.target.closest("button[data-health]");if(!b)return;
+  ask(L("Volver al arranque normal","Back to the normal start"),L("La próxima vez que cargues NeoHEN arrancará otra vez los payloads y plugins que tienen el arranque automático.","The next time NeoHEN is loaded it starts the auto-start payloads and plugins again."),L("Arranque normal","Normal start")).then(function(ok){if(!ok)return;
+    api("/api/health/safemode",{}).then(function(){toast(L("Hecho: el próximo arranque es normal","Done: the next start is a normal one"));return loadHealth()}).catch(fail)})});
 function updNote(){var u=S.upd;if(!u||!u.new)return "";
   return '<div class="note" style="border-color:rgba(77,163,255,.4);background:rgba(77,163,255,.08);color:#CFE4FF;margin-bottom:16px"><span style="flex:1">'+L("Hay una versión nueva de NeoHEN: ","A new NeoHEN version is out: ")+'<b>'+esc(u.new.tag.replace(/^v/,""))+'</b>'+(u.new.date?" ("+esc(u.new.date)+")":"")+L(". Tienes cargada la ",". You have ")+esc(u.cur)+L("."," loaded.")+'</span><a class="btn sm" href="'+esc(u.new.url)+'" target="_blank" rel="noopener">'+L("Ver en GitHub","See it on GitHub")+'</a></div>'}
 
@@ -3719,6 +3751,7 @@ function online(v){
 function fast(){
   return api("/api/sys/info").then(function(i){
     S.info=i;online(true);hudPaint(i);
+    if(!S.hlT||Date.now()-S.hlT>6e4)loadHealth();
     $("ps-m").innerHTML=[i.model,i.firmware&&"FW "+i.firmware,i.ips&&i.ips[0]&&i.ips[0].ip].filter(Boolean).map(esc).join("<br>")+
       (S.upd&&S.upd.new?'<br><a href="'+esc(S.upd.new.url)+'" target="_blank" rel="noopener" style="color:var(--warn)">'+L("Hay NeoHEN ","NeoHEN ")+esc(S.upd.new.tag.replace(/^v/,""))+L(""," is out")+'</a>':"");
     $("ver").textContent="NeoWEB · v"+(i.version||"")+(i.neohen?" · NeoHEN "+String(i.neohen).replace(/\+.*$/,""):"");

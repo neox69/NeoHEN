@@ -21,6 +21,7 @@ along with this program; see the file COPYING. If not, see
 #include "bootstrap_filesystem.h"
 #include "bootstrap_notify.h"
 #include "bootstrap_runtime.h"
+#include "bootstrap_safe_mode.h"
 #include "launch_pipeline.h"
 #include "payload_autostart.h"
 #include "bundled_payloads.h"
@@ -66,6 +67,10 @@ int main(void) {
   if (!bootstrap_filesystem_mount_system())
     return -1;
 
+  /* Counted before anything is launched: a start that crashes from here on
+   * without reaching the daemon's boot OK counts towards safe mode. */
+  const int safe_level = bootstrap_safe_mode_begin();
+
   LOG_DEBUG("Writing embedded assets ...");
   bootstrap_notify_starting(bootstrap_assets_write(config.system_ex_icon));
   LOG_DEBUG("   Written!");
@@ -78,7 +83,13 @@ int main(void) {
     return launch_result;
 
   bootstrap_bundled_payloads_install();
-  bootstrap_payload_autostart();
+  if (safe_level == 0)
+    bootstrap_payload_autostart();
+  else if (safe_level == 1)
+    bootstrap_payload_autostart_only("neoweb.elf"); /* to turn safe mode off */
+  else
+    LOG_WARN("Deep safe mode: no payload auto-start at all");
+  bootstrap_safe_mode_autostart_done();
   LOG_DEBUG("============== Spawner (Bootstrapper) Finished =================");
   return 0;
 }

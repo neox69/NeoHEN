@@ -163,6 +163,9 @@ class SafeBuildTest(unittest.TestCase):
         self.assertEqual(st, 409)             # running: stop it first
         st, j = self.api.post("/api/payloads/stop", {"name": name})
         self.assertEqual(st, 200, j)
+        # stopped by hand: NeoHEN's watchdogs leave it be until it starts again
+        stopped = f"{self.root}/data/neohen/payloads/{name}.stopped"
+        self.assertTrue(os.path.exists(stopped))
         for _ in range(40):
             if not self.pay()[name]["running"]:
                 break
@@ -170,10 +173,35 @@ class SafeBuildTest(unittest.TestCase):
         self.assertFalse(self.pay()[name]["running"])
         st, _ = self.api.post("/api/payloads/stop", {"name": name})
         self.assertEqual(st, 409)             # not running any more
+        st, j = self.api.post("/api/payloads/start", {"name": name})
+        self.assertEqual(st, 200, j)
+        self.assertFalse(os.path.exists(stopped))
+        self.api.post("/api/payloads/stop", {"name": name})
+        for _ in range(40):
+            if not self.pay()[name]["running"]:
+                break
+            time.sleep(0.05)
 
         st, _ = self.api.post("/api/payloads/delete", {"name": name})
         self.assertEqual(st, 200)
         self.assertNotIn(name, self.pay())
+        self.assertFalse(os.path.exists(stopped))
+
+    def test_health_in_the_safe_build(self):
+        _, j = self.api.get("/api/health")
+        self.assertEqual(j["safeMode"], {"active": False, "failedBoots": 0})
+        self.assertIsInstance(j["conflicts"], list)
+        d = f"{self.root}/data/neohen"
+        with open(f"{d}/safe_mode", "w") as f:
+            f.write("failed starts in a row: 3\n")
+        with open(f"{d}/boot_attempts", "w") as f:
+            f.write("4\n")
+        _, j = self.api.get("/api/health")
+        self.assertEqual(j["safeMode"], {"active": True, "failedBoots": 4})
+        st, _ = self.api.post("/api/health/safemode", {})
+        self.assertEqual(st, 200)
+        self.assertFalse(os.path.exists(f"{d}/safe_mode"))
+        self.assertFalse(os.path.exists(f"{d}/boot_attempts"))
 
     def test_payload_names_cannot_escape_the_folder(self):
         for bad in ("../secret.elf", "a/b.elf", ".hidden.elf",

@@ -9,6 +9,8 @@
 #include "json.h"
 
 #define HTTP_MAX_HEADERS 64
+/* connections served at once (a thread each); the next ones get a 503 */
+#define HTTP_MAX_CONNS   48
 
 typedef struct http_header {
   char *name;
@@ -58,11 +60,23 @@ void http_send_head(http_req_t *req, int status, const char *ctype,
                     int64_t length, const char *extra_headers);
 void http_send_buf(http_req_t *req, int status, const char *ctype,
                    const void *data, size_t len);
+void http_send_buf_ex(http_req_t *req, int status, const char *ctype,
+                      const void *data, size_t len, const char *extra_headers);
 void http_send_json(http_req_t *req, int status, jw_t *w);
 void http_send_ok(http_req_t *req);
 void http_send_error(http_req_t *req, int status, const char *fmt, ...)
   __attribute__((format(printf, 3, 4)));
+/* a file, with Range support and an ETag (size and mtime) that turns a
+ * matching If-None-Match into a 304; cache_control, when given, is the value
+ * of a Cache-Control header for it */
 void http_send_file(http_req_t *req, const char *path, int as_attachment);
+void http_send_file_ex(http_req_t *req, const char *path, int as_attachment,
+                       const char *cache_control);
+
+/* whether If-None-Match names this ETag (given with its quotes) */
+int  http_etag_match(const http_req_t *req, const char *etag);
+/* whether Accept-Encoding takes gzip */
+int  http_accepts_gzip(const http_req_t *req);
 
 const char *http_status_text(int status);
 const char *http_mime_type(const char *path);

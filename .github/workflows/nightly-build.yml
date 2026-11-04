@@ -1,9 +1,12 @@
-# Build OnionHEN on every push to dev and publish a rolling nightly-build.
+# Upstream OnionHEN's nightly, unchanged except for the trigger: it builds
+# OnionHEN (not NeoHEN: plain scripts/build.sh, no NeoHEN branding) and
+# publishes a rolling "nightly" pre-release. In this fork it no longer runs on
+# every push to dev, which would publish OnionHEN-branded builds from the
+# NeoHEN repository with an unpinned SDK; it is kept for a manual run only
+# (Actions > nightly-build > Run workflow). NeoHEN builds: neohen-build.yml.
 name: nightly-build
 
 on:
-  push:
-    branches: [dev]
   workflow_dispatch:
 
 concurrency:

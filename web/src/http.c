@@ -20,15 +20,27 @@
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/time.h>
+#include <time.h>
 #include <unistd.h>
 
 #include "log.h"
+#include "plat.h"
 
 #define IO_CHUNK (1024 * 1024)
 #define HTTP_PROBE_SECONDS 20
 /* A connection that sends nothing for this long is closed: each one holds a
  * thread, and a browser or a broken client can leave many of them open. */
 #define HTTP_IDLE_SECONDS 120
+/* Above HTTP_MAX_CONNS (http.h) a connection gets a 503 from the one thread
+ * that turns them away; it holds at most this many at a time, each for a
+ * second or two, and closes the rest straight away. */
+#define HTTP_REJECT_SLOTS 32
+#define HTTP_RETRY_AFTER  2
+/* the most sendfile() is asked to send in one call */
+#define SENDFILE_CHUNK (64 * 1024 * 1024)
+
+/* connections with a thread of their own, open right now */
+static int g_conns;
 
 typedef struct conn_arg {
   int            fd;
@@ -44,6 +56,7 @@ http_status_text(int status) {
   case 200: return "OK";
   case 204: return "No Content";
   case 206: return "Partial Content";
+  case 304: return "Not Modified";
   case 400: return "Bad Request";
   case 401: return "Unauthorized";
   case 403: return "Forbidden";
@@ -303,12 +316,14 @@ http_send_head(http_req_t *req, int status, const char *ctype, int64_t length,
     req->keep_alive = 0;
   }
 
+  /* No Access-Control-* headers: the API only answers pages it served
+   * itself (same_origin() in api.c), which need none. */
+  if(length < 0 && status != 204 && status != 304) {
+    req->keep_alive = 0;            /* the body ends when the connection does */
+  }
   n = snprintf(head, sizeof(head),
                "HTTP/1.1 %d %s\r\n"
                "Server: PS5AIO\r\n"
-               "Access-Control-Allow-Origin: *\r\n"
-               "Access-Control-Allow-Headers: *\r\n"
-               "Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS\r\n"
                "Connection: %s\r\n",
                status, http_status_text(status),
                req->keep_alive ? "keep-alive" : "close");
@@ -318,8 +333,6 @@ http_send_head(http_req_t *req, int status, const char *ctype, int64_t length,
   if(length >= 0) {
     n += snprintf(head + n, sizeof(head) - (size_t)n,
                   "Content-Length: %" PRId64 "\r\n", length);
-  } else {
-    req->keep_alive = 0;
   }
   if(extra_headers) {
     n += snprintf(head + n, sizeof(head) - (size_t)n, "%s", extra_headers);
@@ -337,7 +350,13 @@ http_send_head(http_req_t *req, int status, const char *ctype, int64_t length,
 void
 http_send_buf(http_req_t *req, int status, const char *ctype, const void *data,
               size_t len) {
-  http_send_head(req, status, ctype, (int64_t)len, NULL);
+  http_send_buf_ex(req, status, ctype, data, len, NULL);
+}
+
+void
+http_send_buf_ex(http_req_t *req, int status, const char *ctype, const void *data,
+                 size_t len, const char *extra_headers) {
+  http_send_head(req, status, ctype, (int64_t)len, extra_headers);
   if(len && strcmp(req->method, "HEAD")) {
     if(http_send_all(req->fd, data, len)) {
       req->keep_alive = 0;
@@ -380,6 +399,86 @@ http_send_error(http_req_t *req, int status, const char *fmt, ...) {
   jw_free(&w);
 }
 
+/* the next comma separated item of a header, without the spaces around it */
+static const char *
+next_item(const char *p, const char **item, size_t *len) {
+  const char *e;
+  while(*p == ' ' || *p == '\t' || *p == ',') {
+    p++;
+  }
+  if(!*p) {
+    return NULL;
+  }
+  e = strchr(p, ',');
+  if(!e) {
+    e = p + strlen(p);
+  }
+  *item = p;
+  *len = (size_t)(e - p);
+  while(*len && (p[*len - 1] == ' ' || p[*len - 1] == '\t')) {
+    (*len)--;
+  }
+  return e;
+}
+
+int
+http_etag_match(const http_req_t *req, const char *etag) {
+  const char *h = http_header(req, "If-None-Match");
+  const char *item;
+  size_t len, elen = strlen(etag);
+
+  if(!h) {
+    return 0;
+  }
+  while((h = next_item(h, &item, &len))) {
+    if(len == 1 && item[0] == '*') {
+      return 1;
+    }
+    if(len > 2 && !strncmp(item, "W/", 2)) {      /* weak comparison */
+      item += 2;
+      len -= 2;
+    }
+    if(len == elen && !memcmp(item, etag, len)) {
+      return 1;
+    }
+  }
+  return 0;
+}
+
+int
+http_accepts_gzip(const http_req_t *req) {
+  const char *h = http_header(req, "Accept-Encoding");
+  const char *item;
+  size_t len;
+  int star = 0;
+
+  if(!h) {
+    return 0;
+  }
+  while((h = next_item(h, &item, &len))) {
+    size_t name = 0;
+    int zero = 0;
+    while(name < len && item[name] != ';' && item[name] != ' ') {
+      name++;
+    }
+    /* "gzip;q=0" says no; any other weight says yes */
+    for(size_t i = name; i + 1 < len; i++) {
+      if((item[i] == 'q' || item[i] == 'Q') && item[i + 1] == '=') {
+        zero = strtod(item + i + 2, NULL) <= 0;
+        break;
+      }
+    }
+    if((name == 4 && !strncasecmp(item, "gzip", 4)) ||
+       (name == 6 && !strncasecmp(item, "x-gzip", 6))) {
+      return !zero;
+    }
+    if(name == 1 && item[0] == '*') {
+      star = !zero;
+    }
+  }
+  return star;
+}
+
 static int
 parse_range(const char *hdr, int64_t size, int64_t *start, int64_t *end) {
   /* bytes=a-b | bytes=a- | bytes=-n */
@@ -418,12 +517,66 @@ parse_range(const char *hdr, int64_t size, int64_t *start, int64_t *end) {
   return 1;
 }
 
+/* Sends len bytes of fd from start: sendfile() where the platform has it,
+ * which spares the copy through a buffer, and read()/send() where it does
+ * not or the file system will not take it. */
+static int
+send_range(int sock, int fd, int64_t start, int64_t len) {
+  char *buf;
+
+  while(len > 0) {
+    size_t want = len > SENDFILE_CHUNK ? SENDFILE_CHUNK : (size_t)len;
+    ssize_t n = plat_sendfile(sock, fd, (off_t)start, want);
+    if(n > 0) {
+      start += n;
+      len -= n;
+      continue;
+    }
+    if(n < 0 && errno == EINTR) {
+      continue;
+    }
+    if(n < 0 && (errno == ENOSYS || errno == EINVAL || errno == EOPNOTSUPP ||
+                 errno == ENOTSOCK || errno == ENOTSUP)) {
+      break;                        /* the copy below does it */
+    }
+    return -1;                      /* the peer went away, or the file shrank */
+  }
+  if(len <= 0) {
+    return 0;
+  }
+
+  if(!(buf = malloc(IO_CHUNK))) {
+    return -1;
+  }
+  if(lseek(fd, (off_t)start, SEEK_SET) < 0) {
+    free(buf);
+    return -1;
+  }
+  while(len > 0) {
+    size_t want = len > IO_CHUNK ? IO_CHUNK : (size_t)len;
+    ssize_t n = read(fd, buf, want);
+    if(n <= 0 || http_send_all(sock, buf, (size_t)n)) {
+      free(buf);
+      return -1;
+    }
+    len -= n;
+  }
+  free(buf);
+  return 0;
+}
+
 void
 http_send_file(http_req_t *req, const char *path, int as_attachment) {
+  http_send_file_ex(req, path, as_attachment, NULL);
+}
+
+void
+http_send_file_ex(http_req_t *req, const char *path, int as_attachment,
+                  const char *cache_control) {
   struct stat st;
   int64_t start = 0, end;
   int partial = 0;
-  char extra[1024];
+  char extra[1024], etag[64], cache[160];
   int fd;
 
   if((fd = open(path, O_RDONLY)) < 0) {
@@ -433,6 +586,19 @@ http_send_file(http_req_t *req, const char *path, int as_attachment) {
   if(fstat(fd, &st) || S_ISDIR(st.st_mode)) {
     close(fd);
     http_send_error(req, 400, "%s: not a regular file", path);
+    return;
+  }
+
+  /* size and time of the last change: enough to tell one version from the
+   * next, without reading the file */
+  snprintf(etag, sizeof(etag), "\"%" PRIx64 "-%" PRIx64 "\"",
+           (uint64_t)st.st_size, (uint64_t)st.st_mtime);
+  snprintf(cache, sizeof(cache), "ETag: %s\r\n%s%s%s", etag,
+           cache_control ? "Cache-Control: " : "", cache_control ? cache_control : "",
+           cache_control ? "\r\n" : "");
+  if(http_etag_match(req, etag)) {
+    close(fd);
+    http_send_head(req, 304, NULL, -1, cache);
     return;
   }
 
@@ -452,7 +618,7 @@ http_send_file(http_req_t *req, const char *path, int as_attachment) {
   {
     const char *base = strrchr(path, '/');
     base = base ? base + 1 : path;
-    int n = snprintf(extra, sizeof(extra), "Accept-Ranges: bytes\r\n");
+    int n = snprintf(extra, sizeof(extra), "Accept-Ranges: bytes\r\n%s", cache);
     if(partial) {
       n += snprintf(extra + n, sizeof(extra) - (size_t)n,
                     "Content-Range: bytes %" PRId64 "-%" PRId64 "/%" PRId64 "\r\n",
@@ -479,26 +645,9 @@ http_send_file(http_req_t *req, const char *path, int as_attachment) {
     return;
   }
 
-  char *buf = malloc(IO_CHUNK);
-  if(!buf) {
-    close(fd);
+  if(send_range(req->fd, fd, start, len)) {
     req->keep_alive = 0;
-    return;
   }
-  if(lseek(fd, start, SEEK_SET) < 0) {
-    req->keep_alive = 0;
-  } else {
-    while(len > 0) {
-      size_t want = len > IO_CHUNK ? IO_CHUNK : (size_t)len;
-      ssize_t n = read(fd, buf, want);
-      if(n <= 0 || http_send_all(req->fd, buf, (size_t)n)) {
-        req->keep_alive = 0;
-        break;
-      }
-      len -= n;
-    }
-  }
-  free(buf);
   close(fd);
 }
 
@@ -646,6 +795,7 @@ conn_thread(void *arg) {
   if(!req) {
     close(ca->fd);
     free(ca);
+    __atomic_sub_fetch(&g_conns, 1, __ATOMIC_SEQ_CST);
     return NULL;
   }
   req->fd = ca->fd;
@@ -671,7 +821,9 @@ conn_thread(void *arg) {
 
     req->responded = 0;
     if(!strcmp(req->method, "OPTIONS")) {
-      http_send_head(req, 204, NULL, 0, NULL);
+      /* what the server takes; a cross-origin preflight finds no
+       * Access-Control-Allow-* here and the browser stops there */
+      http_send_head(req, 204, NULL, -1, "Allow: GET, HEAD, POST, PUT, OPTIONS\r\n");
     } else {
       ca->handler(req);
       if(!req->responded) {
@@ -699,6 +851,7 @@ conn_thread(void *arg) {
   close(req->fd);
   free(req);
   free(ca);
+  __atomic_sub_fetch(&g_conns, 1, __ATOMIC_SEQ_CST);
   return NULL;
 }
 
@@ -776,6 +929,156 @@ probe_thread(void *arg) {
   return NULL;
 }
 
+/* ------------------------------------------------------------ busy */
+
+/* Connections over the cap are passed here through a pipe, so accept() goes
+ * on at once. This thread waits a moment for the request, answers 503 and
+ * reads what is left until the client hangs up: closing a socket with unread
+ * data resets it, and the client could lose the answer. */
+static int g_reject_pipe[2] = {-1, -1};
+
+static int64_t
+now_ms(void) {
+  struct timespec ts;
+  clock_gettime(CLOCK_MONOTONIC, &ts);
+  return (int64_t)ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
+}
+
+static void
+drain(int fd, int *eof) {
+  char tmp[2048];
+  for(;;) {
+    ssize_t n = recv(fd, tmp, sizeof(tmp), MSG_DONTWAIT);
+    if(n > 0) {
+      continue;
+    }
+    if(n < 0 && errno == EINTR) {
+      continue;
+    }
+    *eof = n == 0 || (errno != EAGAIN && errno != EWOULDBLOCK);
+    return;
+  }
+}
+
+static void *
+reject_thread(void *arg) {
+  static const char body[] = "{\"ok\":false,\"error\":\"too many connections\"}";
+  char busy[320];
+  int blen;
+  struct {
+    int     fd;
+    int     answered;
+    int64_t deadline;
+  } slot[HTTP_REJECT_SLOTS];
+  struct pollfd pfd[HTTP_REJECT_SLOTS + 1];
+  int n = 0;
+  (void)arg;
+
+  blen = snprintf(busy, sizeof(busy),
+                  "HTTP/1.1 503 Service Unavailable\r\n"
+                  "Server: PS5AIO\r\n"
+                  "Retry-After: %d\r\n"
+                  "Content-Type: application/json; charset=utf-8\r\n"
+                  "Content-Length: %u\r\n"
+                  "Connection: close\r\n"
+                  "\r\n%s",
+                  HTTP_RETRY_AFTER, (unsigned)(sizeof(body) - 1), body);
+  for(;;) {
+    int64_t now = now_ms(), wait = 1000;
+    for(int i = 0; i < n; i++) {
+      int64_t left = slot[i].deadline - now;
+      if(left < wait) {
+        wait = left < 0 ? 0 : left;
+      }
+      pfd[i + 1].fd = slot[i].fd;
+      pfd[i + 1].events = POLLIN;
+      pfd[i + 1].revents = 0;
+    }
+    pfd[0].fd = g_reject_pipe[0];
+    pfd[0].events = POLLIN;
+    pfd[0].revents = 0;
+    if(poll(pfd, (nfds_t)n + 1, (int)wait) < 0 && errno != EINTR) {
+      sleep(1);
+      continue;
+    }
+
+    now = now_ms();
+    for(int i = 0; i < n; i++) {
+      int eof = 0;
+      if(!(pfd[i + 1].revents & (POLLIN | POLLHUP | POLLERR)) && now < slot[i].deadline) {
+        continue;
+      }
+      drain(slot[i].fd, &eof);
+      if(!slot[i].answered && !eof) {
+        /* the request is in (or it is late): answer, then read until the
+         * client closes, for at most two seconds */
+        if(send(slot[i].fd, busy, (size_t)blen, MSG_DONTWAIT | MSG_NOSIGNAL) < 0) {
+          eof = 1;
+        } else {
+          shutdown(slot[i].fd, SHUT_WR);
+          slot[i].answered = 1;
+          slot[i].deadline = now + 2000;
+        }
+      } else if(now >= slot[i].deadline) {
+        eof = 1;
+      }
+      if(eof) {
+        close(slot[i].fd);
+        slot[i] = slot[n - 1];
+        pfd[i + 1] = pfd[n];
+        n--;
+        i--;
+      }
+    }
+
+    if(pfd[0].revents & POLLIN) {
+      int fds[16];
+      ssize_t got = read(g_reject_pipe[0], fds, sizeof(fds));
+      for(ssize_t k = 0; k < got / (ssize_t)sizeof(int); k++) {
+        if(n >= HTTP_REJECT_SLOTS) {
+          close(fds[k]);
+          continue;
+        }
+        slot[n].fd = fds[k];
+        slot[n].answered = 0;
+        slot[n].deadline = now + 1000;
+        n++;
+      }
+    }
+  }
+  return NULL;
+}
+
+static void
+reject_start(void) {
+  pthread_t th;
+  pthread_attr_t attr;
+
+  if(pipe(g_reject_pipe)) {
+    g_reject_pipe[0] = g_reject_pipe[1] = -1;
+    return;
+  }
+  fcntl(g_reject_pipe[1], F_SETFL, fcntl(g_reject_pipe[1], F_GETFL) | O_NONBLOCK);
+  pthread_attr_init(&attr);
+  pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+  pthread_attr_setstacksize(&attr, 64 * 1024);
+  if(pthread_create(&th, &attr, reject_thread, NULL)) {
+    close(g_reject_pipe[0]);
+    close(g_reject_pipe[1]);
+    g_reject_pipe[0] = g_reject_pipe[1] = -1;
+  }
+  pthread_attr_destroy(&attr);
+}
+
+/* hands a connection over the cap to reject_thread(), or closes it when
+ * that one is full too */
+static void
+reject(int fd) {
+  if(g_reject_pipe[1] < 0 || write(g_reject_pipe[1], &fd, sizeof(fd)) != sizeof(fd)) {
+    close(fd);
+  }
+}
+
 int
 http_serve(uint16_t port, http_handler_t handler) {
   int one = 1;
@@ -792,6 +1095,7 @@ http_serve(uint16_t port, http_handler_t handler) {
   if(!pthread_create(&probe, NULL, probe_thread, (void *)(uintptr_t)port)) {
     pthread_detach(probe);
   }
+  reject_start();
 
   for(;;) {
     struct sockaddr_in caddr;
@@ -831,6 +1135,18 @@ http_serve(uint16_t port, http_handler_t handler) {
       continue;
     }
 
+    /* each connection is a thread with a 512 KB stack: past the cap the
+     * client is told to come back in a moment */
+    if(__atomic_load_n(&g_conns, __ATOMIC_SEQ_CST) >= HTTP_MAX_CONNS) {
+      static int64_t last_warn;
+      if(now_ms() - last_warn > 10000) {
+        last_warn = now_ms();
+        LOG_WARN("%d connections open; turning new ones away", HTTP_MAX_CONNS);
+      }
+      reject(fd);
+      continue;
+    }
+
     setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one));
     int bufsz = 1024 * 1024;
     setsockopt(fd, SOL_SOCKET, SO_SNDBUF, &bufsz, sizeof(bufsz));
@@ -853,7 +1169,9 @@ http_serve(uint16_t port, http_handler_t handler) {
     pthread_attr_init(&attr);
     pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
     pthread_attr_setstacksize(&attr, 512 * 1024);
+    __atomic_add_fetch(&g_conns, 1, __ATOMIC_SEQ_CST);
     if(pthread_create(&th, &attr, conn_thread, ca)) {
+      __atomic_sub_fetch(&g_conns, 1, __ATOMIC_SEQ_CST);
       close(fd);
       free(ca);
     }

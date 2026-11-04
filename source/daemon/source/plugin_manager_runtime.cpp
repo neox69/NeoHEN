@@ -1,5 +1,6 @@
 #include "plugin_manager_runtime.hpp"
 #include "plugin_directory_watcher.hpp"
+#include "boot_health.hpp"
 
 #include <elfldr_remote.h>
 #include <onion/log.h>
@@ -135,7 +136,11 @@ void log_report(const char *operation, const plugin::ReconcileReport &report) {
 } // namespace
 
 void start() {
-  log_report("startup", manager().reconcile(true));
+  /* safe mode (onion/safe_mode.h): discovered, but nothing auto-started */
+  const bool safe = onion::daemon::boot_health::safe_mode();
+  if (safe)
+    LOG_WARN("[plugins] safe mode: plugins are not auto-started");
+  log_report("startup", manager().reconcile(!safe));
   if (!watcher().start())
     LOG_ERROR("[plugins] directory watcher failed to start");
 }

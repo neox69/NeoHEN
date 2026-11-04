@@ -42,7 +42,23 @@ VARIANT  := $(if $(SAFE),safe,full)
 STAMP    := build/variant-$(VARIANT).stamp
 $(shell mkdir -p build; [ -f $(STAMP) ] || { rm -f build/variant-*.stamp; touch $(STAMP); })
 
-DEFS   := -DLAUNCHER_DIR=\"$(CURDIR)/launcher\" -DWEBUI_PATH=\"$(CURDIR)/$(WEBUI)\" -DJXRJS_PATH=\"$(CURDIR)/$(JXRJS)\" $(FULLDEF)
+# The NeoHEN release this NeoWEB ships with, from the repo's VERSION file
+# (api.h has a fallback for builds outside the repo). VERSION is listed with
+# the headers so a new release number rebuilds the binaries.
+NEOHEN_VERSION := $(shell tr -d ' \t\r\n' < ../VERSION 2>/dev/null)
+HEADERS += $(wildcard ../VERSION)
+
+DEFS   := $(if $(NEOHEN_VERSION),-DNEOHEN_VERSION=\"$(NEOHEN_VERSION)\") -DLAUNCHER_DIR=\"$(CURDIR)/launcher\" -DWEBUI_PATH=\"$(CURDIR)/$(WEBUI)\" -DJXRJS_PATH=\"$(CURDIR)/$(JXRJS)\" $(FULLDEF)
+
+# The page and jxr.js go into the binary gzipped: webui.c hands them as they
+# are to browsers (all of them take gzip) and inflates them for the rest. Their
+# ETags are the hash of the files, worked out here (see the rules at the end).
+WEBUI_GZ    := build/index.html.gz
+JXRJS_GZ    := build/jxr.js.gz
+WEBUI_ETAGS := build/webui_etag.h
+WEBUI_EMBED := $(WEBUI_GZ) $(JXRJS_GZ) $(WEBUI_ETAGS)
+SHA256      := $(shell command -v sha256sum >/dev/null 2>&1 && echo sha256sum || echo 'shasum -a 256')
+DEFS   += -Ibuild -DWEBUI_GZ_PATH=\"$(CURDIR)/$(WEBUI_GZ)\" -DJXRJS_GZ_PATH=\"$(CURDIR)/$(JXRJS_GZ)\"
 
 .PHONY: all host clean test
 
@@ -86,3 +102,19 @@ $(HOST_BIN): $(COMMON_SRCS) src/plat_host.c $(HEADERS) $(WEBUI) $(JXRJS) $(LAUNC
 
 clean:
 	rm -rf $(ELF) build
+
+# ------------------------------------------------------------ embedded page
+$(HOST_BIN) $(ELF): $(WEBUI_EMBED)
+
+$(WEBUI_GZ): $(WEBUI)
+	@mkdir -p build
+	gzip -9 -n -c $< > $@.tmp && mv $@.tmp $@
+
+$(JXRJS_GZ): $(JXRJS)
+	@mkdir -p build
+	gzip -9 -n -c $< > $@.tmp && mv $@.tmp $@
+
+$(WEBUI_ETAGS): $(WEBUI) $(JXRJS)
+	@mkdir -p build
+	{ printf '#define WEBUI_ETAG "%s"\n' "$$($(SHA256) < $(WEBUI) | cut -c1-24)"; \
+	  printf '#define JXRJS_ETAG "%s"\n' "$$($(SHA256) < $(JXRJS) | cut -c1-24)"; } > $@.tmp && mv $@.tmp $@

@@ -79,6 +79,8 @@ static int test_defaults_and_serialize_keys(void) {
   TEST_ASSERT_TRUE(text.find("stable_seconds=30\n") != std::string::npos);
   TEST_ASSERT_TRUE(text.find("[shadowmount]\n") != std::string::npos);
   TEST_ASSERT_TRUE(text.find("watchdog=relaunch\n") != std::string::npos);
+  TEST_ASSERT_TRUE(text.find("[update]\n") != std::string::npos);
+  TEST_ASSERT_TRUE(text.find("\nchannel=stable\n") != std::string::npos);
   TEST_ASSERT_TRUE(text.find("kstuff_tables=false\n") != std::string::npos);
   TEST_ASSERT_TRUE(text.find("wait_for_tracer=true\n") != std::string::npos);
   TEST_ASSERT_TRUE(text.find("edge=top") != std::string::npos);
@@ -155,6 +157,7 @@ static int test_full_schema_roundtrip(void) {
   in.rest_stable_seconds = 45;
   in.smp_watchdog = onion::kSmpWatchdogRelaunch;
   in.smp_watchdog_interval_seconds = 600;
+  in.update_channel = onion::kUpdateChannelPrerelease;
   in.diag_kstuff_tables = true;
   in.shellui_wait_for_tracer = false;
   in.onionhen_game_opts = false;
@@ -203,6 +206,7 @@ static int test_full_schema_roundtrip(void) {
   TEST_ASSERT_EQ_INT(in.smp_watchdog, out.smp_watchdog);
   TEST_ASSERT_EQ_INT(in.smp_watchdog_interval_seconds,
                      out.smp_watchdog_interval_seconds);
+  TEST_ASSERT_EQ_INT(in.update_channel, out.update_channel);
   TEST_ASSERT_TRUE(out.diag_kstuff_tables == in.diag_kstuff_tables);
   TEST_ASSERT_TRUE(out.shellui_wait_for_tracer == in.shellui_wait_for_tracer);  TEST_ASSERT_TRUE(out.onionhen_game_opts == in.onionhen_game_opts);
   TEST_ASSERT_EQ_U64(in.rest_mode_delay_seconds, out.rest_mode_delay_seconds);
@@ -265,7 +269,7 @@ static int test_partial_ini_keeps_defaults(void) {
   TEST_ASSERT_TRUE(out.overlay_background);
   TEST_ASSERT_TRUE(!out.app_jailbreak_enabled);
   TEST_ASSERT_EQ_INT(onion::kRestToolboxStable, out.rest_toolbox_mode);
-  TEST_ASSERT_EQ_INT(onion::kSmpWatchdogNotify, out.smp_watchdog);
+  TEST_ASSERT_EQ_INT(onion::kSmpWatchdogRelaunch, out.smp_watchdog);
   TEST_ASSERT_TRUE(!out.diag_kstuff_tables);
   TEST_ASSERT_TRUE(out.shellui_wait_for_tracer);
   TEST_ASSERT_TRUE(out.kstuff_autoload);
@@ -661,6 +665,7 @@ static int test_neohen_rc1_keys(void) {
   fputs("[meta]\nschema_version=1\n"
         "\n[rest_mode]\ntoolbox_after_resume=Stable\nstable_seconds=5\n"
         "\n[shadowmount]\nwatchdog=relaunch\nwatchdog_interval_seconds=99999\n"
+        "\n[update]\nchannel=PreRelease\n"
         "\n[diagnostics]\nkstuff_tables=true\n"
         "\n[shellui]\nwait_for_tracer=false\n",
         f);
@@ -673,6 +678,7 @@ static int test_neohen_rc1_keys(void) {
   TEST_ASSERT_EQ_INT(onion::kSmpWatchdogRelaunch, out.smp_watchdog);
   TEST_ASSERT_EQ_INT(onion::kSmpWatchdogDefaultSeconds,
                      out.smp_watchdog_interval_seconds);
+  TEST_ASSERT_EQ_INT(onion::kUpdateChannelPrerelease, out.update_channel);
   TEST_ASSERT_TRUE(out.diag_kstuff_tables);
   TEST_ASSERT_TRUE(!out.shellui_wait_for_tracer);
 
@@ -680,13 +686,15 @@ static int test_neohen_rc1_keys(void) {
   TEST_ASSERT_TRUE(f != nullptr);
   fputs("[meta]\nschema_version=1\n"
         "\n[rest_mode]\ntoolbox_after_resume=bogus\n"
-        "\n[shadowmount]\nwatchdog=maybe\n",
+        "\n[shadowmount]\nwatchdog=maybe\n"
+        "\n[update]\nchannel=nightly\n",
         f);
   fclose(f);
   onion::Settings def{};
   TEST_ASSERT_TRUE(onion::settings_load_file(path.c_str(), &def));
   TEST_ASSERT_EQ_INT(onion::kRestToolboxStable, def.rest_toolbox_mode);
-  TEST_ASSERT_EQ_INT(onion::kSmpWatchdogNotify, def.smp_watchdog);
+  TEST_ASSERT_EQ_INT(onion::kSmpWatchdogRelaunch, def.smp_watchdog);
+  TEST_ASSERT_EQ_INT(onion::kUpdateChannelStable, def.update_channel);
   unlink(path.c_str());
   return 0;
 }

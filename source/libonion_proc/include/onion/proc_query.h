@@ -47,6 +47,13 @@ pid_t onion_find_pid_substr(const char *substr);
  */
 pid_t onion_find_pid_ex(const char *name, bool needle, bool for_bigapp);
 
+/** Every process (one entry each) with its ki_comm and ki_tdname; stops
+ *  when cb returns non-zero. Returns the number of processes seen, or -1
+ *  when the list cannot be read. */
+typedef int (*onion_proc_each_fn)(void *ctx, pid_t pid, const char *comm,
+                                  const char *tdname);
+int onion_proc_each(onion_proc_each_fn cb, void *ctx);
+
 /** True if pid still exists (KERN_PROC_PID). */
 bool onion_proc_is_alive(pid_t pid);
 

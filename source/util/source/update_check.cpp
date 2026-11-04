@@ -1,8 +1,11 @@
 /* NeoHEN: says on the TV when a newer NeoHEN is out.
  *
  * 90 s after start and then every 12 hours the util service asks GitHub for
- * the releases of neox69/NeoHEN (pre-releases too) and compares the newest
- * with the NeoHEN that is running. Each new version is announced once: the
+ * the releases of neox69/NeoHEN and compares the newest with the NeoHEN that
+ * is running. update.channel in config.ini picks which releases count:
+ * prerelease takes every one; stable (the default) takes final releases
+ * only, except that a NeoHEN that is itself a pre-release is still told of a
+ * newer pre-release when no newer final is out (a final always comes first). Each new version is announced once: the
  * tag shown last is kept in update_seen.txt. An "update_check_off" file in
  * the data folder (NeoWEB > Settings switches it) turns it off. Nothing is
  * downloaded for NeoHEN itself: the notice only says which version there is.
@@ -13,9 +16,15 @@
 #include <onion/brand.h>
 #include <onion/log.h>
 #include <onion/notify.h>
+#include <onion/settings.hpp>
 #include <onion/version.h>
+#include "store_lock.hpp"
+extern "C" {
+#include <sha256.h>
+}
 
 #include <algorithm>
+#include <cctype>
 #include <cstdio>
 #include <cstring>
 #include <ctime>
@@ -26,6 +35,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+extern onion::SettingsStore g_settings;
+
 namespace {
 
 constexpr const char *kReleases =
@@ -34,6 +45,9 @@ constexpr const char *kSeen = ONION_USER_DATA_DIR "/update_seen.txt";
 constexpr const char *kOff = ONION_USER_DATA_DIR "/update_check_off";
 constexpr unsigned kFirstCheckS = 90;
 constexpr unsigned kEveryS = 12 * 60 * 60;
+
+/* version_key()'s fourth number for a final release */
+constexpr long kFinal = 1000000;
 
 /* 0.1.0-rc7 -> {0,1,0,7}; a final release ranks above its rcs. */
 bool version_key(const std::string &text, long out[4]) {
@@ -54,7 +68,7 @@ bool version_key(const std::string &text, long out[4]) {
   }
   /* "+sha" build metadata is still the final release; any other
    * pre-release ("-beta1", an upstream tag) ranks below every rc. */
-  out[3] = 1000000;
+  out[3] = kFinal;
   if (std::string(s).rfind("-rc", 0) == 0)
     out[3] = std::strtol(s + 3, nullptr, 10);
   else if (*s == '-')
@@ -110,18 +124,35 @@ void check_once() {
   onion_cjson::Root root(body);
   if (!root || !cJSON_IsArray(root.get()))
     return;
-  std::string best_tag;
-  long best[4] = {0, 0, 0, 0};
+  /* newest release of any kind, and newest final release */
+  std::string any_tag, final_tag;
+  long any[4] = {0, 0, 0, 0}, fin[4] = {0, 0, 0, 0};
   for (const cJSON *r = root.get()->child; r; r = r->next) {
     if (onion_cjson::bool_item(r, "draft", false))
       continue;
     const std::string tag = onion_cjson::string_item(r, "tag_name", "");
     long key[4];
-    if (version_key(tag, key) && (best_tag.empty() || compare(key, best) > 0)) {
-      best_tag = tag;
-      for (int i = 0; i < 4; ++i)
-        best[i] = key[i];
+    if (!version_key(tag, key))
+      continue;
+    if (any_tag.empty() || compare(key, any) > 0) {
+      any_tag = tag;
+      std::copy(key, key + 4, any);
     }
+    const bool pre = key[3] != kFinal || onion_cjson::bool_item(r, "prerelease", false);
+    if (!pre && (final_tag.empty() || compare(key, fin) > 0)) {
+      final_tag = tag;
+      std::copy(key, key + 4, fin);
+    }
+  }
+  const bool all = g_settings.snapshot().update_channel == onion::kUpdateChannelPrerelease;
+  std::string best_tag;
+  const long *best = nullptr;
+  if (all) {
+    best_tag = any_tag, best = any;
+  } else if (!final_tag.empty() && compare(fin, mine) > 0) {
+    best_tag = final_tag, best = fin;
+  } else if (mine[3] != kFinal) {
+    best_tag = any_tag, best = any; /* a pre-release keeps getting the next one */
   }
   if (best_tag.empty() || compare(best, mine) <= 0) {
     LOG_INFO("[update] up to date (%s)", ONIONHEN_VERSION);
@@ -144,7 +175,11 @@ void check_once() {
  * name, it replaces the one in the payloads folder. A payload that is running
  * keeps running the old version until it is started again. Payloads put
  * there by hand or bundled with NeoHEN are not in the store: never touched.
- * "store_auto_off" in the data folder turns this off. */
+ * "store_auto_off" in the data folder turns this off.
+ * Only a release file GitHub publishes a SHA-256 for ("digest") is taken,
+ * and only when the download matches it; one without is left as it is.
+ * store.json is NeoWEB's too: it is changed under store.json.lock, re-read
+ * right before writing, and written through a temp file of util's own. */
 constexpr const char *kStore = ONION_USER_DATA_DIR "/web/store.json";
 constexpr const char *kStoreOff = ONION_USER_DATA_DIR "/store_auto_off";
 
@@ -177,8 +212,30 @@ bool fetch_text(const std::string &url, const char *host, std::string &body) {
          }) == SyncStatus::Ok;
 }
 
-/* Same rules as the store's own download: github.com only, an ELF for .elf. */
-bool download(const std::string &url, const std::string &name) {
+/* "sha256:<64 hex>" from a GitHub asset's digest; "" when there is none */
+std::string asset_sha256(const cJSON *asset) {
+  const std::string d = onion_cjson::string_item(asset, "digest", "");
+  if (d.size() != 7 + 64 || d.compare(0, 7, "sha256:") != 0)
+    return "";
+  for (size_t i = 7; i < d.size(); ++i)
+    if (!std::isdigit(static_cast<unsigned char>(d[i])) && (d[i] < 'a' || d[i] > 'f'))
+      return "";
+  return d.substr(7);
+}
+
+std::string hex32(const uint8_t *d) {
+  static const char k[] = "0123456789abcdef";
+  std::string s;
+  for (size_t i = 0; i < SHA256_BLOCK_SIZE; ++i) {
+    s += k[d[i] >> 4];
+    s += k[d[i] & 15];
+  }
+  return s;
+}
+
+/* Same rules as the store's own download: github.com only, an ELF for .elf,
+ * and here also the SHA-256 GitHub gives for the file. */
+bool download(const std::string &url, const std::string &name, const std::string &sha) {
   const std::string dest = ONION_USER_DATA_DIR "/payloads/" + name;
   const std::string part = dest + ".part";
   FILE *out = fopen(part.c_str(), "wb");
@@ -193,8 +250,11 @@ bool download(const std::string &url, const std::string &name) {
   request.max_body_bytes = 64u << 20;
   size_t bytes = 0;
   unsigned char head[4] = {};
+  SHA256_CTX ctx;
+  sha256_init(&ctx);
   Ps5HttpTransport http;
   const SyncStatus st = http.perform(request, [&](const void *data, size_t n) {
+    sha256_update(&ctx, static_cast<const uint8_t *>(data), n);
     if (bytes < sizeof(head))
       std::memcpy(head + bytes, data, std::min(n, sizeof(head) - bytes));
     bytes += n;
@@ -203,7 +263,12 @@ bool download(const std::string &url, const std::string &name) {
   const bool closed = fclose(out) == 0;
   const bool is_elf = name.size() > 4 && name.compare(name.size() - 4, 4, ".elf") == 0;
   const bool looks_right = !is_elf || (bytes > 4 && std::memcmp(head, "\x7f" "ELF", 4) == 0);
-  if (st != SyncStatus::Ok || !closed || bytes == 0 || !looks_right ||
+  uint8_t digest[SHA256_BLOCK_SIZE];
+  sha256_final(&ctx, digest);
+  const bool sha_right = hex32(digest) == sha;
+  if (!sha_right && st == SyncStatus::Ok)
+    LOG_WARN("[store] %s: the download does not match GitHub's SHA-256, thrown away", name.c_str());
+  if (st != SyncStatus::Ok || !closed || bytes == 0 || !looks_right || !sha_right ||
       rename(part.c_str(), dest.c_str()) != 0) {
     unlink(part.c_str());
     LOG_WARN("[store] update of %s failed (%s, %zu bytes)", name.c_str(),
@@ -225,7 +290,7 @@ void store_check_once() {
   const cJSON *installed = onion_cjson::item(store.get(), "installed");
   if (!sources || !installed)
     return;
-  struct Update { std::string name, from, to, url; };
+  struct Update { std::string name, from, to, url, sha; };
   std::vector<Update> todo;
   for (const cJSON *src = sources->child; src; src = src->next) {
     const std::string name = src->string ? src->string : "";
@@ -260,30 +325,54 @@ void store_check_once() {
     const cJSON *assets = onion_cjson::item(latest, "assets");
     for (const cJSON *a = assets ? assets->child : nullptr; a; a = a->next) {
       if (asset == onion_cjson::string_item(a, "name", "")) {
+        const std::string sha = asset_sha256(a);
+        if (sha.empty()) {
+          /* decision 6.1 of the 1.0 plan: automatic updates need a hash */
+          LOG_INFO("[store] %s %s has no SHA-256 on GitHub: not updated by itself",
+                   name.c_str(), tag.c_str());
+          break;
+        }
         todo.push_back({name, current, tag,
-                        onion_cjson::string_item(a, "browser_download_url", "")});
+                        onion_cjson::string_item(a, "browser_download_url", ""), sha});
         break;
       }
     }
   }
   if (todo.empty())
     return;
-  bool changed = false;
-  cJSON *root = store.get();
+  std::vector<Update> done;
+  for (const Update &u : todo) {
+    if (u.url.rfind("https://github.com/", 0) != 0 || !download(u.url, u.name, u.sha))
+      continue;
+    LOG_INFO("[store] %s updated %s -> %s", u.name.c_str(), u.from.c_str(), u.to.c_str());
+    onion_notify(true, "notify.store.updated_fmt", u.name.c_str(), u.to.c_str());
+    done.push_back(u);
+  }
+  if (done.empty())
+    return;
+  /* The downloads took a while and NeoWEB may have written store.json in
+   * the meantime: take the lock, read it again and change only our names. */
+  util_store_lock lock;
+  onion_cjson::Root fresh(read_file(kStore));
+  if (!fresh || !cJSON_IsObject(fresh.get()))
+    return;
+  cJSON *root = fresh.get();
   cJSON *inst = cJSON_GetObjectItemCaseSensitive(root, "installed");
   cJSON *srcs = cJSON_GetObjectItemCaseSensitive(root, "sources");
+  if (!cJSON_IsObject(inst) || !cJSON_IsObject(srcs))
+    return;
   cJSON *log = cJSON_GetObjectItemCaseSensitive(root, "updates");
   if (!cJSON_IsArray(log)) {
     cJSON_DeleteItemFromObjectCaseSensitive(root, "updates");
     log = cJSON_AddArrayToObject(root, "updates");
   }
-  for (const Update &u : todo) {
-    if (u.url.rfind("https://github.com/", 0) != 0 || !download(u.url, u.name))
-      continue;
-    LOG_INFO("[store] %s updated %s -> %s", u.name.c_str(), u.from.c_str(), u.to.c_str());
-    onion_notify(true, "notify.store.updated_fmt", u.name.c_str(), u.to.c_str());
-    cJSON_ReplaceItemInObjectCaseSensitive(inst, u.name.c_str(), cJSON_CreateString(u.to.c_str()));
-    cJSON_ReplaceItemInObjectCaseSensitive(srcs, u.name.c_str(), cJSON_CreateString(u.url.c_str()));
+  for (const Update &u : done) {
+    if (!cJSON_GetObjectItemCaseSensitive(srcs, u.name.c_str()))
+      continue; /* taken out of the store meanwhile */
+    cJSON_DeleteItemFromObjectCaseSensitive(inst, u.name.c_str());
+    cJSON_AddItemToObject(inst, u.name.c_str(), cJSON_CreateString(u.to.c_str()));
+    cJSON_DeleteItemFromObjectCaseSensitive(srcs, u.name.c_str());
+    cJSON_AddItemToObject(srcs, u.name.c_str(), cJSON_CreateString(u.url.c_str()));
     cJSON *e = cJSON_CreateObject();
     cJSON_AddStringToObject(e, "name", u.name.c_str());
     cJSON_AddStringToObject(e, "from", u.from.c_str());
@@ -292,18 +381,18 @@ void store_check_once() {
     cJSON_InsertItemInArray(log, 0, e);
     while (cJSON_GetArraySize(log) > 20)
       cJSON_DeleteItemFromArray(log, 20);
-    changed = true;
   }
-  if (!changed)
-    return;
   char *text = cJSON_PrintUnformatted(root);
   if (!text)
     return;
-  const std::string tmp = std::string(kStore) + ".tmp";
+  /* a temp name of util's own: NeoWEB writes through store.json.tmp */
+  const std::string tmp = std::string(kStore) + ".util.tmp";
   if (FILE *f = fopen(tmp.c_str(), "wb")) {
-    fputs(text, f);
-    fclose(f);
-    rename(tmp.c_str(), kStore);
+    const bool ok = fputs(text, f) >= 0;
+    if (fclose(f) == 0 && ok)
+      rename(tmp.c_str(), kStore);
+    else
+      unlink(tmp.c_str());
   }
   cJSON_free(text);
 }

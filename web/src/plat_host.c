@@ -16,6 +16,7 @@
 #include <string.h>
 #include <signal.h>
 #include <sys/prctl.h>
+#include <sys/sendfile.h>
 #include <sys/stat.h>
 #include <sys/statvfs.h>
 #include <sys/sysinfo.h>
@@ -529,4 +530,20 @@ int
 plat_open_browser(const char *url) {
   LOG_INFO("[emu] open browser: %s", url);
   return 0;
+}
+
+/* Linux sendfile(2). NEOWEB_NO_SENDFILE=1 turns it off, to try the
+ * read()/send() path the caller falls back to. */
+ssize_t
+plat_sendfile(int sock, int fd, off_t offset, size_t len) {
+  static int off = -1;
+  if(off < 0) {
+    const char *e = getenv("NEOWEB_NO_SENDFILE");
+    off = e && *e && *e != '0';
+  }
+  if(off) {
+    errno = ENOSYS;
+    return -1;
+  }
+  return sendfile(sock, fd, &offset, len);
 }

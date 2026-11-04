@@ -18,6 +18,15 @@ set(ONIONHEN_VERSION_HEADER
 
 # Forks set their own release number (e.g. 0.1.0-rc1); the commit is appended.
 set(ONION_PRODUCT_VERSION "" CACHE STRING "Product version shown instead of the git tag")
+# NeoHEN: an empty value falls back to the VERSION file at the repo root, the
+# same file scripts/build-neohen.sh, NeoWEB and CI read.
+set(ONIONHEN_VERSION_FILE "${ONIONHEN_ROOT}/VERSION")
+set(_onion_product_version "${ONION_PRODUCT_VERSION}")
+if(_onion_product_version STREQUAL "" AND EXISTS "${ONIONHEN_VERSION_FILE}")
+	file(STRINGS "${ONIONHEN_VERSION_FILE}" _onion_product_version LIMIT_COUNT 1)
+	string(STRIP "${_onion_product_version}" _onion_product_version)
+	set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${ONIONHEN_VERSION_FILE}")
+endif()
 
 # Re-evaluate Git state on every build. The script preserves the header mtime
 # when the version is unchanged, so incremental compilation remains cheap.
@@ -25,7 +34,7 @@ add_custom_target(onion_version
 	COMMAND "${CMAKE_COMMAND}"
 		"-DREPO_ROOT=${ONIONHEN_ROOT}"
 		"-DOUTPUT_FILE=${ONIONHEN_VERSION_HEADER}"
-		"-DPRODUCT_VERSION=${ONION_PRODUCT_VERSION}"
+		"-DPRODUCT_VERSION=${_onion_product_version}"
 		-P "${PROJECT_ROOT}/cmake/GenerateVersionHeader.cmake"
 	BYPRODUCTS "${ONIONHEN_VERSION_HEADER}"
 	COMMENT "Generating OnionHEN build version"

@@ -4,20 +4,48 @@
 # zstd. Installs into $PS5_PAYLOAD_SDK/target/user/homebrew.
 #
 #   PS5_PAYLOAD_SDK=/opt/ps5-payload-sdk scripts/ci/build_ps5_deps.sh [workdir]
+#   scripts/ci/build_ps5_deps.sh --list    print the pinned tarballs and exit
+#
+# Every tarball is pinned by SHA-256: a download that does not match stops
+# the build. To move a dependency, change its URL and hash together.
 set -euo pipefail
+
+# file  sha256  url
+PINS=(
+  "zlib.tgz bb329a0a2cd0274d05519d61c667c062e06990d72e125ee2dfa8de64f0119d16 https://github.com/madler/zlib/releases/download/v1.3.2/zlib-1.3.2.tar.gz"
+  "openssl.tgz c53a47e5e441c930c3928cf7bf6fb00e5d129b630e0aa873b08258656e7345ec https://github.com/openssl/openssl/releases/download/openssl-3.5.2/openssl-3.5.2.tar.gz"
+  "libpsl.tgz 1dcc9ceae8b128f3c0b3f654decd0e1e891afc6ff81098f227ef260449dae208 https://github.com/rockdaboot/libpsl/releases/download/0.21.5/libpsl-0.21.5.tar.gz"
+  # curl.se is not reachable from every build host; the GitHub release is.
+  "curl.txz 40df79166e74aa20149365e11ee4c798a46ad57c34e4f68fd13100e2c9a91946 https://github.com/curl/curl/releases/download/curl-8_18_0/curl-8.18.0.tar.xz"
+  "zstd.tgz eb33e51f49a15e023950cd7825ca74a4a2b43db8354825ac24fc1b7ee09e6fa3 https://github.com/facebook/zstd/releases/download/v1.5.7/zstd-1.5.7.tar.gz"
+)
+
+if [[ "${1:-}" == "--list" ]]; then
+  for pin in "${PINS[@]}"; do
+    read -r _ sum url <<< "${pin}"
+    echo "${url##*/} sha256=${sum}"
+  done
+  exit 0
+fi
+
 : "${PS5_PAYLOAD_SDK:?PS5_PAYLOAD_SDK must point at the SDK}"
 WORK="${1:-$(mktemp -d)}"
 JOBS="${JOBS:-$(nproc)}"
 mkdir -p "${WORK}"
 cd "${WORK}"
 
-fetch() { [[ -f "$2" ]] || curl -fsSL --retry 3 -o "$2" "$1"; }
-fetch https://github.com/madler/zlib/releases/download/v1.3.2/zlib-1.3.2.tar.gz zlib.tgz
-fetch https://github.com/openssl/openssl/releases/download/openssl-3.5.2/openssl-3.5.2.tar.gz openssl.tgz
-fetch https://github.com/rockdaboot/libpsl/releases/download/0.21.5/libpsl-0.21.5.tar.gz libpsl.tgz
-# curl.se is not reachable from every build host; the GitHub release is.
-fetch https://github.com/curl/curl/releases/download/curl-8_18_0/curl-8.18.0.tar.xz curl.txz
-fetch https://github.com/facebook/zstd/releases/download/v1.5.7/zstd-1.5.7.tar.gz zstd.tgz
+for pin in "${PINS[@]}"; do
+  read -r file sum url <<< "${pin}"
+  if [[ ! -f "${file}" ]]; then
+    curl -fsSL --retry 3 -o "${file}.part" "${url}"
+    mv "${file}.part" "${file}"
+  fi
+  if ! echo "${sum}  ${file}" | sha256sum -c --quiet -; then
+    echo "SHA-256 mismatch for ${url} (expected ${sum})" >&2
+    rm -f "${file}"
+    exit 1
+  fi
+done
 rm -rf src && mkdir src && cd src
 for f in zlib.tgz openssl.tgz libpsl.tgz curl.txz zstd.tgz; do tar xf "../${f}"; done
 

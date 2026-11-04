@@ -188,6 +188,40 @@ extern "C" pid_t onion_find_pid_substr(const char *substr) {
   return scan_kinfo(substr, /*substr=*/true);
 }
 
+extern "C" int onion_proc_each(onion_proc_each_fn cb, void *ctx) {
+  if (!cb) {
+    return -1;
+  }
+  int mib[4] = {CTL_KERN, KERN_PROC, KERN_PROC_PROC, 0};
+  size_t buf_size = 0;
+  if (sysctl(mib, 4, nullptr, &buf_size, nullptr, 0)) {
+    return -1;
+  }
+  void *buf = malloc(buf_size);
+  if (!buf) {
+    return -1;
+  }
+  if (sysctl(mib, 4, buf, &buf_size, nullptr, 0)) {
+    free(buf);
+    return -1;
+  }
+  int seen = 0;
+  for (char *ptr = static_cast<char *>(buf);
+       ptr < static_cast<char *>(buf) + buf_size;) {
+    auto *ki = reinterpret_cast<struct kinfo_proc *>(ptr);
+    if (ki->ki_structsize <= 0) {
+      break;
+    }
+    ptr += ki->ki_structsize;
+    ++seen;
+    if (cb(ctx, ki->ki_pid, ki->ki_comm, ki->ki_tdname)) {
+      break;
+    }
+  }
+  free(buf);
+  return seen;
+}
+
 namespace {
 bool kinfo_for_pid(pid_t pid, struct kinfo_proc *out) {
   if (pid <= 0 || !out)

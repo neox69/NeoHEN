@@ -424,6 +424,24 @@ const char *smp_watchdog_name(int v) {
   }
 }
 
+int parse_update_channel(const char *s, int def) {
+  if (streq_ci(s, "stable"))
+    return kUpdateChannelStable;
+  if (streq_ci(s, "prerelease"))
+    return kUpdateChannelPrerelease;
+  return def;
+}
+
+const char *update_channel_name(int v) {
+  switch (v) {
+  case kUpdateChannelPrerelease:
+    return "prerelease";
+  case kUpdateChannelStable:
+  default:
+    return "stable";
+  }
+}
+
 const char *cheats_mirror_name(int v) {
   switch (v) {
   case kCheatsMirrorGithub:
@@ -887,6 +905,10 @@ bool apply_parser(IniParser *parser, Settings *out) {
       ini_get(parser, "shadowmount.watchdog_interval_seconds"),
       out->smp_watchdog_interval_seconds, kSmpWatchdogMinSeconds,
       kSmpWatchdogMaxSeconds);
+  out->neoweb_watchdog = parse_smp_watchdog(ini_get(parser, "neoweb.watchdog"),
+                                            out->neoweb_watchdog);
+  out->update_channel = parse_update_channel(ini_get(parser, "update.channel"),
+                                             out->update_channel);
   out->diag_kstuff_tables = parse_bool(
       ini_get(parser, "diagnostics.kstuff_tables"), out->diag_kstuff_tables);
   out->shellui_wait_for_tracer = parse_bool(
@@ -1098,6 +1120,24 @@ std::string settings_serialize(const Settings &in) {
   b += "# watchdog_interval_seconds: 30 through 3600.\n";
   b += "watchdog_interval_seconds=" +
        std::to_string(in.smp_watchdog_interval_seconds) + "\n";
+  b += "\n";
+  b += "[neoweb]\n";
+  b += "# watchdog checks every minute (and after Rest Mode) that NeoWEB, when\n";
+  b += "# it starts with NeoHEN, still answers on port 8686.\n";
+  b += "# off: never; notify: show a notification; relaunch: also start\n";
+  b += "# payloads/neoweb.elf again. A NeoWEB stopped on purpose (from the\n";
+  b += "# Toolbox: payloads/neoweb.elf.stopped) is left stopped.\n";
+  b += "# Available values: off, notify, relaunch\n";
+  b += "watchdog=" + std::string(smp_watchdog_name(in.neoweb_watchdog)) + "\n";
+  b += "\n";
+  b += "[update]\n";
+  b += "# channel picks which NeoHEN releases the update notice offers.\n";
+  b += "# stable: final releases only; while the NeoHEN running is itself a\n";
+  b += "# pre-release (e.g. 0.1.0-rc15) it still offers a newer pre-release,\n";
+  b += "# unless a newer final is out, which comes first. prerelease: every\n";
+  b += "# release, release candidates included.\n";
+  b += "# Available values: stable, prerelease\n";
+  b += "channel=" + std::string(update_channel_name(in.update_channel)) + "\n";
   b += "\n";
   b += "[diagnostics]\n";
   b += "# kstuff_tables logs kstuff's PS5/PS4 syscall-table switches at start,\n";

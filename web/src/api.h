@@ -6,7 +6,12 @@
 #include "json.h"
 
 #define PS5AIO_NAME      "NeoWEB"
-#define PS5AIO_VERSION   "0.8.0"
+#define PS5AIO_VERSION   "0.9.0"
+/* The NeoHEN release this NeoWEB was built with: the Makefile passes it from
+ * the repo's VERSION file. */
+#ifndef NEOHEN_VERSION
+#define NEOHEN_VERSION   "unknown"
+#endif
 #define PS5AIO_HTTP_PORT 8686
 #define PS5AIO_DISC_PORT 8687
 #define PS5AIO_DATA_DIR  "/data/neohen/web"
@@ -122,6 +127,12 @@ void api_payloads_start(http_req_t *req);
 void api_payloads_stop(http_req_t *req);
 void api_payloads_delete(http_req_t *req);
 void api_payloads_autostart(http_req_t *req);
+/* safe mode and conflicting homebrew (api_payloads.c) */
+void api_health(http_req_t *req);
+void api_health_safe_mode_clear(http_req_t *req);
+void api_health_conflicts(jw_t *w);
+void api_health_safe_mode(jw_t *w);
+void api_payloads_manifest(jw_t *w);
 
 void api_mem_maps(http_req_t *req);
 void api_mem_read(http_req_t *req);

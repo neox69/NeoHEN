@@ -30,8 +30,11 @@ static const char *g_names[] = {"debug", "info", "warn", "error"};
 /* stdout of a payload goes nowhere anyone can read, so when NeoWEB died in
  * Rest Mode nothing said why. The file keeps the last two halves. */
 #define LOG_FILE_MAX (512 * 1024)
-static int  g_fd = -1;
-static char g_path[256];
+static int   g_fd = -1;
+static char  g_path[256];
+/* the file's size as far as our own writes go: fstat() is only asked when
+ * this says the file is full, not on every line */
+static off_t g_size;
 
 int
 log_fd(void) {
@@ -42,13 +45,21 @@ static void
 log_file_rotate(void) {
   char old[sizeof(g_path) + 2];
   struct stat st;
-  if(g_fd < 0 || fstat(g_fd, &st) || st.st_size < LOG_FILE_MAX) {
+  if(g_fd < 0 || g_size < LOG_FILE_MAX) {
     return;
+  }
+  if(fstat(g_fd, &st)) {
+    g_size = 0;
+    return;
+  }
+  if((g_size = st.st_size) < LOG_FILE_MAX) {
+    return;                         /* someone else made it smaller */
   }
   snprintf(old, sizeof(old), "%s.1", g_path);
   close(g_fd);
   rename(g_path, old);
   g_fd = open(g_path, O_WRONLY | O_CREAT | O_APPEND, 0666);
+  g_size = 0;
 }
 
 void
@@ -56,6 +67,7 @@ log_open_file(const char *path) {
   snprintf(g_path, sizeof(g_path), "%s", path);
   pthread_mutex_lock(&g_lock);
   g_fd = open(g_path, O_WRONLY | O_CREAT | O_APPEND, 0666);
+  g_size = LOG_FILE_MAX;            /* unknown: the first check asks */
   log_file_rotate();
   pthread_mutex_unlock(&g_lock);
 }
@@ -87,7 +99,9 @@ log_write(int level, const char *fmt, ...) {
                      tm.tm_min, tm.tm_sec, g_names[level & 3], msg);
     if(n > 0) {
       ssize_t w = write(g_fd, line, n < (int)sizeof(line) ? (size_t)n : sizeof(line) - 1);
-      (void)w;
+      if(w > 0) {
+        g_size += w;
+      }
     }
     log_file_rotate();
   }

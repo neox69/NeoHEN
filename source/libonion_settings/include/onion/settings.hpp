@@ -273,6 +273,13 @@ inline constexpr int kSmpWatchdogRelaunch = 2;
 inline constexpr int kSmpWatchdogMinSeconds = 30;
 inline constexpr int kSmpWatchdogMaxSeconds = 3600;
 inline constexpr int kSmpWatchdogDefaultSeconds = 60;
+/* NeoWEB watchdog (neoweb.watchdog): the same three modes. */
+inline constexpr int kNeowebWatchdogOff = kSmpWatchdogOff;
+inline constexpr int kNeowebWatchdogNotify = kSmpWatchdogNotify;
+inline constexpr int kNeowebWatchdogRelaunch = kSmpWatchdogRelaunch;
+/* NeoHEN update notice: which GitHub releases it offers (update.channel). */
+inline constexpr int kUpdateChannelStable = 0;
+inline constexpr int kUpdateChannelPrerelease = 1;
 inline constexpr int clamp_fan_threshold(int celsius) {
   if (celsius < kFanThresholdMinCelsius)
     return kFanThresholdMinCelsius;
@@ -313,6 +320,16 @@ struct Settings {
   // Watch the ShadowMount+ hook after resume and periodically.
   int smp_watchdog = kSmpWatchdogRelaunch;
   int smp_watchdog_interval_seconds = kSmpWatchdogDefaultSeconds;
+
+  // [neoweb]
+  // Check that NeoWEB answers; off, notify, or relaunch it. A NeoWEB that
+  // was stopped on purpose (payloads/neoweb.elf.stopped) is left alone.
+  int neoweb_watchdog = kNeowebWatchdogRelaunch;
+
+  // [update]
+  // stable: final releases only, unless NeoHEN itself is a pre-release and
+  // no newer final is out; prerelease: every release.
+  int update_channel = kUpdateChannelStable;
 
   // [diagnostics]
   // Log kstuff's sysentvec toggles (read-only kernel reads).

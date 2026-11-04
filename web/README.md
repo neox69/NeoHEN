@@ -56,9 +56,11 @@ something then answers 403.
 | GET | `/api/payloads/list` | payloads in the folder: size, running and pid, auto-start, priority, bundled |
 | PUT | `/api/payloads/upload?name=` | save the request body as a payload (64 MB at most; an `.elf` must be an ELF) |
 | POST | `/api/payloads/start` | hand it to the ELF loader (`{"name": "x.elf"}`) |
-| POST | `/api/payloads/stop` | kill its process |
+| POST | `/api/payloads/stop` | kill its process (and leave `name.stopped`, so NeoHEN's watchdog does not start it again) |
 | POST | `/api/payloads/delete` | remove it, with its auto-start marker and priority |
 | POST | `/api/payloads/autostart` | `{"name": "x.elf", "enabled": true}` |
+| GET | `/api/health` | NeoHEN's safe mode (`{"active", "failedBoots"}`) and conflicting homebrew running (BackPork, etaHEN, CheatRunner, a second kstuff) |
+| POST | `/api/health/safemode` | turn safe mode off: the next NeoHEN start is a normal one |
 
 Payload notes:
 

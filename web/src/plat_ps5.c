@@ -6,6 +6,7 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <fcntl.h>
+#include <pthread.h>
 #include <signal.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -907,4 +908,44 @@ plat_open_browser(const char *url) {
     return -1;
   }
   return 0;
+}
+
+/* sendfile(2), FreeBSD style:
+ *   int sendfile(int fd, int s, off_t offset, size_t nbytes,
+ *                struct sf_hdtr *hdtr, off_t *sbytes, int flags);
+ * taken from libkernel by NID (the stub library of the SDK may not have it).
+ * Without it the caller reads and sends through a buffer, as before. */
+typedef int (*sendfile_fn_t)(int, int, off_t, size_t, void *, off_t *, int);
+
+static sendfile_fn_t  g_sendfile;
+static pthread_once_t g_sendfile_once = PTHREAD_ONCE_INIT;
+
+static void
+sendfile_resolve(void) {
+  static const char *const libs[] = {"libkernel_sys.sprx", "libkernel.sprx", "libkernel_web.sprx"};
+  uint32_t handle;
+  for(size_t i = 0; i < sizeof(libs) / sizeof(libs[0]) && !g_sendfile; i++) {
+    if(!kernel_dynlib_handle(-1, libs[i], &handle)) {
+      g_sendfile = (sendfile_fn_t)kernel_dynlib_resolve(-1, handle, "YA0r4LCkfeY");
+    }
+  }
+  if(!g_sendfile) {
+    LOG_WARN("sendfile not found in libkernel; downloads go through a buffer");
+  }
+}
+
+ssize_t
+plat_sendfile(int sock, int fd, off_t offset, size_t len) {
+  off_t sent = 0;
+  pthread_once(&g_sendfile_once, sendfile_resolve);
+  if(!g_sendfile) {
+    errno = ENOSYS;
+    return -1;
+  }
+  /* on EINTR, EAGAIN (the send timeout) or EBUSY part of it may be gone
+   * already, and sbytes says how much */
+  if(!g_sendfile(fd, sock, offset, len, NULL, &sent, 0) || sent > 0) {
+    return (ssize_t)sent;
+  }
+  return -1;
 }

@@ -1,10 +1,12 @@
-# Build NeoHEN.elf on every push to neohen-main or a neohen/* branch and keep it as a
-# workflow artifact (Actions run page -> Artifacts). No releases, no tags.
+# Build NeoHEN.elf on every push to neohen-main or a neohen/* branch, and on
+# v* tags, and keep it as a workflow artifact (Actions run page -> Artifacts).
+# No releases are published from here. A tag must match the VERSION file.
 name: neohen-build
 
 on:
   push:
     branches: ['neohen/**', 'neohen-main']
+    tags: ['v*']
   workflow_dispatch:
 
 concurrency:
@@ -21,12 +23,29 @@ jobs:
     env:
       PS5_PAYLOAD_SDK: ${{ github.workspace }}/.ps5-payload-sdk
       LLVM_CONFIG: /usr/lib/llvm-18/bin/llvm-config
+      # Pinned PS5 Payload SDK release and the SHA-256 of its
+      # ps5-payload-sdk.zip. To move it, change both. Leaving PS5_SDK_TAG
+      # empty falls back to the latest release (not reproducible; no hash).
+      PS5_SDK_TAG: v0.45
+      PS5_SDK_SHA256: 5fac64093d0e3e69f2584ce7935f24f703f622d9681f1495c85b9f00d1291a2c
     steps:
+      # Actions are pinned by commit; the comment names the tag it was.
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 1
           persist-credentials: false
+
+      - name: Check the tag matches VERSION
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          set -euo pipefail
+          want="v$(tr -d ' \t\r\n' < VERSION)"
+          if [[ "${GITHUB_REF_NAME}" != "${want}" ]]; then
+            echo "::error::tag ${GITHUB_REF_NAME} does not match VERSION (${want})"
+            exit 1
+          fi
+          echo "tag ${GITHUB_REF_NAME} matches VERSION"
 
       - name: Install build packages
         run: |
@@ -38,22 +57,49 @@ jobs:
             python3-certifi python3-pip python3-pyelftools unzip xz-utils
           sudo ln -sf /usr/lib/llvm-18/bin/llvm-config /usr/local/bin/llvm-config
 
+      # The host tests need no SDK: they run first so a failure shows in
+      # minutes instead of after the PS5 build.
+      - name: Host unit tests
+        run: |
+          set -euo pipefail
+          pip3 install --break-system-packages --no-cache-dir keystone-engine
+          kdir="$(python3 -c 'import keystone, os; print(os.path.dirname(keystone.__file__))')"
+          mkdir -p "${RUNNER_TEMP}/keystone/lib"
+          ln -sf "${kdir}/libkeystone.so" "${RUNNER_TEMP}/keystone/lib/libkeystone.so"
+          ln -sf "${kdir}/libkeystone.so" "${RUNNER_TEMP}/keystone/lib/libkeystone.so.0"
+          export LD_LIBRARY_PATH="${RUNNER_TEMP}/keystone/lib"
+          make -C source/util/tests test KEYSTONE_PREFIX="${RUNNER_TEMP}/keystone" -j"$(nproc)"
+
+      - name: NeoWEB tests (host emulator)
+        run: |
+          set -euo pipefail
+          make -C web host SAFE=1
+          python3 web/tests/test_safe.py
+          rm -rf web/build
+          make -C web host
+          python3 web/tests/test_api.py
+          rm -rf web/build
+
       - name: Resolve PS5 Payload SDK release
         id: sdk
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          tag="$(curl -fsSL -H "Authorization: Bearer ${GITHUB_TOKEN}" \
-            https://api.github.com/repos/ps5-payload-dev/sdk/releases/latest \
-            | python3 -c 'import json,sys; print(json.load(sys.stdin)["tag_name"])')"
+          tag="${PS5_SDK_TAG}"
+          if [[ -z "${tag}" ]]; then
+            echo "::warning::PS5_SDK_TAG is empty: using the latest SDK release (not reproducible)"
+            tag="$(curl -fsSL -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+              https://api.github.com/repos/ps5-payload-dev/sdk/releases/latest \
+              | python3 -c 'import json,sys; print(json.load(sys.stdin)["tag_name"])')"
+          fi
           echo "tag=${tag}" >> "${GITHUB_OUTPUT}"
 
       # The SDK zip lacks curl/OpenSSL/zstd; they are built once per SDK tag
       # and dependency-script revision, then restored from the cache.
       - name: Cache SDK and PS5 dependencies
         id: sdk-cache
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: ${{ env.PS5_PAYLOAD_SDK }}
           key: ps5-sdk-${{ steps.sdk.outputs.tag }}-deps-${{ hashFiles('scripts/ci/build_ps5_deps.sh') }}
@@ -65,6 +111,9 @@ jobs:
           tmp="$(mktemp -d)"
           curl -fsSL --retry 3 -o "${tmp}/sdk.zip" \
             "https://github.com/ps5-payload-dev/sdk/releases/download/${{ steps.sdk.outputs.tag }}/ps5-payload-sdk.zip"
+          if [[ -n "${PS5_SDK_TAG}" ]]; then
+            echo "${PS5_SDK_SHA256}  ${tmp}/sdk.zip" | sha256sum -c -
+          fi
           unzip -q "${tmp}/sdk.zip" -d "${tmp}/out"
           rm -rf "${PS5_PAYLOAD_SDK}"
           cp -a "${tmp}/out/ps5-payload-sdk" "${PS5_PAYLOAD_SDK}"
@@ -100,27 +149,6 @@ jobs:
           ./scripts/build-neohen.sh --release --jobs "$(nproc)"
           test -f build/bin/NeoHEN.elf
 
-      - name: Host unit tests
-        run: |
-          set -euo pipefail
-          pip3 install --break-system-packages --no-cache-dir keystone-engine
-          kdir="$(python3 -c 'import keystone, os; print(os.path.dirname(keystone.__file__))')"
-          mkdir -p "${RUNNER_TEMP}/keystone/lib"
-          ln -sf "${kdir}/libkeystone.so" "${RUNNER_TEMP}/keystone/lib/libkeystone.so"
-          ln -sf "${kdir}/libkeystone.so" "${RUNNER_TEMP}/keystone/lib/libkeystone.so.0"
-          export LD_LIBRARY_PATH="${RUNNER_TEMP}/keystone/lib"
-          make -C source/util/tests test KEYSTONE_PREFIX="${RUNNER_TEMP}/keystone" -j"$(nproc)"
-
-      - name: NeoWEB tests (host emulator)
-        run: |
-          set -euo pipefail
-          make -C web host SAFE=1
-          python3 web/tests/test_safe.py
-          rm -rf web/build
-          make -C web host
-          python3 web/tests/test_api.py
-          rm -rf web/build
-
       - name: Stage artifact
         run: |
           set -euo pipefail
@@ -134,6 +162,8 @@ jobs:
             echo "commit=${GITHUB_SHA}"
             echo "built=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
             echo "sdk=${{ steps.sdk.outputs.tag }}"
+            if [[ -n "${PS5_SDK_TAG}" ]]; then echo "sdk_sha256=${PS5_SDK_SHA256}"; fi
+            scripts/ci/build_ps5_deps.sh --list | sed 's/^/dep=/'
             echo "build_type=Release"
             echo "status=compiled; not verified on a console"
           } > dist/BUILD_INFO.txt
@@ -145,7 +175,7 @@ jobs:
         run: echo "ref=${GITHUB_REF_NAME//\//-}" >> "${GITHUB_OUTPUT}"
 
       - name: Upload NeoHEN.elf
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: NeoHEN-${{ steps.name.outputs.ref }}-${{ github.sha }}
           path: dist/

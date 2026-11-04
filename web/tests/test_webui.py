@@ -49,6 +49,23 @@ const bad = [];
     }
     await p.close();
   }
+  // safe mode: said on the dashboard, and turned off from there
+  {
+    const safe = path.join(ROOT, 'data/neohen/safe_mode');
+    const p = await b.newPage({ viewport: { width: 1400, height: 900 } });
+    p.on('pageerror', e => bad.push('health: ' + e.message));
+    await p.goto(BASE + '#panel', { waitUntil: 'domcontentloaded' });
+    for (let t = 0; t < 5000 && !await p.$('#hl-safe'); t += 200) await p.waitForTimeout(200);
+    if (!await p.$('#hl-safe')) bad.push('health: no safe mode notice');
+    else {
+      await p.evaluate(() => document.querySelector('[data-health="safe"]').click());
+      for (let t = 0; t < 3000 && !await p.evaluate(() => document.getElementById('dlg').open); t += 100) await p.waitForTimeout(100);
+      await p.click('#dyes');
+      for (let t = 0; t < 3000 && fs.existsSync(safe); t += 100) await p.waitForTimeout(100);
+      if (fs.existsSync(safe)) bad.push('health: safe mode not turned off');
+    }
+    await p.close();
+  }
   // uploads
   const p = await b.newPage({ viewport: { width: 1400, height: 900 } });
   p.on('pageerror', e => bad.push('upload: ' + e.message));
@@ -122,6 +139,9 @@ class WebUiTest(unittest.TestCase):
         shutil.rmtree(cls.tmp, ignore_errors=True)
 
     def test_sections_and_uploads(self):
+        # NeoHEN in safe mode: every section is drawn with its notice on
+        with open(os.path.join(self.srv.root, "data/neohen/safe_mode"), "w") as f:
+            f.write("failed starts in a row: 3\n")
         js = os.path.join(self.tmp, "run.js")
         with open(js, "w") as f:
             f.write(SCRIPT)

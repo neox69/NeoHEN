@@ -4,6 +4,7 @@
  */
 #include "daemon_ops.hpp"
 #include "ipc.hpp"
+#include "neoweb_watchdog.hpp"
 #include <onion/platform.h>
 #include <onion/settings.hpp>
 #include "onion_cjson.hpp"
@@ -462,6 +463,8 @@ void handleIPC(clientArgs *client, std::string &inputStr,
       break;
     }
 
+    /* the Toolbox's payload switch: a NeoWEB stopped this way stays stopped */
+    onion::daemon::neoweb::note_user_stop(pid);
     ForceKillProc(pid);
     reply(sender_app, false);
     break;

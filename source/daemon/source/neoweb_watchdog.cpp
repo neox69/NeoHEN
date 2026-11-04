@@ -12,6 +12,7 @@
 
 #include <arpa/inet.h>
 #include <atomic>
+#include <cstdio>
 #include <cstring>
 #include <netinet/in.h>
 #include <pthread.h>
@@ -31,6 +32,12 @@ namespace {
 
 constexpr const char *kElfPath = ONION_DATA_DIR "/payloads/neoweb.elf";
 constexpr const char *kAutoStart = ONION_DATA_DIR "/payloads/neoweb.elf.auto_start";
+/* Stopped on purpose: the Toolbox (through BREW_FORCE_KILL_PID, see
+ * note_user_stop) or anything else that stops it by hand writes this; the
+ * watchdog then leaves NeoWEB stopped. Starting it again by any route
+ * clears it: NeoHEN's auto-start and NeoWEB's own payload page remove it,
+ * and the watchdog removes it as soon as NeoWEB answers again. */
+constexpr const char *kStopped = ONION_DATA_DIR "/payloads/neoweb.elf.stopped";
 constexpr int kPort = 8686;
 constexpr int kFirstCheckSeconds = 90;  // let autostart finish first
 constexpr int kCheckSeconds = 60;
@@ -95,9 +102,12 @@ void *watchdog_thread(void *) {
   int relaunches = 0;
   time_t last_relaunch = 0;
   bool limited_said = false;
+  bool stopped_said = false;
+  bool down_said = false;
   while (!g_stack_shutting_down.load(std::memory_order_acquire)) {
     sleep(1);
-    if (daemon_power_state_is_sleeping()) {
+    const int mode = g_settings.snapshot().neoweb_watchdog;
+    if (mode == onion::kNeowebWatchdogOff || daemon_power_state_is_sleeping()) {
       misses = 0;
       continue;
     }
@@ -113,11 +123,27 @@ void *watchdog_thread(void *) {
       continue;
     countdown = kCheckSeconds;
 
-    if (!if_exists(kAutoStart) || answers()) {
-      if (misses)
+    if (!if_exists(kAutoStart)) {
+      misses = 0;
+      continue;
+    }
+    if (answers()) {
+      if (misses || down_said)
         LOG_INFO("neoweb watchdog: NeoWEB answers again");
-      else if (resume_check && if_exists(kAutoStart))
+      else if (resume_check)
         LOG_INFO("neoweb watchdog: NeoWEB ok (after Rest Mode)");
+      /* running again, whoever started it: the user stop is over */
+      if (if_exists(kStopped) && unlink(kStopped) == 0)
+        LOG_INFO("neoweb watchdog: NeoWEB was started again; user stop cleared");
+      misses = 0;
+      stopped_said = false;
+      down_said = false;
+      continue;
+    }
+    if (if_exists(kStopped)) {
+      if (!stopped_said)
+        LOG_INFO("neoweb watchdog: NeoWEB was stopped by hand; left stopped");
+      stopped_said = true;
       misses = 0;
       continue;
     }
@@ -132,6 +158,14 @@ void *watchdog_thread(void *) {
     }
     LOG_WARN("neoweb watchdog: NeoWEB %s%s", pid > 1 ? "hung" : "not running",
              resume_check ? " (after Rest Mode)" : "");
+    if (mode == onion::kNeowebWatchdogNotify) {
+      /* once until it answers again, not on every check */
+      if (!down_said)
+        onion_notify(true, "notify.neoweb.down");
+      down_said = true;
+      misses = 0;
+      continue;
+    }
 
     const time_t now = time(nullptr);
     if (relaunches >= kRelaunchMaxPerBoot) {
@@ -174,6 +208,15 @@ void watchdog_start() {
 
 void watchdog_on_resume() {
   g_resume_due.store(kResumeCheckSeconds, std::memory_order_release);
+}
+
+void note_user_stop(int pid) {
+  if (pid <= 1 || pid != neoweb_pid())
+    return;
+  if (FILE *f = fopen(kStopped, "w")) {
+    fclose(f);
+    LOG_INFO("neoweb watchdog: NeoWEB pid=%d stopped by hand; it stays stopped", pid);
+  }
 }
 
 } // namespace onion::daemon::neoweb

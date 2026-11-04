@@ -135,6 +135,41 @@ def fake_cheat_service(path, listing, seen):
     return srv
 
 
+def fake_util_service(path, answer, seen):
+    """NeoHEN's util service: answer(cmd, ask) -> (var, err)."""
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    if os.path.exists(path):
+        os.unlink(path)
+    srv = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    srv.bind(path)
+    srv.listen(4)
+
+    def run():
+        while True:
+            try:
+                c, _ = srv.accept()
+            except OSError:
+                return
+            buf = b""
+            while len(buf) < 12 + 0x1000:
+                part = c.recv(12 + 0x1000 - len(buf))
+                if not part:
+                    break
+                buf += part
+            if len(buf) == 12 + 0x1000:
+                magic, cmd, _err = struct.unpack("<IIi", buf[:12])
+                ask = json.loads(buf[12:].split(b"\0")[0])
+                seen.append((cmd, ask))
+                var, err = answer(cmd, ask)
+                msg = json.dumps({"var": var}).encode().ljust(0x1000, b"\0")
+                c.sendall(struct.pack("<IIi", magic, 0x8000002, err) + msg)
+            c.close()
+
+    import threading
+    threading.Thread(target=run, daemon=True).start()
+    return srv
+
+
 class Api:
     def __init__(self, base):
         self.base = base
@@ -380,6 +415,191 @@ class PayloadTest(unittest.TestCase):
         self.assertIn(b"NeoWEB", body)
         self.assertIn("text/html", hdr["Content-Type"])
 
+    def test_webui_gzip_etag(self):
+        import gzip
+        for path, kind in (("/", "text/html"), ("/jxr.js", "javascript")):
+            st, gz, hdr = self.api.req("GET", path, headers={"Accept-Encoding": "gzip, deflate"})
+            self.assertEqual(st, 200)
+            self.assertEqual(hdr["Content-Encoding"], "gzip")
+            self.assertIn(kind, hdr["Content-Type"])
+            self.assertEqual(hdr["Cache-Control"], "no-cache")
+            self.assertEqual(hdr["Vary"], "Accept-Encoding")
+            self.assertEqual(int(hdr["Content-Length"]), len(gz))
+            etag = hdr["ETag"]
+            self.assertRegex(etag, r'^"[0-9a-f]{24}-gz"$')
+            # without gzip: the same bytes, inflated by the server
+            st, plain, phdr = self.api.req("GET", path)
+            self.assertEqual(st, 200)
+            self.assertIsNone(phdr["Content-Encoding"])
+            self.assertEqual(gzip.decompress(gz), plain)
+            self.assertLess(len(gz) * 2, len(plain))
+            self.assertEqual(phdr["ETag"], etag[:-4] + '"')
+            # "gzip;q=0" is a no
+            _, _, h = self.api.req("HEAD", path, headers={"Accept-Encoding": "gzip;q=0, br"})
+            self.assertIsNone(h["Content-Encoding"])
+            self.assertEqual(int(h["Content-Length"]), len(plain))
+            # revalidation
+            for inm in (etag, "W/" + etag, '"nope", ' + etag, "*"):
+                st, body, h = self.api.req("GET", path, headers={"Accept-Encoding": "gzip",
+                                                                 "If-None-Match": inm})
+                self.assertEqual(st, 304, inm)
+                self.assertEqual(body, b"")
+                self.assertEqual(h["ETag"], etag)
+            st, _, _ = self.api.req("GET", path, headers={"Accept-Encoding": "gzip",
+                                                          "If-None-Match": '"nope"'})
+            self.assertEqual(st, 200)
+            # the plain copy has its own tag
+            st, _, _ = self.api.req("GET", path, headers={"If-None-Match": etag})
+            self.assertEqual(st, 200)
+            st, _, _ = self.api.req("GET", path, headers={"If-None-Match": phdr["ETag"]})
+            self.assertEqual(st, 304)
+
+    def test_304_keeps_the_connection(self):
+        import http.client
+        c = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
+        self.addCleanup(c.close)
+        c.request("GET", "/", headers={"Accept-Encoding": "gzip"})
+        r = c.getresponse()
+        r.read()
+        etag = r.getheader("ETag")
+        for _ in range(3):
+            c.request("GET", "/", headers={"Accept-Encoding": "gzip", "If-None-Match": etag})
+            r = c.getresponse()
+            self.assertEqual(r.status, 304)
+            self.assertEqual(r.read(), b"")
+            self.assertEqual(r.getheader("Connection"), "keep-alive")
+
+    def test_no_cors_headers(self):
+        for method, path in (("GET", "/api/ping"), ("GET", "/"), ("OPTIONS", "/api/fs/delete")):
+            st, _, hdr = self.api.req(method, path, headers={"Origin": "http://evil.example",
+                                                             "Access-Control-Request-Method": "POST"})
+            for h in hdr.keys():
+                self.assertFalse(h.lower().startswith("access-control-"), (method, path, h))
+            if method == "OPTIONS":
+                self.assertEqual(st, 204)
+                self.assertIn("POST", hdr["Allow"])
+
+    def test_icon_etag(self):
+        st, body, hdr = self.api.req("GET", "/apps/icon?id=PPSA01234")
+        self.assertEqual(st, 200)
+        self.assertTrue(body.startswith(b"\x89PNG"))
+        self.assertEqual(hdr["Cache-Control"], "no-cache")
+        etag = hdr["ETag"]
+        self.assertEqual(etag, '"%x-%x"' % (len(body), int(os.stat(
+            f"{self.root}/user/appmeta/PPSA01234/icon0.png").st_mtime)))
+        st, body, _ = self.api.req("GET", "/apps/icon?id=PPSA01234", headers={"If-None-Match": etag})
+        self.assertEqual(st, 304)
+        self.assertEqual(body, b"")
+
+    def _ranges(self, api, data, path):
+        size = len(data)
+        st, body, hdr = api.req("GET", "/fs/get?path=" + path)
+        self.assertEqual(st, 200)
+        self.assertEqual(body, data)
+        self.assertEqual(hdr["Accept-Ranges"], "bytes")
+        for rng, lo, hi in (("bytes=0-0", 0, 0), ("bytes=-17", size - 17, size - 1),
+                            ("bytes=1048570-2097160", 1048570, 2097160),
+                            ("bytes=%d-" % (size - 1000), size - 1000, size - 1),
+                            ("bytes=5-%d" % (size * 2), 5, size - 1)):
+            st, body, hdr = api.req("GET", "/fs/get?path=" + path, headers={"Range": rng})
+            self.assertEqual(st, 206, rng)
+            self.assertEqual(body, data[lo:hi + 1], rng)
+            self.assertEqual(hdr["Content-Range"], "bytes %d-%d/%d" % (lo, hi, size))
+        st, _, hdr = api.req("GET", "/fs/get?path=" + path, headers={"Range": "bytes=%d-" % size})
+        self.assertEqual(st, 416)
+        self.assertEqual(hdr["Content-Range"], "bytes */%d" % size)
+        st, body, hdr = api.req("HEAD", "/fs/get?path=" + path, headers={"Range": "bytes=10-19"})
+        self.assertEqual(st, 206)
+        self.assertEqual(body, b"")
+        self.assertEqual(hdr["Content-Length"], "10")
+
+    def test_range_downloads(self):
+        data = os.urandom(3 * 1024 * 1024 + 333)
+        os.makedirs(f"{self.root}/data/rng", exist_ok=True)
+        with open(f"{self.root}/data/rng/f.bin", "wb") as f:
+            f.write(data)
+        self._ranges(self.api, data, "/data/rng/f.bin")          # sendfile()
+        # and the read()/send() copy, for a platform without sendfile()
+        port, ctl = free_port(), free_port()
+        env = dict(os.environ, PS5AIO_ROOT=self.root, NEOWEB_CTL_PORT=str(ctl),
+                   NEOWEB_NO_SENDFILE="1")
+        proc = subprocess.Popen([BIN, str(port)], env=env,
+                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        self.addCleanup(proc.wait)
+        self.addCleanup(proc.kill)
+        api = Api(f"http://127.0.0.1:{port}")
+        for _ in range(100):
+            try:
+                api.get("/api/ping")
+                break
+            except Exception:
+                time.sleep(0.05)
+        self._ranges(api, data, "/data/rng/f.bin")
+
+    def test_connection_cap(self):
+        socks = []
+        try:
+            for _ in range(60):
+                socks.append(socket.create_connection(("127.0.0.1", self.port), timeout=10))
+            time.sleep(0.3)           # all accepted: 48 threads, the rest turned away
+            for s in socks:
+                s.sendall(b"GET /api/ping HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n")
+            answers = []
+            for s in socks:
+                data = b""
+                while True:
+                    chunk = s.recv(65536)
+                    if not chunk:
+                        break
+                    data += chunk
+                answers.append(data)
+        finally:
+            for s in socks:
+                s.close()
+        codes = [int(a.split(b" ", 2)[1]) for a in answers]
+        self.assertEqual(set(codes), {200, 503}, codes)
+        self.assertGreaterEqual(codes.count(503), 10, codes)
+        self.assertGreaterEqual(codes.count(200), 40, codes)
+        busy = next(a for a in answers if a.split(b" ", 2)[1] == b"503")
+        self.assertIn(b"\r\nRetry-After: 2\r\n", busy)
+        self.assertIn(b"too many connections", busy)
+        # the threads go when the connections do, and the server takes new ones
+        for _ in range(100):
+            try:
+                if self.api.get("/api/ping")[0] == 200:
+                    break
+            except Exception:
+                pass
+            time.sleep(0.05)
+        self.assertEqual(self.api.get("/api/ping")[0], 200)
+
+    def test_connection_cap_idle(self):
+        # idle sockets past the cap are answered too, after a second
+        socks = []
+        try:
+            for _ in range(56):
+                socks.append(socket.create_connection(("127.0.0.1", self.port), timeout=10))
+            time.sleep(1.5)
+            busy = 0
+            for s in socks[48:]:
+                s.settimeout(0.5)
+                try:
+                    if s.recv(100).startswith(b"HTTP/1.1 503 "):
+                        busy += 1
+                except socket.timeout:
+                    pass
+            self.assertGreaterEqual(busy, 6)
+        finally:
+            for s in socks:
+                s.close()
+        for _ in range(100):
+            try:
+                if self.api.get("/api/ping")[0] == 200:
+                    break
+            except Exception:
+                pass
+            time.sleep(0.05)
+
     def test_discovery(self):
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.addCleanup(s.close)
@@ -594,6 +814,17 @@ class PayloadTest(unittest.TestCase):
         _, j = self.api.get("/api/sys/info")
         self.assertEqual(j["neohen"], "0.1.0-rc6+2382")
 
+    def test_neohen_build_version(self):
+        # the Makefile passes the repo's VERSION file in: the NeoHEN release
+        # this NeoWEB was built with, next to NeoWEB's own version
+        with open(os.path.join(os.path.dirname(__file__), "..", "..", "VERSION")) as f:
+            want = f.read().strip()
+        _, j = self.api.get("/api/sys/info")
+        self.assertEqual(j["neohenBuild"], want)
+        _, p = self.api.get("/api/ping")
+        self.assertEqual(p["neohenBuild"], want)
+        self.assertEqual(p["version"], j["version"])
+
     def test_zz_no_autosave(self):
         # the automatic save copy was taken out in 0.1.0-rc6: closing a game copies nothing
         base = f"{self.root}/mnt/usb0/NeoHEN/saves/users/NeoX_ESP (1d31cd9c)/PPSA01234"
@@ -675,6 +906,59 @@ class PayloadTest(unittest.TestCase):
         self.assertIn("mounts", info)
         self.assertIn("procs", info)
         self.assertIsInstance(json.loads(z.read("neoweb-log.json")), list)
+
+    def test_diagnostic_bundle(self):
+        import hashlib
+        import io
+        import zipfile
+        d = f"{self.root}/data/neohen"
+        os.makedirs(f"{d}/payloads", exist_ok=True)
+        elf = b"\x7fELF" + os.urandom(3000)
+        files = {
+            f"{d}/NeoHEN_crash.log": b"signal 11 at 0x1234\n",
+            f"{d}/version.txt": b"0.1.0-rc15\n",
+            f"{d}/config.ini": b"[meta]\nschema_version=1\n[x]\napi_token=abc123\nPassword = hunter2\n"
+                               b"# token=in a comment stays\nwatchdog=relaunch\n",
+            f"{d}/web/config.json": json.dumps({"token": "s3cr3t", "port": 8686, "nested": {"apiKey": "k"}}).encode(),
+            f"{d}/payloads/diag-test.elf": elf,
+            f"{d}/payloads/diag-test.elf.bundled": b"v1.2.3\n",
+            f"{d}/payloads/diag-test.elf.auto_start": b"",
+        }
+        for path, body in files.items():
+            with open(path, "wb") as f:
+                f.write(body)
+        try:
+            st, body, hdrs = self.api.req("GET", "/api/sys/report")
+            self.assertEqual(st, 200)
+            z = zipfile.ZipFile(io.BytesIO(body))
+            self.assertIsNone(z.testzip())
+            names = z.namelist()
+            for want in ("NeoHEN_crash.log", "version.txt", "config.ini", "neoweb-config.json",
+                         "payloads.json", "console.json"):
+                self.assertIn(want, names)
+            # no secrets in it
+            self.assertNotIn(b"abc123", body)
+            self.assertNotIn(b"hunter2", body)
+            self.assertNotIn(b"s3cr3t", body)
+            ini = z.read("config.ini").decode()
+            self.assertIn("api_token=(removed)\n", ini)
+            self.assertIn("Password =(removed)\n", ini)
+            self.assertIn("watchdog=relaunch\n", ini)
+            cfg = json.loads(z.read("neoweb-config.json"))
+            self.assertEqual((cfg["token"], cfg["port"], cfg["nested"]["apiKey"]), ("(removed)", 8686, "(removed)"))
+            # every payload with its SHA-256 and version
+            pay = {p["name"]: p for p in json.loads(z.read("payloads.json"))}
+            one = pay["diag-test.elf"]
+            self.assertEqual(one["sha256"], hashlib.sha256(elf).hexdigest())
+            self.assertEqual((one["size"], one["bundled"], one["autoStart"]), (len(elf), "v1.2.3", True))
+            info = json.loads(z.read("console.json"))
+            self.assertIn("firmware", info)
+            self.assertIn("active", info["safeMode"])
+            self.assertIsInstance(info["conflicts"], list)
+        finally:
+            for path in files:
+                if os.path.exists(path):
+                    os.unlink(path)
 
     def test_pkg_and_eject(self):
         os.makedirs(f"{self.root}/data/pkg", exist_ok=True)
@@ -967,9 +1251,126 @@ class PayloadTest(unittest.TestCase):
                     {"sha256": "abc"}, {"sha256": "zz" * 32}):
             st, _ = self.api.post("/api/apps/store", dict(ok, **bad))
             self.assertEqual(st, 400, bad)
+        # no SHA-256: only when the user said yes to an unverified install
+        self.assertEqual(self.api.post("/api/apps/store", dict(ok, sha256=""))[0], 400)
+        self.assertEqual(self.api.post("/api/apps/store", {k: v for k, v in ok.items() if k != "sha256"})[0], 400)
         # NeoHEN's service is not there in the tests
         self.assertEqual(self.api.post("/api/apps/store", ok)[0], 502)
-        self.assertEqual(self.api.post("/api/apps/store", dict(ok, sha256=""))[0], 502)
+        self.assertEqual(self.api.post("/api/apps/store", dict(ok, sha256="", unverified=True))[0], 502)
+
+    def test_apps_store_unverified_reaches_the_service(self):
+        sock = f"{self.root}/system_tmp/neohen/ipc/util_service"
+        seen = []
+        srv = fake_util_service(sock, lambda cmd, ask: ('{"state":"download","id":"PPSA12345"}', 0), seen)
+        try:
+            base = {"action": "install", "url": "https://github.com/a/b/releases/download/v1/PPSA12345.zip",
+                    "id": "PPSA12345", "tag": "v1", "size": 1234}
+            st, j = self.api.post("/api/apps/store", dict(base, unverified=True))
+            self.assertEqual(st, 200, j)
+            self.assertEqual(j["job"]["state"], "download")
+            cmd, ask = seen[-1]
+            self.assertEqual(cmd, 0x800001B)
+            self.assertEqual((ask["sha256"], ask["unverified"], ask["size"]), ("", True, 1234))
+            # with a SHA-256 the flag never goes along
+            st, _ = self.api.post("/api/apps/store", dict(base, sha256="cd" * 32, unverified=True))
+            self.assertEqual(st, 200)
+            self.assertEqual((seen[-1][1]["sha256"], seen[-1][1]["unverified"]), ("cd" * 32, False))
+            # what the service says no to (e.g. no room) comes back as it is
+            srv.close()
+            srv = fake_util_service(sock, lambda cmd, ask: ("not enough free space: 5.2 GB needed, 1.0 GB free", -1), seen)
+            st, j = self.api.post("/api/apps/store", dict(base, sha256="cd" * 32))
+            self.assertEqual(st, 409)
+            self.assertIn("not enough free space", j["error"])
+        finally:
+            srv.close()
+            os.unlink(sock)
+
+    def test_store_json_lock(self):
+        """store.json has two writers (this and NeoHEN's util): NeoWEB takes
+        store.json.lock, reads the file afresh and keeps what the other wrote."""
+        sock = f"{self.root}/system_tmp/neohen/ipc/util_service"
+        store = f"{self.root}/data/neohen/web/store.json"
+        lock = store + ".lock"
+        url = "https://github.com/a/b/releases/download/v1/x.elf"
+        srv = fake_util_service(sock, lambda cmd, ask: ("4096", 0), [])
+        try:
+            with open(store, "w") as f:
+                json.dump({"installed": {"y.elf": "v9"}, "sources": {"y.elf": url}}, f)
+            # a lock left by a writer that died is taken over
+            open(lock, "w").close()
+            old = time.time() - 120
+            os.utime(lock, (old, old))
+            st, j = self.api.post("/api/store/fetch", {"url": url, "name": "x.elf", "tag": "v1"})
+            self.assertEqual(st, 200, j)
+            self.assertFalse(os.path.exists(lock))
+            with open(store) as f:
+                self.assertEqual(json.load(f)["installed"], {"x.elf": "v1", "y.elf": "v9"})
+            # a live lock is waited for, and what its holder wrote is kept
+            open(lock, "w").close()
+            import threading
+            def other_writer():
+                time.sleep(0.6)
+                with open(store) as f:
+                    d = json.load(f)
+                d["installed"]["z.elf"] = "v3"
+                with open(store + ".util.tmp", "w") as f:
+                    json.dump(d, f)
+                os.rename(store + ".util.tmp", store)
+                os.unlink(lock)
+            t = threading.Thread(target=other_writer)
+            t.start()
+            st, j = self.api.post("/api/store/fetch", {"url": url, "name": "w.elf", "tag": "v2"})
+            t.join()
+            self.assertEqual(st, 200, j)
+            with open(store) as f:
+                self.assertEqual(json.load(f)["installed"],
+                                 {"x.elf": "v1", "y.elf": "v9", "z.elf": "v3", "w.elf": "v2"})
+            self.assertFalse(os.path.exists(lock))
+        finally:
+            srv.close()
+            os.unlink(sock)
+            for p in (store, lock):
+                if os.path.exists(p):
+                    os.unlink(p)
+
+    def test_health(self):
+        d = f"{self.root}/data/neohen"
+        _, j = self.api.get("/api/health")
+        self.assertEqual(j["safeMode"], {"active": False, "failedBoots": 0})
+        self.assertNotIn("BackPork", j["conflicts"])
+        # other homebrew beside NeoHEN: said, never stopped
+        bindir = tempfile.mkdtemp(prefix="procs-")
+        procs = []
+        try:
+            for name in ("ps5-backpork.elf", "kstuff.elf", "kstuff.elf"):
+                exe = os.path.join(bindir, name)
+                if not os.path.exists(exe):
+                    shutil.copy(shutil.which("sleep"), exe)
+                procs.append(subprocess.Popen([exe, "30"]))
+            time.sleep(0.2)
+            _, j = self.api.get("/api/health")
+            self.assertIn("BackPork", j["conflicts"])
+            self.assertIn("kstuff x2", j["conflicts"])
+            for p in procs:
+                self.assertIsNone(p.poll())
+        finally:
+            for p in procs:
+                p.kill()
+                p.wait()
+            shutil.rmtree(bindir)
+        # safe mode, as NeoHEN's bootstrapper leaves it, and turning it off
+        with open(f"{d}/safe_mode", "w") as f:
+            f.write("failed starts in a row: 3\n")
+        with open(f"{d}/boot_attempts", "w") as f:
+            f.write("4\n")
+        _, j = self.api.get("/api/health")
+        self.assertEqual(j["safeMode"], {"active": True, "failedBoots": 4})
+        st, _ = self.api.post("/api/health/safemode", {})
+        self.assertEqual(st, 200)
+        self.assertFalse(os.path.exists(f"{d}/safe_mode"))
+        self.assertFalse(os.path.exists(f"{d}/boot_attempts"))
+        _, j = self.api.get("/api/health")
+        self.assertFalse(j["safeMode"]["active"])
 
     # ------------------------------------------------------------ apps
     def test_apps_list(self):

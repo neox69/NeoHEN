@@ -11,6 +11,8 @@
  *   name.elf.auto_start  start it when NeoHEN boots
  *   name.elf.json        {"version":1,"priority":N,"delay_seconds":N}
  *   name.elf.bundled     NeoHEN installed it and may update it
+ *   name.elf.stopped     stopped by hand: NeoHEN's watchdogs leave it be
+ *                        (removed when it is started again)
  *
  * SPDX-License-Identifier: GPL-3.0-or-later */
 #include <dirent.h>
@@ -29,6 +31,7 @@
 #include "fsutil.h"
 #include "log.h"
 #include "plat.h"
+#include "sha256.h"
 
 #define NEOWEB_PAYLOAD_DIR  "/data/neohen/payloads"
 /* An empty file here turns the routes that change anything into 403. */
@@ -461,6 +464,8 @@ api_payloads_start(http_req_t *req) {
     return;
   }
   LOG_INFO("payload started: %s from %s", name, req->client_ip);
+  payload_path(name, ".stopped", local, sizeof(local));
+  unlink(local);
 
   /* Find its process: the one named after the file, or failing that the
    * newest process that was not there before. */
@@ -548,6 +553,12 @@ api_payloads_stop(http_req_t *req) {
   }
   LOG_INFO("payload stopped: %s (%d process%s) from %s", name, killed,
            killed == 1 ? "" : "es", req->client_ip);
+  {
+    /* stopped on purpose: a watchdog must not start it again */
+    char marker[PATH_MAX];
+    payload_path(name, ".stopped", marker, sizeof(marker));
+    fs_write_file(marker, "", 0);
+  }
   api_begin(&w);
   jw_kstr(&w, "name", name);
   jw_kint(&w, "stopped", killed);
@@ -582,6 +593,8 @@ api_payloads_delete(http_req_t *req) {
   payload_path(name, ".auto_start", local, sizeof(local));
   unlink(local);
   payload_path(name, ".json", local, sizeof(local));
+  unlink(local);
+  payload_path(name, ".stopped", local, sizeof(local));
   unlink(local);
   /* The ".bundled" stamp stays on purpose: it is what tells NeoHEN that this
    * payload was removed by the user and must not be installed again. */
@@ -620,4 +633,196 @@ api_payloads_autostart(http_req_t *req) {
   jw_kstr(&w, "name", name);
   jw_kbool(&w, "autoStart", on);
   api_finish(req, &w);
+}
+
+/* ------------------------------------------------------------ health
+ * Two things the dashboard warns about (see docs/robustness.md):
+ *   - safe mode: NeoHEN failed to reach "boot OK" 3 starts in a row, so this
+ *     start skipped auto-start payloads and plugins. /data/neohen/safe_mode
+ *     says so, /data/neohen/boot_attempts counts the failed starts. Clearing
+ *     it here removes both (the next start is a normal one).
+ *   - conflicts: another homebrew stack running beside NeoHEN. Only a
+ *     warning: nothing is stopped. */
+#define NEOHEN_SAFE_MODE     "/data/neohen/safe_mode"
+#define NEOHEN_BOOT_ATTEMPTS "/data/neohen/boot_attempts"
+
+typedef struct conflict_scan {
+  int kstuff;
+  unsigned found; /* bit per k_conflicts entry */
+} conflict_scan_t;
+
+/* lowercase piece of the process name, and what to call it */
+static const char *const k_conflicts[][2] = {
+  {"backpork", "BackPork"},
+  {"etahen", "etaHEN"},
+  {"cheatrunner", "CheatRunner"},
+};
+
+static int
+conflict_cb(void *ctx, pid_t pid, const char *name) {
+  conflict_scan_t *c = ctx;
+  char low[64];
+  size_t i;
+
+  for(i = 0; name[i] && i < sizeof(low) - 1; i++) {
+    low[i] = (char)((name[i] >= 'A' && name[i] <= 'Z') ? name[i] + 32 : name[i]);
+  }
+  low[i] = 0;
+  if(pid == getpid()) {
+    return 0;
+  }
+  if(strstr(low, "kstuff")) {
+    c->kstuff++;
+  }
+  for(i = 0; i < sizeof(k_conflicts) / sizeof(k_conflicts[0]); i++) {
+    if(strstr(low, k_conflicts[i][0])) {
+      c->found |= 1u << i;
+    }
+  }
+  return 0;
+}
+
+/* writes the names of what clashes with NeoHEN, as a JSON array */
+void
+api_health_conflicts(jw_t *w) {
+  conflict_scan_t c = {0};
+
+  plat_proc_each(conflict_cb, &c);
+  jw_arr(w);
+  for(size_t i = 0; i < sizeof(k_conflicts) / sizeof(k_conflicts[0]); i++) {
+    if(c.found & (1u << i)) {
+      jw_str(w, k_conflicts[i][1]);
+    }
+  }
+  /* NeoHEN loads one kstuff; a second one (a payload manager's) clashes */
+  if(c.kstuff > 1) {
+    jw_str(w, "kstuff x2");
+  }
+  jw_arr_end(w);
+}
+
+/* {"active": bool, "failedBoots": n}, as members of the open object */
+void
+api_health_safe_mode(jw_t *w) {
+  char local[PATH_MAX];
+  char *text = NULL;
+  size_t len = 0;
+  int64_t n = 0;
+
+  plat_path(NEOHEN_BOOT_ATTEMPTS, local, sizeof(local));
+  if(!fs_read_file(local, &text, &len, 64)) {
+    n = atoll(text);
+    free(text);
+  }
+  plat_path(NEOHEN_SAFE_MODE, local, sizeof(local));
+  jw_kbool(w, "active", exists(local));
+  jw_kint(w, "failedBoots", n > 0 ? n : 0);
+}
+
+/* GET /api/health   {"safeMode": {"active", "failedBoots"}, "conflicts": [...]} */
+void
+api_health(http_req_t *req) {
+  jw_t w;
+
+  api_begin(&w);
+  jw_key(&w, "safeMode");
+  jw_obj(&w);
+  api_health_safe_mode(&w);
+  jw_obj_end(&w);
+  jw_key(&w, "conflicts");
+  api_health_conflicts(&w);
+  api_finish(req, &w);
+}
+
+/* POST /api/health/safemode {}   the next NeoHEN start is a normal one */
+void
+api_health_safe_mode_clear(http_req_t *req) {
+  char local[PATH_MAX];
+
+  http_drain_body(req);
+  if(read_only(req)) {
+    return;
+  }
+  plat_path(NEOHEN_SAFE_MODE, local, sizeof(local));
+  if(unlink(local) && errno != ENOENT) {
+    http_send_error(req, 500, "%s: %s", NEOHEN_SAFE_MODE, strerror(errno));
+    return;
+  }
+  plat_path(NEOHEN_BOOT_ATTEMPTS, local, sizeof(local));
+  unlink(local);
+  LOG_INFO("safe mode cleared from %s", req->client_ip);
+  http_send_ok(req);
+}
+
+/* For the diagnostic report: every payload file with its size, SHA-256,
+ * auto-start, the release the store put (store.json) or the version NeoHEN
+ * bundled (.bundled stamp). A JSON array. */
+void
+api_payloads_manifest(jw_t *w) {
+  char dir[PATH_MAX], local[PATH_MAX], stamp[PATH_MAX];
+  char *text = NULL;
+  size_t len = 0;
+  jval_t *store = NULL;
+  const jval_t *installed = NULL;
+  struct dirent *e;
+  DIR *d;
+
+  plat_path(PS5AIO_DATA_DIR "/store.json", local, sizeof(local));
+  if(!fs_read_file(local, &text, &len, 1 << 20)) {
+    store = json_parse(text, len);
+    free(text);
+    installed = store ? json_get(store, "installed") : NULL;
+  }
+  jw_arr(w);
+  plat_path(NEOWEB_PAYLOAD_DIR, dir, sizeof(dir));
+  if((d = opendir(dir))) {
+    while((e = readdir(d))) {
+      struct stat st;
+      if(!valid_name(e->d_name)) {
+        continue;
+      }
+      payload_path(e->d_name, "", local, sizeof(local));
+      if(stat(local, &st) || !S_ISREG(st.st_mode)) {
+        continue;
+      }
+      jw_obj(w);
+      jw_kstr(w, "name", e->d_name);
+      jw_kint(w, "size", (int64_t)st.st_size);
+      jw_kint(w, "mtime", (int64_t)st.st_mtime);
+      {
+        sha256_t s;
+        char hex[65] = "", buf[64 * 1024];
+        ssize_t n;
+        int fd = open(local, O_RDONLY);
+        if(fd >= 0) {
+          sha256_init(&s);
+          while((n = read(fd, buf, sizeof(buf))) > 0) {
+            sha256_update(&s, buf, (size_t)n);
+          }
+          close(fd);
+          if(!n) {
+            sha256_final(&s, hex);
+          }
+        }
+        jw_kstr(w, "sha256", hex);
+      }
+      payload_path(e->d_name, ".auto_start", stamp, sizeof(stamp));
+      jw_kbool(w, "autoStart", exists(stamp));
+      payload_path(e->d_name, ".bundled", stamp, sizeof(stamp));
+      if(!fs_read_file(stamp, &text, &len, 256)) {
+        while(len && (text[len - 1] == '\n' || text[len - 1] == '\r')) {
+          text[--len] = 0;
+        }
+        jw_kstr(w, "bundled", text);
+        free(text);
+      }
+      if(installed && json_get(installed, e->d_name)) {
+        jw_kstr(w, "store", json_get_str(installed, e->d_name, ""));
+      }
+      jw_obj_end(w);
+    }
+    closedir(d);
+  }
+  jw_arr_end(w);
+  json_free(store);
 }

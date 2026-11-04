@@ -125,6 +125,7 @@ api_ping(http_req_t *req) {
   api_begin(&w);
   jw_kstr(&w, "name", PS5AIO_NAME);
   jw_kstr(&w, "version", PS5AIO_VERSION);
+  jw_kstr(&w, "neohenBuild", NEOHEN_VERSION);
   jw_kstr(&w, "platform", plat_name());
   jw_kbool(&w, "auth", g_token[0] != 0);
   api_finish(req, &w);
@@ -135,6 +136,9 @@ api_sys_info(http_req_t *req) {
   jw_t w;
   api_begin(&w);
   jw_kstr(&w, "version", PS5AIO_VERSION);
+  /* the NeoHEN release this NeoWEB was built with; "neohen" below is the
+   * NeoHEN that is running */
+  jw_kstr(&w, "neohenBuild", NEOHEN_VERSION);
   {
     /* NeoHEN writes its own version there at start (0.1.0-rc6 onwards) */
     char local[PATH_MAX], *text = NULL;
@@ -471,9 +475,105 @@ api_sys_log(http_req_t *req) {
 #ifdef NEOWEB_FULL
 /* ---------------------------------------------------------------- report
  * Everything someone helping with a problem asks for, in one ZIP: NeoHEN's
- * logs and configuration, the themes service's diary, this service's own
- * log, and what the console is (model, firmware, sensors, volumes,
- * processes). No save data, no user names, nothing from the games. */
+ * logs and crash logs, its configuration (tokens and passwords taken out),
+ * the themes service's diary, this service's own log, what the console is
+ * (model, firmware, sensors, volumes, processes), safe mode and conflicting
+ * homebrew, and every payload with its version and SHA-256. No save data,
+ * no user names, nothing from the games. */
+
+/* a setting whose value is not for sharing */
+static int
+secret_key(const char *k, size_t n) {
+  static const char *const words[] = {"token", "pass", "secret", "key", "auth", "pin", "cookie", "account"};
+  char low[64];
+  size_t i;
+
+  for(i = 0; i < n && i < sizeof(low) - 1; i++) {
+    low[i] = (char)tolower((unsigned char)k[i]);
+  }
+  low[i] = 0;
+  for(i = 0; i < sizeof(words) / sizeof(words[0]); i++) {
+    if(strstr(low, words[i])) {
+      return 1;
+    }
+  }
+  return 0;
+}
+
+static void
+scrub_json(jval_t *v) {
+  for(; v; v = v->next) {
+    if(v->key && v->type == J_STR && v->str && v->str[0] && secret_key(v->key, strlen(v->key))) {
+      free(v->str);
+      v->str = strdup("(removed)");
+    }
+    if(v->type == J_OBJ || v->type == J_ARR) {
+      scrub_json(v->child);
+    }
+  }
+}
+
+/* an INI (key=value lines) or JSON file, with the secret values taken out */
+static void
+report_scrubbed(zlist_t *z, const char *console, const char *name) {
+  char local[PATH_MAX];
+  char *data = NULL, *out = NULL;
+  size_t len = 0, lines = 1, o = 0;
+  struct stat st;
+
+  plat_path(console, local, sizeof(local));
+  if(stat(local, &st) || fs_read_file(local, &data, &len, 1 << 20)) {
+    return;
+  }
+  if(data[0] == '{') {
+    jval_t *v = json_parse(data, len);
+    jw_t w;
+    jw_init(&w);
+    if(v) {
+      scrub_json(v->child);
+      json_write(&w, v);
+      json_free(v);
+    }
+    if(!w.oom && w.data && (out = strndup(w.data, w.len))) {
+      zlist_add(z, name, NULL, out, strlen(out), st.st_mtime);
+      free(out);
+    }
+    jw_free(&w);
+    free(data);
+    return;
+  }
+  for(size_t i = 0; i < len; i++) {
+    lines += data[i] == '\n';
+  }
+  /* each line may grow by "(removed)" at most */
+  if(!(out = malloc(len + lines * 10 + 1))) {
+    free(data);
+    return;
+  }
+  for(char *line = data; line < data + len;) {
+    char *nl = memchr(line, '\n', (size_t)(data + len - line));
+    size_t n = nl ? (size_t)(nl - line) + 1 : (size_t)(data + len - line);
+    char *eq = memchr(line, '=', n);
+    if(line[0] != '#' && line[0] != ';' && eq && secret_key(line, (size_t)(eq - line))) {
+      size_t keep = (size_t)(eq - line) + 1;
+      memcpy(out + o, line, keep);
+      o += keep;
+      memcpy(out + o, "(removed)", 9);
+      o += 9;
+      if(nl) {
+        out[o++] = '\n';
+      }
+    } else {
+      memcpy(out + o, line, n);
+      o += n;
+    }
+    line += n;
+  }
+  out[o] = 0;
+  zlist_add(z, name, NULL, out, o, st.st_mtime);
+  free(out);
+  free(data);
+}
 static void
 report_text(zlist_t *z, const char *name, jw_t *w) {
   if(!w->oom && w->data) {
@@ -547,7 +647,9 @@ api_sys_report(http_req_t *req) {
     {"/data/neohen/NeoHEN_crash.log", "NeoHEN_crash.log"},
     {PS5AIO_DATA_DIR "/neoweb.log", "neoweb.log"},
     {PS5AIO_DATA_DIR "/neoweb.log.1", "neoweb.log.1"},
-    {"/data/neohen/config.ini", "config.ini"},
+    {"/data/neohen/version.txt", "version.txt"},
+    {"/data/neohen/safe_mode", "safe_mode.txt"},
+    {"/data/neohen/boot_attempts", "boot_attempts.txt"},
     {"/data/neohen/themes/neotheme.log", "themes/neotheme.log"},
     {"/data/neohen/themes/state.txt", "themes/state.txt"},
     {"/data/neohen/themes/active.txt", "themes/active.txt"},
@@ -575,8 +677,24 @@ api_sys_report(http_req_t *req) {
   plat_mounts(&w);
   jw_key(&w, "procs");
   plat_procs(&w);
+  jw_key(&w, "safeMode");
+  jw_obj(&w);
+  api_health_safe_mode(&w);
+  jw_obj_end(&w);
+  jw_key(&w, "conflicts");
+  api_health_conflicts(&w);
   jw_obj_end(&w);
   report_text(&z, "console.json", &w);
+
+  /* every payload with its SHA-256 and where it came from */
+  jw_init(&w);
+  api_payloads_manifest(&w);
+  report_text(&z, "payloads.json", &w);
+
+  report_scrubbed(&z, "/data/neohen/config.ini", "config.ini");
+  report_scrubbed(&z, PS5AIO_DATA_DIR "/config.json", "neoweb-config.json");
+  report_scrubbed(&z, PS5AIO_DATA_DIR "/store.json", "store.json");
+  report_scrubbed(&z, PS5AIO_DATA_DIR "/apps.json", "apps.json");
 
   jw_init(&w);
   log_dump_json(&w, 0);
@@ -667,6 +785,8 @@ static const api_route_t g_routes[] = {
   {"POST", "/api/payloads/stop",      api_payloads_stop},
   {"POST", "/api/payloads/delete",    api_payloads_delete},
   {"POST", "/api/payloads/autostart", api_payloads_autostart},
+  {"GET",  "/api/health",             api_health},
+  {"POST", "/api/health/safemode",    api_health_safe_mode_clear},
 
 #ifdef NEOWEB_FULL
   {"POST", "/api/sys/kill",         api_sys_kill},
@@ -880,6 +1000,31 @@ same_origin(http_req_t *req) {
   return host && !strncasecmp(origin, "http://", 7) && !strcasecmp(origin + 7, host);
 }
 
+/* Whether the readonly marker is there. Asked on every request that is not a
+ * GET, so the answer is kept for a couple of seconds: creating or removing
+ * the file takes that long to count here (NeoHEN's payload routes still look
+ * for it themselves each time). */
+#define READONLY_TTL_MS 2000
+
+static int
+read_only_marker(void) {
+  static int64_t checked = INT64_MIN / 2;
+  static int ro;
+  struct timespec ts;
+  int64_t now;
+
+  clock_gettime(CLOCK_MONOTONIC, &ts);
+  now = (int64_t)ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
+  if(now - __atomic_load_n(&checked, __ATOMIC_ACQUIRE) < READONLY_TTL_MS) {
+    return __atomic_load_n(&ro, __ATOMIC_RELAXED);
+  }
+  char marker[1024];
+  plat_path(PS5AIO_DATA_DIR "/readonly", marker, sizeof(marker));
+  __atomic_store_n(&ro, !access(marker, F_OK), __ATOMIC_RELAXED);
+  __atomic_store_n(&checked, now, __ATOMIC_RELEASE);
+  return ro;
+}
+
 void
 api_dispatch(http_req_t *req) {
   int path_matched = 0;
@@ -912,14 +1057,10 @@ api_dispatch(http_req_t *req) {
     }
     /* One switch for the whole service: with the marker file present,
      * nothing that changes the console is served. */
-    if(strcmp(req->method, "GET") && strcmp(req->method, "HEAD")) {
-      char marker[1024];
-      plat_path(PS5AIO_DATA_DIR "/readonly", marker, sizeof(marker));
-      if(!access(marker, F_OK)) {
-        http_send_error(req, 403, "NeoWEB is read-only (%s exists)",
-                        PS5AIO_DATA_DIR "/readonly");
-        return;
-      }
+    if(strcmp(req->method, "GET") && strcmp(req->method, "HEAD") && read_only_marker()) {
+      http_send_error(req, 403, "NeoWEB is read-only (%s exists)",
+                      PS5AIO_DATA_DIR "/readonly");
+      return;
     }
     r->fn(req);
     return;

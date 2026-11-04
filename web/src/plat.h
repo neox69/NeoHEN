@@ -68,6 +68,12 @@ int         plat_first_ip(char *out, size_t size);
 int         plat_unmount(const char *path);
 int         plat_eject_disc(void);
 
+/* sends up to len bytes of the file fd, from offset, down the socket sock
+ * without a copy through user memory. Returns the bytes sent (fewer than len
+ * when interrupted) or -1 with errno set; ENOSYS, EINVAL or EOPNOTSUPP mean
+ * it cannot be done this way and the caller should read() and send(). */
+ssize_t     plat_sendfile(int sock, int fd, off_t offset, size_t len);
+
 /* human readable reason for the last failing plat_* call (thread-local) */
 const char *plat_error(void);
 void        plat_set_error(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
