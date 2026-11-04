@@ -25,6 +25,8 @@ along with this program; see the file COPYING. If not, see
 #include <onion/proc_query.h>
 #include <onion/platform.h>
 #include "boot_health.hpp"
+#include <onion/safe_mode.h>
+#include <time.h>
 #include "daemon_ops.hpp"
 #include "neoweb_watchdog.hpp"
 #include "smp_watchdog.hpp"
@@ -262,6 +264,38 @@ void sig_handler(int signo) {
 
 bool is_800 = false;
 
+/* At start the Toolbox goes into the home menu only once the bootstrapper
+ * has finished: kstuff has had its 10 s to settle and the auto-start
+ * payloads are launched (it writes boot_autostart_done). Injected 1.5 s
+ * after kstuff, while it was still settling, the Toolbox stalled loading the
+ * menu's assemblies on 13.42 (1.0.0, cold boot) until the system killed the
+ * menu: a freeze and a "system software" error. Started again on its own
+ * (no bootstrapper), the marker is already there and nothing is waited. */
+static void wait_boot_settled() {
+  constexpr int kMaxWaitS = 60;
+  constexpr int kMinS = 9; /* the daemon starts about 1 s after kstuff */
+  const time_t start = time(nullptr);
+  bool said = false;
+  for (;;) {
+    const time_t waited = time(nullptr) - start;
+    if (waited >= kMaxWaitS)
+      break;
+    if (onion_file_present(ONION_BOOT_AUTOSTART_DONE_PATH) && waited >= kMinS)
+      break;
+    if (onion_file_present(ONION_BOOT_AUTOSTART_DONE_PATH) && !said &&
+        waited == 0)
+      break; /* already there: not a fresh start */
+    if (!said) {
+      LOG_INFO("Toolbox: waiting for the start to settle (kstuff, auto-start)");
+      said = true;
+    }
+    sleep(1);
+  }
+  if (said)
+    LOG_INFO("Toolbox: start settled after %ld s",
+             static_cast<long>(time(nullptr) - start));
+}
+
 int main() {
   /* Raw elfldr uploads default to "payload.elf"; publish our stable name. */
   (void)syscall(SYS_thr_set_name, -1, "onion_daemon.elf");
@@ -346,6 +380,7 @@ int main() {
             sys_ver.version);
 
   /* Toolbox injection is independent from the optional post-load navigation. */
+  wait_boot_settled();
   cmd_enable_toolbox();
 
   const onion::Settings boot_settings = g_settings.snapshot();
