@@ -5,9 +5,14 @@
  * and this start, before it launches or counts anything, looks there (the
  * rules are onion_update_decide() in onion/update_state.h):
  *
- * - installed release newer than this one: its NeoHEN.elf is checked
- *   against the SHA-256 util wrote and sent to 9021, and this start ends.
- *   The new one then does everything (replacing a running NeoHEN too);
+ * - installed release newer than this one, with update.apply_at_boot on:
+ *   its NeoHEN.elf is checked against the SHA-256 util wrote and sent to
+ *   9021, and this start ends. The new one then does everything (replacing
+ *   a running NeoHEN too);
+ * - the same with update.apply_at_boot off (the default): this one starts;
+ *   the installed one runs only when NeoWEB's "Restart now" sends it, and it
+ *   is neither counted, confirmed nor rolled back here (its trial count
+ *   starts over, since this start was not one of its);
  * - same release: this is it, and while it is on trial the start is counted
  *   in state.json (trial_starts);
  * - the trial release did not reach boot OK twice in a row: previous/ is
@@ -87,7 +92,7 @@ static bool hand_off(const char *version) {
   return true;
 }
 
-bool bootstrap_update_begin(void) {
+bool bootstrap_update_begin(bool apply_at_boot) {
   for (int round = 0; round < 2; ++round) {
     onion_update_state st;
     char installed[ONION_UPDATE_VER_MAX];
@@ -96,7 +101,18 @@ bool bootstrap_update_begin(void) {
                            sizeof(installed));
     const int failed = onion_boot_attempts_read();
     const onion_update_decision d =
-        onion_update_decide(&st, installed, ONIONHEN_VERSION, failed);
+        onion_update_decide(&st, installed, ONIONHEN_VERSION, failed, apply_at_boot);
+
+    if (d.held) {
+      LOG_INFO("update: %s is installed but update.apply_at_boot is off: starting this one "
+               "(%s); NeoWEB's Restart now uses it",
+               installed, ONIONHEN_VERSION);
+      if (d.reset_trial) {
+        st.trial_starts = 0;
+        onion_update_state_save(ONION_UPDATE_DIR, &st);
+      }
+      return true;
+    }
 
     if (d.confirm_ok) {
       /* util normally does this at boot OK; it did not get to */

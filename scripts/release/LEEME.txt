@@ -16,6 +16,8 @@ de usarla.
   TERCEROS.txt          autores, versiones y licencias de lo que lleva dentro
   neohen_ctl.py         control desde un PC (opcional)
   config.ini.ejemplo    la configuración por defecto, como referencia
+  autoload/             autoload.txt listo para los autoloaders de itsPLK
+                        (ver autoload/LEEME.txt)
 
 NeoHEN.elf lleva dentro todo lo que arranca: kstuff-lite, ShadowMount+, el
 servidor FTP, nanoDNS y NeoWEB. Los tres primeros payloads son los
@@ -31,6 +33,7 @@ la consola y deja ahí sus payloads, listos para arrancar solos:
   /data/neohen/payloads/ftpsrv.elf
   /data/neohen/payloads/nanodns.elf
   /data/neohen/payloads/neoweb.elf
+  /data/neohen/payloads/neotheme.elf   (servicio de temas)
 
 Cada uno lleva al lado tres ficheros pequeños: .auto_start (arrancar solo),
 .json (orden de arranque) y .bundled (marca de que lo instaló NeoHEN).
@@ -134,37 +137,60 @@ navegador de tu red:
 
     http://<IP_DE_LA_PS5>:8686/
 
-Tiene tres pestañas:
-  Consola     temperaturas, discos y el juego abierto, con botón de cerrar
-  Biblioteca  juegos con su carátula, buscador y botón de lanzar
-  Payloads    enviar un .elf o .bin, arrancarlo, pararlo, borrarlo y elegir
-              si arranca solo con NeoHEN
+Al arrancar, la consola muestra esa dirección. También se abre desde el
+icono de NeoWEB en Multimedia, y en el móvil con el código QR (acción
+rápida «En el móvil» del panel, o Ajustes > Acceso).
 
-También sirve los datos a paneles domésticos y sustituye a PS5Upload, sin
-engancharse al menú de la consola.
+Panel de la consola, biblioteca, payloads, explorador de ficheros,
+Instalar (PKG, parches y DLC mediante ShadowMount+), tienda de apps, temas,
+homebrew, ajustes de NeoHEN y actualizaciones de NeoHEN. Sustituye a
+PS5Upload sin engancharse al menú de la consola.
 
-No tiene explorador de ficheros, ni instalador, ni puede apagar la consola.
-Lo único que cambia es el juego en marcha y los ficheros de la carpeta de
-payloads. No pide contraseña: cualquiera de tu red puede usarla, igual que
-ya puede enviar un payload al puerto 9021. Si solo quieres la parte de
-consulta, crea un fichero vacío /data/neohen/web/readonly y todo lo que
-modifica algo quedará bloqueado. Si no quieres NeoWEB, borra
-payloads/neoweb.elf.auto_start.
+Por defecto no pide contraseña: cualquiera de tu red puede usarla, igual
+que ya puede enviar un payload al puerto 9021. En Ajustes > Acceso puedes
+crear un token (se muestra una vez) y un token de invitado de solo
+lectura. Un fichero vacío /data/neohen/web/readonly bloquea todo lo que
+modifica algo. Si no quieres NeoWEB, borra payloads/neoweb.elf.auto_start.
+
+
+8b. Actualizar, volver atrás y modo seguro
+----------------------------------------------------------------
+Desde la 0.1.0-rc16: NeoWEB > Sistema > Actualizar NeoHEN descarga la
+versión nueva de GitHub, comprueba su SHA-256 y la deja en
+/data/neohen/update/current junto a la anterior. «Reiniciar NeoHEN con …»
+la usa en el momento. Con «Usar la actualización al arrancar»
+(update.apply_at_boot, apagado por defecto) cada arranque pasa a ella, y si
+no termina de arrancar dos veces seguidas vuelve sola a la anterior. Con el
+ajuste apagado arranca siempre el NeoHEN.elf que envías. «Volver a la
+anterior» lo hace a mano; por FTP, borra /data/neohen/update/current.
+
+Si NeoHEN no termina de arrancar 3 veces seguidas, arranca en modo seguro:
+sin payloads automáticos (salvo NeoWEB) ni plugins. Se quita con «Arranque
+normal» en el panel de NeoWEB. Para forzarlo, crea un fichero vacío
+/data/neohen/safe_mode.
+
+Desinstalar: deja de enviar NeoHEN.elf y reinicia; para borrar sus
+ficheros, borra /data/neohen (y /user/data/neohen si existe).
 
 
 9. Estado de esta versión
 ----------------------------------------------------------------
-Probado en consola (PS5 13.42) con NeoHEN 0.1.0-rc1, cargado sobre un
-kstuff-lite 1.11 ya en marcha: arranque, marca e icono, Toolbox desde la
-tarjeta y desde Ajustes, descarga de trucos, tres juegos con ShadowMount+
-(uno AMPR), reposo con un juego suspendido en los modos manual y stable, y
-recarga de la Toolbox desde el PC.
+Solo se ha probado en una consola, PS5 CFI-7021 con firmware 13.42. La 1.0
+apunta a 13.00-13.60; el resto de firmware está por confirmar, y por debajo
+de 13.00 debería funcionar pero no se ha probado. 14.x no está soportado.
 
-Sin verificar en consola: la carga única en frío con el arranque
-automático de payloads, el vigilante de ShadowMount+ cuando de verdad
-pierde el hook, la espera por ps5upload, y lo nuevo de esta versión
-(nombre en Ajustes, modo stable por defecto). Los pasos de prueba están en
-docs/PRUEBAS-CONSOLA.md.
+Probado en 13.42 (0.1.0-rc1 a rc3, y partes de NeoWEB durante la rc5):
+arranque, en frío también, Toolbox desde la tarjeta y desde Ajustes,
+descarga de trucos, juegos montados con ShadowMount+ (uno AMPR), reposo con
+un juego suspendido en los modos manual y stable, recarga de la Toolbox
+desde el PC, el vigilante relanzando un ShadowMount+ parado, y la página de
+NeoWEB con su gestor de payloads.
+
+Sin verificar en consola: la instalación de los payloads en el primer
+arranque, lanzar y cerrar juegos desde NeoWEB, el vigilante de ShadowMount+
+cuando de verdad pierde el hook, aplicar un truco, instalar PKG, y todo lo
+nuevo desde la rc13 (actualizar desde NeoWEB, modo seguro, modo invitado...).
+La tabla completa está en el README del repositorio.
 
 
 Créditos

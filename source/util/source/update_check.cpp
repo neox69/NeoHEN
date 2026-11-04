@@ -174,7 +174,10 @@ void check_once() {
  * NeoWEB's store keeps, for each payload it installed, the release it put
  * ("installed") and the file it came from ("sources", a github.com release
  * download URL). When the author has a newer release with a file of the same
- * name, it replaces the one in the payloads folder. A payload that is running
+ * name, it replaces the one in the payloads folder. A file whose name carries
+ * its version (ps5debug-NG_v1.3.2.elf, kept as ps5debug-NG.elf) has its
+ * name pattern in "assets" ("ps5debug-NG*.elf", * and ? only): the one file
+ * of the new release that matches it is taken (none, or two, and nothing is). A payload that is running
  * keeps running the old version until it is started again. Payloads put
  * there by hand or bundled with NeoHEN are not in the store: never touched.
  * "store_auto_off" in the data folder turns this off.
@@ -223,6 +226,39 @@ std::string asset_sha256(const cJSON *asset) {
     if (!std::isdigit(static_cast<unsigned char>(d[i])) && (d[i] < 'a' || d[i] > 'f'))
       return "";
   return d.substr(7);
+}
+
+/* * any run of characters (none too), ? one; nothing else is special */
+bool glob_match(const char *p, const char *s) {
+  for (; *p; ++p, ++s) {
+    if (*p == '*') {
+      while (p[1] == '*')
+        ++p;
+      for (const char *t = s;; ++t) {
+        if (glob_match(p + 1, t))
+          return true;
+        if (!*t)
+          return false;
+      }
+    }
+    if (!*s || (*p != '?' && *p != *s))
+      return false;
+  }
+  return !*s;
+}
+
+/* a pattern NeoWEB stored: a plain file name with * and ?, no paths */
+bool asset_glob_ok(const std::string &g) {
+  if (g.empty() || g.size() > 80 || g[0] == '.')
+    return false;
+  bool plain = false;
+  for (char c : g) {
+    if (std::isalnum(static_cast<unsigned char>(c)))
+      plain = true;
+    else if (c != '.' && c != '_' && c != '-' && c != '*' && c != '?')
+      return false;
+  }
+  return plain;
 }
 
 std::string hex32(const uint8_t *d) {
@@ -290,6 +326,7 @@ void store_check_once() {
     return;
   const cJSON *sources = onion_cjson::item(store.get(), "sources");
   const cJSON *installed = onion_cjson::item(store.get(), "installed");
+  const cJSON *patterns = onion_cjson::item(store.get(), "assets"); /* may be absent */
   if (!sources || !installed)
     return;
   struct Update { std::string name, from, to, url, sha; };
@@ -311,6 +348,10 @@ void store_check_once() {
     if (parts.size() != 6 || parts[2] != "releases" || parts[3] != "download")
       continue;
     const std::string asset = parts[5];
+    const std::string glob =
+        patterns ? onion_cjson::string_item(patterns, name.c_str(), "") : std::string();
+    if (!glob.empty() && !asset_glob_ok(glob))
+      continue;
     const std::string current = onion_cjson::string_item(installed, name.c_str(), "");
     std::string body;
     if (!fetch_text("https://api.github.com/repos/" + parts[0] + "/" + parts[1] +
@@ -325,19 +366,30 @@ void store_check_once() {
     if (tag.empty() || tag == current)
       continue;
     const cJSON *assets = onion_cjson::item(latest, "assets");
+    const cJSON *pick = nullptr;
+    int matches = 0;
     for (const cJSON *a = assets ? assets->child : nullptr; a; a = a->next) {
-      if (asset == onion_cjson::string_item(a, "name", "")) {
-        const std::string sha = asset_sha256(a);
-        if (sha.empty()) {
-          /* decision 6.1 of the 1.0 plan: automatic updates need a hash */
-          LOG_INFO("[store] %s %s has no SHA-256 on GitHub: not updated by itself",
-                   name.c_str(), tag.c_str());
-          break;
-        }
-        todo.push_back({name, current, tag,
-                        onion_cjson::string_item(a, "browser_download_url", ""), sha});
-        break;
+      const std::string an = onion_cjson::string_item(a, "name", "");
+      if (glob.empty() ? an == asset : glob_match(glob.c_str(), an.c_str())) {
+        pick = pick ? pick : a;
+        ++matches;
       }
+    }
+    if (matches > 1) {
+      LOG_INFO("[store] %s %s: %d files match %s, not updated by itself", name.c_str(),
+               tag.c_str(), matches, glob.c_str());
+      continue;
+    }
+    if (pick) {
+      const std::string sha = asset_sha256(pick);
+      if (sha.empty()) {
+        /* decision 6.1 of the 1.0 plan: automatic updates need a hash */
+        LOG_INFO("[store] %s %s has no SHA-256 on GitHub: not updated by itself",
+                 name.c_str(), tag.c_str());
+        continue;
+      }
+      todo.push_back({name, current, tag,
+                      onion_cjson::string_item(pick, "browser_download_url", ""), sha});
     }
   }
   if (todo.empty())

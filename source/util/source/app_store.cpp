@@ -11,7 +11,15 @@
  * user agreed ("unverified": true); apps.json remembers it as unverified.
  * Free space on /data is checked before the download (the zip's size) and
  * again before unpacking (what the zip says it holds).
- * What was installed, and which release, is kept in web/apps.json. */
+ * What was installed, and which release, is kept in web/apps.json.
+ *
+ * "kind": "homebrew" installs a zip laid out for websrv's homebrew folder
+ * instead (ps5-payload-dev/offact's OffAct.zip: OffAct.elf, homebrew.js,
+ * sce_sys/icon0.png): its files, at the top of the zip or inside one folder,
+ * go to /data/homebrew/<dir>/, a name NeoWEB's page gives ("OffAct"), and
+ * NeoWEB's Homebrew section lists it. It must hold homebrew.js or eboot.elf.
+ * Same download, SHA-256, free-space and zip-slip rules, the same swap by
+ * rename; apps.json keeps it under "homebrew" instead of "installed". */
 
 #include "app_store.hpp"
 
@@ -54,7 +62,8 @@ constexpr unsigned long long kSpareBytes = 256ull << 20;
 
 struct Job {
   std::string state = "idle"; /* idle download unpack done failed */
-  std::string id, tag, url, sha, err;
+  std::string id, tag, url, sha, err; /* id: the title id, or the homebrew folder */
+  bool homebrew = false;
   size_t got = 0, total = 0;
   bool unverified = false;
 };
@@ -69,6 +78,17 @@ bool id_ok(const std::string &id) {
   for (size_t i = 0; i < 9; ++i)
     if (i < 4 ? !std::isupper(static_cast<unsigned char>(id[i]))
               : !std::isdigit(static_cast<unsigned char>(id[i])))
+      return false;
+  return true;
+}
+
+/* a folder name for /data/homebrew: letters, digits, "._-", not hidden, and
+ * not a title id (those folders are ShadowMount+'s apps) */
+bool dir_ok(const std::string &d) {
+  if (d.empty() || d.size() > 64 || d[0] == '.' || id_ok(d))
+    return false;
+  for (char c : d)
+    if (!std::isalnum(static_cast<unsigned char>(c)) && c != '.' && c != '_' && c != '-')
       return false;
   return true;
 }
@@ -149,8 +169,8 @@ std::string room_for(const char *path, unsigned long long need) {
   return "not enough free space: " + gib(need + kSpareBytes) + " needed, " + gib(have) + " free";
 }
 
-void remember(const std::string &id, const std::string &tag, const std::string &url,
-              bool unverified) {
+void remember(const char *list, const std::string &id, const std::string &tag,
+              const std::string &url, bool unverified) {
   char *text = nullptr;
   size_t len = 0;
   cJSON *root = nullptr;
@@ -162,9 +182,11 @@ void remember(const std::string &id, const std::string &tag, const std::string &
     cJSON_Delete(root);
     root = cJSON_CreateObject();
   }
-  cJSON *installed = cJSON_GetObjectItemCaseSensitive(root, "installed");
-  if (!cJSON_IsObject(installed))
-    installed = cJSON_AddObjectToObject(root, "installed");
+  cJSON *installed = cJSON_GetObjectItemCaseSensitive(root, list);
+  if (!cJSON_IsObject(installed)) {
+    cJSON_DeleteItemFromObjectCaseSensitive(root, list);
+    installed = cJSON_AddObjectToObject(root, list);
+  }
   cJSON *one = cJSON_CreateObject();
   cJSON_AddStringToObject(one, "tag", tag.c_str());
   cJSON_AddStringToObject(one, "url", url.c_str());
@@ -204,9 +226,49 @@ std::string app_prefix(mz_zip_archive *zip, mz_uint n, const std::string &id) {
   return found;
 }
 
+/* A homebrew folder zip: homebrew.js or eboot.elf at the top (prefix ""),
+ * or every file inside one folder that has one of them ("OffAct/").
+ * False when neither. */
+bool homebrew_prefix(mz_zip_archive *zip, mz_uint n, std::string &prefix) {
+  bool top = false, one = true;
+  std::string first;
+  for (mz_uint i = 0; i < n; ++i) {
+    mz_zip_archive_file_stat st;
+    if (!mz_zip_reader_file_stat(zip, i, &st) || !safe_path(st.m_filename))
+      continue; /* refused later */
+    const std::string name(st.m_filename);
+    if (name == "homebrew.js" || name == "eboot.elf")
+      top = true;
+    const size_t slash = name.find('/');
+    const std::string folder = slash == std::string::npos ? "" : name.substr(0, slash + 1);
+    if (folder.empty() || (!first.empty() && folder != first))
+      one = false;
+    else
+      first = folder;
+  }
+  if (top) {
+    prefix.clear();
+    return true;
+  }
+  if (!one || first.empty())
+    return false;
+  for (mz_uint i = 0; i < n; ++i) {
+    mz_zip_archive_file_stat st;
+    if (!mz_zip_reader_file_stat(zip, i, &st))
+      continue;
+    const std::string name(st.m_filename);
+    if (name == first + "homebrew.js" || name == first + "eboot.elf") {
+      prefix = first;
+      return true;
+    }
+  }
+  return false;
+}
+
 /* Unpack zip into stage: the "<id>/" folder only, wherever app_prefix found
- * it. Files beside it (a readme, the license) are left out. */
-std::string unpack(const std::string &zip_path, const std::string &id,
+ * it. Files beside it (a readme, the license) are left out. A homebrew zip:
+ * everything, or what is inside its one folder. */
+std::string unpack(const std::string &zip_path, const std::string &id, bool homebrew,
                    const std::string &stage) {
   mz_zip_archive zip;
   memset(&zip, 0, sizeof(zip));
@@ -218,9 +280,14 @@ std::string unpack(const std::string &zip_path, const std::string &id,
   mz_uint64 total = 0;
   if (n == 0 || n > kMaxEntries)
     err = "too many or no files in the zip";
-  const std::string prefix = err.empty() ? app_prefix(&zip, n, id) : "";
-  if (err.empty() && prefix.empty())
-    err = "the zip holds no " + id + " folder with an eboot.bin";
+  std::string prefix;
+  if (err.empty() && homebrew && !homebrew_prefix(&zip, n, prefix))
+    err = "the zip holds no homebrew.js or eboot.elf (at its top or in one folder)";
+  if (err.empty() && !homebrew) {
+    prefix = app_prefix(&zip, n, id);
+    if (prefix.empty())
+      err = "the zip holds no " + id + " folder with an eboot.bin";
+  }
   for (mz_uint i = 0; err.empty() && i < n; ++i) {
     mz_zip_archive_file_stat st;
     if (!mz_zip_reader_file_stat(&zip, i, &st)) {
@@ -238,7 +305,7 @@ std::string unpack(const std::string &zip_path, const std::string &id,
     param = param || name == prefix + "sce_sys/param.json";
     total += st.m_uncomp_size;
   }
-  if (err.empty() && (!eboot || !param))
+  if (err.empty() && !homebrew && (!eboot || !param))
     err = "no eboot.bin or sce_sys/param.json in " + id;
   if (err.empty() && total > kMaxAppBytes)
     err = "the app is too big";
@@ -291,9 +358,11 @@ void *job_thread(void *) {
     std::lock_guard<std::mutex> lock(g_mu);
     j = g_job;
   }
-  const std::string zip = std::string(kWork) + "/" + j.id + ".zip";
-  const std::string stage = std::string(kWork) + "/stage-" + j.id;
-  const std::string old = std::string(kWork) + "/old-" + j.id;
+  /* "hb-": a homebrew folder never shares work names with a title id */
+  const std::string tmp = (j.homebrew ? "hb-" : "") + j.id;
+  const std::string zip = std::string(kWork) + "/" + tmp + ".zip";
+  const std::string stage = std::string(kWork) + "/stage-" + tmp;
+  const std::string old = std::string(kWork) + "/old-" + tmp;
   const std::string dest = std::string(kHome) + "/" + j.id;
   mkdir_tree(kWork);
   mkdir_tree(kHome);
@@ -338,7 +407,7 @@ void *job_thread(void *) {
   }
 
   set("unpack");
-  std::string err = unpack(zip, j.id, stage);
+  std::string err = unpack(zip, j.id, j.homebrew, stage);
   unlink(zip.c_str());
   if (err.empty()) {
     /* the new folder replaces the old one in one rename each */
@@ -357,7 +426,7 @@ void *job_thread(void *) {
     set("failed", err);
     return nullptr;
   }
-  remember(j.id, j.tag, j.url, j.unverified);
+  remember(j.homebrew ? "homebrew" : "installed", j.id, j.tag, j.url, j.unverified);
   LOG_INFO("[apps] %s %s installed in %s", j.id.c_str(), j.tag.c_str(), dest.c_str());
   set("done");
   return nullptr;
@@ -368,6 +437,8 @@ std::string status_json() {
   cJSON *o = cJSON_CreateObject();
   cJSON_AddStringToObject(o, "state", g_job.state.c_str());
   cJSON_AddStringToObject(o, "id", g_job.id.c_str());
+  if (g_job.homebrew)
+    cJSON_AddStringToObject(o, "kind", "homebrew");
   cJSON_AddStringToObject(o, "tag", g_job.tag.c_str());
   cJSON_AddNumberToObject(o, "got", static_cast<double>(g_job.got));
   cJSON_AddNumberToObject(o, "total", static_cast<double>(g_job.total));
@@ -397,7 +468,9 @@ bool util_app_store(const cJSON *request, std::string &out) {
     return false;
   }
   const std::string url = onion_cjson::string_item(request, "url", "");
-  const std::string id = onion_cjson::string_item(request, "id", "");
+  const bool homebrew = std::string(onion_cjson::string_item(request, "kind", "app")) == "homebrew";
+  const std::string id =
+      onion_cjson::string_item(request, homebrew ? "dir" : "id", "");
   const std::string tag = onion_cjson::string_item(request, "tag", "");
   const std::string sha = onion_cjson::string_item(request, "sha256", "");
   const cJSON *unv = cJSON_GetObjectItemCaseSensitive(request, "unverified");
@@ -405,7 +478,7 @@ bool util_app_store(const cJSON *request, std::string &out) {
   const cJSON *sz = cJSON_GetObjectItemCaseSensitive(request, "size");
   const unsigned long long size =
       cJSON_IsNumber(sz) && sz->valuedouble > 0 ? static_cast<unsigned long long>(sz->valuedouble) : 0;
-  if (!id_ok(id) || tag.size() > 60 || (!sha.empty() && !sha_ok(sha)) || url.compare(0, 19, "https://github.com/") != 0 ||
+  if (!(homebrew ? dir_ok(id) : id_ok(id)) || tag.size() > 60 || (!sha.empty() && !sha_ok(sha)) || url.compare(0, 19, "https://github.com/") != 0 ||
       url.size() > 400) {
     out = "rejected";
     return false;
@@ -437,6 +510,7 @@ bool util_app_store(const cJSON *request, std::string &out) {
     g_job = Job();
     g_job.state = "download";
     g_job.id = id;
+    g_job.homebrew = homebrew;
     g_job.tag = tag;
     g_job.url = url;
     g_job.sha = sha;

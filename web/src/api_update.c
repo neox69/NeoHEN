@@ -4,11 +4,12 @@
  * source/util/source/neohen_update.cpp): it asks GitHub for the release
  * update.channel picks, downloads its zip, checks GitHub's SHA-256 and what
  * is inside, and keeps it in /data/neohen/update/current with the release
- * before it in previous/. The next NeoHEN.elf that starts hands off to it
- * (or "apply" restarts NeoHEN with it now). A release that does not reach
+ * before it in previous/. "apply" restarts NeoHEN with it now; with
+ * update.apply_at_boot on, every NeoHEN.elf that starts also hands off to
+ * it (off by default). A release that does not reach
  * boot OK twice is rolled back by the bootstrapper. This file only relays:
  *
- * GET  /api/update   {"running", "channel", "installed": {state.json +
+ * GET  /api/update   {"running", "channel", "apply_at_boot", "installed": {state.json +
  *                    "current"/"previous" folders}, "available":
  *                    {available.json} | null, "job": {...} | null}
  * POST /api/update   {"action": "check" | "install" (+ "tag") | "cancel" |
@@ -22,6 +23,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <sys/stat.h>
 
 #include "fsutil.h"
@@ -79,16 +81,19 @@ read_word(const char *path, char *out, size_t size) {
   free(data);
 }
 
-/* update.channel in config.ini: stable (the default) or prerelease */
-static const char *
-channel(void) {
+/* [update] @name in config.ini, as NeoHEN reads it (the last one counts);
+ * "" when it is not there */
+static void
+update_key(const char *name, char *out, size_t cap) {
   char local[PATH_MAX], line[256];
-  int in_update = 0, pre = 0;
+  size_t nl = strlen(name);
+  int in_update = 0;
   FILE *f;
 
+  out[0] = 0;
   plat_path(CONFIG_INI, local, sizeof(local));
   if(!(f = fopen(local, "r"))) {
-    return "stable";
+    return;
   }
   while(fgets(line, sizeof(line), f)) {
     char *p = line, *e;
@@ -99,10 +104,10 @@ channel(void) {
       in_update = !strncmp(p, "[update]", 8);
       continue;
     }
-    if(!in_update || strncmp(p, "channel", 7)) {
+    if(!in_update || strncmp(p, name, nl)) {
       continue;
     }
-    p += 7;
+    p += nl;
     while(*p == ' ' || *p == '\t') {
       p++;
     }
@@ -114,10 +119,28 @@ channel(void) {
     }
     for(e = p; *e && !isspace((unsigned char)*e) && *e != ';' && *e != '#'; e++) {
     }
-    pre = (size_t)(e - p) == 10 && !strncmp(p, "prerelease", 10);
+    snprintf(out, cap, "%.*s", (int)(e - p), p);
   }
   fclose(f);
-  return pre ? "prerelease" : "stable";
+}
+
+/* update.channel: stable (the default) or prerelease */
+static const char *
+channel(void) {
+  char v[32];
+
+  update_key("channel", v, sizeof(v));
+  return !strcmp(v, "prerelease") ? "prerelease" : "stable";
+}
+
+/* update.apply_at_boot: off by default (settings.cpp's parse_bool) */
+static int
+apply_at_boot(void) {
+  char v[32];
+
+  update_key("apply_at_boot", v, sizeof(v));
+  return !strcasecmp(v, "on") || !strcasecmp(v, "true") || !strcasecmp(v, "yes") ||
+         !strcmp(v, "1");
 }
 
 /* v0.1.0-rc16, 1.0.0: what util accepts as a tag */
@@ -185,6 +208,7 @@ reply(http_req_t *req, const char *job) {
   api_begin(&w);
   jw_kstr(&w, "running", run);
   jw_kstr(&w, "channel", channel());
+  jw_kbool(&w, "apply_at_boot", apply_at_boot());
   jw_key(&w, "installed");
   jw_obj(&w);
   jw_kstr(&w, "current", cur);

@@ -870,6 +870,10 @@ class PayloadTest(unittest.TestCase):
             st, j = self.api.get("/api/update")
             self.assertEqual(st, 200, j)
             self.assertEqual((j["running"], j["channel"], j["job"]), ("0.1.0-rc16+ab12", "prerelease", None))
+            self.assertIs(j["apply_at_boot"], False)  # off unless config.ini says on
+            self._update_files({"config.ini": b"[update]\napply_at_boot = On ; at every start\nchannel=stable\n"})
+            _, j2 = self.api.get("/api/update")
+            self.assertEqual((j2["apply_at_boot"], j2["channel"]), (True, "stable"))
             self.assertEqual(j["installed"]["state"], state)
             self.assertEqual((j["installed"]["current"], j["installed"]["previous"]), ("0.1.0-rc17", "0.1.0-rc16"))
             self.assertEqual(j["available"], avail)
@@ -1440,6 +1444,83 @@ class PayloadTest(unittest.TestCase):
         finally:
             srv.close()
             os.unlink(sock)
+
+    def test_apps_store_homebrew_folder(self):
+        """a zip for websrv's homebrew folder (offact's OffAct.zip) goes to
+        /data/homebrew/<dir>: the folder name is checked like a file name,
+        and the SHA-256 rule is the same as for apps"""
+        ok = {"action": "install", "kind": "homebrew", "dir": "OffAct", "tag": "v0.4.2", "size": 3413323,
+              "url": "https://github.com/ps5-payload-dev/offact/releases/download/v0.4.2/OffAct.zip",
+              "sha256": "0fcb22174934387dc671cf134a8b802505657622dabc050d20fe930457eb34aa"}
+        for bad in ({"dir": ""}, {"dir": "../x"}, {"dir": "a/b"}, {"dir": ".hidden"}, {"dir": "a b"},
+                    {"dir": "x" * 65}, {"dir": "PPSA12345"}, {"kind": "other"},
+                    {"url": "https://evil.example/OffAct.zip"}, {"sha256": "abc"}, {"sha256": ""}):
+            st, _ = self.api.post("/api/apps/store", dict(ok, **bad))
+            self.assertEqual(st, 400, bad)
+        sock = f"{self.root}/system_tmp/neohen/ipc/util_service"
+        seen = []
+        apps = f"{self.root}/data/neohen/web/apps.json"
+        os.makedirs(os.path.dirname(apps), exist_ok=True)
+        with open(apps, "w") as f:
+            json.dump({"installed": {"PPSA12345": {"tag": "v1"}}, "homebrew": {"OffAct": {"tag": "v0.4.1"}}}, f)
+        srv = fake_util_service(sock, lambda cmd, ask: ('{"state":"download","id":"OffAct","kind":"homebrew"}', 0), seen)
+        try:
+            st, j = self.api.post("/api/apps/store", ok)
+            self.assertEqual(st, 200, j)
+            cmd, ask = seen[-1]
+            self.assertEqual(cmd, 0x800001B)
+            self.assertEqual({k: ask[k] for k in ("action", "kind", "dir", "sha256", "unverified", "size", "tag")},
+                             {"action": "install", "kind": "homebrew", "dir": "OffAct", "sha256": ok["sha256"],
+                              "unverified": False, "size": 3413323, "tag": "v0.4.2"})
+            self.assertEqual((j["job"]["kind"], j["homebrew"], j["installed"]),
+                             ("homebrew", {"OffAct": {"tag": "v0.4.1"}}, {"PPSA12345": {"tag": "v1"}}))
+            # no digest on GitHub: only as unverified, as for apps
+            st, _ = self.api.post("/api/apps/store", dict(ok, sha256="", unverified=True))
+            self.assertEqual((st, seen[-1][1]["unverified"], seen[-1][1]["sha256"]), (200, True, ""))
+            # an app install sends no kind, as before
+            st, _ = self.api.post("/api/apps/store", {"action": "install", "id": "PPSA12345", "tag": "v1",
+                                                       "url": "https://github.com/a/b/releases/download/v1/PPSA12345.zip",
+                                                       "sha256": "ab" * 32})
+            self.assertEqual(st, 200)
+            self.assertNotIn("kind", seen[-1][1])
+        finally:
+            srv.close()
+            os.unlink(sock)
+            os.unlink(apps)
+
+    def test_store_asset_pattern(self):
+        """a payload whose release file carries its version (ps5debug-NG_v1.3.2.elf,
+        kept as ps5debug-NG.elf): the page sends a name pattern and store.json
+        keeps it under "assets" for NeoHEN's automatic update"""
+        sock = f"{self.root}/system_tmp/neohen/ipc/util_service"
+        store = f"{self.root}/data/neohen/web/store.json"
+        url = "https://github.com/Pharaoh2k/ps5debug-NG/releases/download/v1.3.2/ps5debug-NG_v1.3.2.elf"
+        ok = {"url": url, "name": "ps5debug-NG.elf", "tag": "v1.3.2", "asset": "ps5debug-NG*.elf"}
+        for bad in ("../x*.elf", "a/b*.elf", "*", ".x*", "x y.elf", "x" * 81):
+            st, _ = self.api.post("/api/store/fetch", dict(ok, asset=bad))
+            self.assertEqual(st, 400, bad)
+        srv = fake_util_service(sock, lambda cmd, ask: ("4096", 0), [])
+        try:
+            st, j = self.api.post("/api/store/fetch", ok)
+            self.assertEqual(st, 200, j)
+            with open(store) as f:
+                d = json.load(f)
+            self.assertEqual((d["sources"]["ps5debug-NG.elf"], d["assets"]), (url, {"ps5debug-NG.elf": "ps5debug-NG*.elf"}))
+            # installed again without one: the pattern is dropped ("" is the URL's name)
+            st, _ = self.api.post("/api/store/fetch", {k: v for k, v in ok.items() if k != "asset"})
+            self.assertEqual(st, 200)
+            with open(store) as f:
+                self.assertEqual(json.load(f)["assets"], {"ps5debug-NG.elf": ""})
+            # one with an unchanging name never gets an entry
+            st, _ = self.api.post("/api/store/fetch", {"url": "https://github.com/a/b/releases/download/v1/x.elf",
+                                                        "name": "x.elf", "tag": "v1"})
+            with open(store) as f:
+                self.assertNotIn("x.elf", json.load(f)["assets"])
+        finally:
+            srv.close()
+            os.unlink(sock)
+            if os.path.exists(store):
+                os.unlink(store)
 
     def test_store_json_lock(self):
         """store.json has two writers (this and NeoHEN's util): NeoWEB takes
@@ -2324,6 +2405,9 @@ class NeoHenSettingsTest(unittest.TestCase):
         self.assertEqual((keys["shadowmount.watchdog_interval_seconds"]["min"],
                           keys["shadowmount.watchdog_interval_seconds"]["max"]), (30, 3600))
         self.assertEqual(keys["update.channel"]["when"], "now")
+        # the hand-off at boot to a release installed from NeoWEB: off unless asked
+        self.assertEqual({f: keys["update.apply_at_boot"][f] for f in ("value", "set", "default", "when", "choices")},
+                         {"value": "off", "set": False, "default": "off", "when": "start", "choices": ["on", "off"]})
         self.assertEqual(keys["startup.show_thanks"]["when"], "start")
         self.assertEqual(keys["rest_mode.stable_seconds"]["when"], "resume")
 
@@ -2362,6 +2446,20 @@ class NeoHenSettingsTest(unittest.TestCase):
         keys = {k["key"]: k["value"] for k in j["keys"]}
         self.assertEqual((keys["neoweb.watchdog"], keys["shadowmount.watchdog"], keys["update.channel"]),
                          ("off", "notify", "stable"))
+
+    def test_apply_at_boot(self):
+        st, j = self.api.post("/api/neohen/settings", {"values": {"update.apply_at_boot": "ON"}})
+        self.assertEqual(st, 200, j)
+        self.assertEqual({c["key"]: c["when"] for c in j["changed"]}, {"update.apply_at_boot": "start"})
+        self.assertIn("[update]\nchannel=stable\nmy_own_key=keep me\napply_at_boot=on\n", self.read())
+        st, j = self.api.post("/api/neohen/settings", {"values": {"update.apply_at_boot": True}})
+        self.assertEqual(st, 400, j)
+        # NeoHEN reads it as a boolean: a hand-written "true" shows as on
+        with open(self.ini, "w") as f:
+            f.write(NEOHEN_INI.replace("my_own_key=keep me", "apply_at_boot = true"))
+        _, j = self.api.get("/api/neohen/settings")
+        k = {k["key"]: k for k in j["keys"]}["update.apply_at_boot"]
+        self.assertEqual((k["value"], k["set"]), ("on", True))
 
     def test_write_refused(self):
         for values in ({"meta.schema_version": "2"}, {"overlay.enabled": True},
@@ -2609,6 +2707,170 @@ class GuestTest(unittest.TestCase):
         st, _ = self.call("POST", "/api/auth/guest", body={"action": "new"})
         self.assertEqual(st, 409)
 
+
+# nanoDNS's own default config (README of drakmor/nanoDNS 0.4)
+NANODNS_INI = """[general]
+log=/data/nanodns/nanodns.log
+debug=0
+quiet=0
+bind=127.0.0.1
+bind6=::1
+
+[upstream]
+server=1.1.1.1
+server=8.8.8.8
+server=77.88.8.8
+timeout_ms=1500
+
+[overrides]
+*.playstation.com=0.0.0.0
+*.playstation.com.*=0.0.0.0
+playstation.com=0.0.0.0
+*.playstation.net=0.0.0.0
+*.playstation.net.*=0.0.0.0
+*.psndl.net=0.0.0.0
+playstation.net=0.0.0.0
+psndl.net=0.0.0.0
+# *.example.com=192.168.0.10
+# exact.host.local=10.0.0.42
+
+[exceptions]
+feature.api.playstation.com
+*.stun.playstation.net
+stun.*.playstation.net
+ena.net.playstation.net
+post.net.playstation.net
+gst.prod.dl.playstation.net
+# auth.api.playstation.net
+# *.allowed.playstation.net
+"""
+
+
+class DnsUpdatesTest(unittest.TestCase):
+    """Settings > NeoHEN > nanoDNS: the "block system updates" preset."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.root = tempfile.mkdtemp(prefix="neoweb-dns-")
+        cls.ini = f"{cls.root}/data/nanodns/nanodns.ini"
+        cls.proc, cls.api = start_neoweb(cls.root)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.proc.kill()
+        cls.proc.wait()
+        shutil.rmtree(cls.root, ignore_errors=True)
+
+    def write(self, text, mode="w"):
+        os.makedirs(os.path.dirname(self.ini), exist_ok=True)
+        with open(self.ini, mode, newline="") as f:
+            f.write(text)
+
+    def read(self):
+        with open(self.ini, newline="") as f:
+            return f.read()
+
+    def tearDown(self):
+        if os.path.exists(self.ini):
+            os.unlink(self.ini)
+
+    def test_no_config_yet(self):
+        _, j = self.api.get("/api/dns/updates")
+        self.assertEqual((j["enabled"], j["configFound"]), (False, False))
+        self.assertEqual(j["config"], "/data/nanodns/nanodns.ini")
+        st, j = self.api.post("/api/dns/updates", {"enabled": True})
+        self.assertEqual(st, 409, j)
+        self.assertFalse(os.path.exists(self.ini))
+
+    def test_on_and_off(self):
+        self.write(NANODNS_INI)
+        _, j = self.api.get("/api/dns/updates")
+        self.assertFalse(j["enabled"])
+        self.assertTrue(j["configFound"])
+        # nanoDNS's defaults already block all of *.playstation.net
+        self.assertTrue(j["covered"])
+        self.assertEqual(j["bind"], "127.0.0.1")
+        self.assertEqual(j["bypass"], [])
+        hosts = j["hosts"]
+        self.assertEqual(len(hosts), 39)
+        for h in ("fus01.ps5.update.playstation.net", "djp01.ps5.update.playstation.net",
+                  "heu01.ps5.update.playstation.net", "dbr01.ps5.update.playstation.net"):
+            self.assertIn(h, hosts)
+        self.assertTrue(all(h.endswith(".ps5.update.playstation.net") for h in hosts))
+
+        st, j = self.api.post("/api/dns/updates", {"enabled": True})
+        self.assertEqual(st, 200, j)
+        self.assertTrue(j["enabled"])
+        text = self.read()
+        lines = text.split("\n")
+        at = lines.index("[overrides]")
+        self.assertTrue(lines[at + 1].startswith("# >>> NeoWEB: block system updates"))
+        self.assertEqual(lines[at + 2:at + 41], [h + "=0.0.0.0" for h in hosts])
+        self.assertEqual(lines[at + 41], "# <<< NeoWEB: block system updates")
+        # the rest of the file is as it was
+        self.assertEqual("\n".join(lines[:at + 1] + lines[at + 42:]), NANODNS_INI)
+        # on twice is the same file
+        self.api.post("/api/dns/updates", {"enabled": True})
+        self.assertEqual(self.read(), text)
+
+        _, j = self.api.post("/api/dns/updates", {"enabled": False})
+        self.assertFalse(j["enabled"])
+        self.assertEqual(self.read(), NANODNS_INI)
+
+    def test_exception_lets_them_through(self):
+        cfg = NANODNS_INI.replace("feature.api.playstation.com\n",
+                                  "feature.api.playstation.com\n*.UPDATE.playstation.net  # mine\n")
+        self.write(cfg.replace("bind=127.0.0.1", "bind = 0.0.0.0"))
+        self.api.post("/api/dns/updates", {"enabled": True})
+        _, j = self.api.get("/api/dns/updates")
+        self.assertTrue(j["enabled"])
+        self.assertFalse(j["covered"])
+        self.assertEqual(j["bypass"], ["*.update.playstation.net"])
+        self.assertEqual(j["bind"], "0.0.0.0")
+
+    def test_user_rules_only_psn_back(self):
+        # the user took the PSN blocks out: nothing blocks the update servers
+        cfg = "[overrides]\n*.example.com=192.168.0.10\n"
+        self.write(cfg)
+        _, j = self.api.get("/api/dns/updates")
+        self.assertFalse(j["covered"])
+        # an earlier rule that sends them elsewhere is not "covered" either
+        self.write("[overrides]\n*.update.playstation.net=10.0.0.1\n*.playstation.net=0.0.0.0\n")
+        _, j = self.api.get("/api/dns/updates")
+        self.assertFalse(j["covered"])
+
+    def test_no_overrides_section_and_crlf(self):
+        cfg = "[general]\r\nbind=127.0.0.1\r\n\r\n[upstream]\r\nserver=1.1.1.1"
+        self.write(cfg)
+        _, j = self.api.post("/api/dns/updates", {"enabled": True})
+        self.assertTrue(j["enabled"])
+        text = self.read()
+        self.assertTrue(text.startswith(cfg + "\r\n\r\n[overrides]\r\n# >>> NeoWEB"))
+        self.assertNotIn("\n", text.replace("\r\n", ""))
+        self.assertTrue(text.endswith("# <<< NeoWEB: block system updates\r\n"))
+        _, j = self.api.post("/api/dns/updates", {"enabled": False})
+        self.assertFalse(j["enabled"])
+        # the [overrides] header stays; nanoDNS takes an empty one
+        self.assertEqual(self.read(), cfg + "\r\n\r\n[overrides]\r\n")
+
+    def test_cut_block_is_off_and_keeps_user_lines(self):
+        self.write(NANODNS_INI)
+        self.api.post("/api/dns/updates", {"enabled": True})
+        text = self.read().replace("fus01.ps5.update.playstation.net=0.0.0.0\n",
+                                   "mine.example=1.2.3.4\n")
+        self.write(text)
+        _, j = self.api.get("/api/dns/updates")
+        self.assertFalse(j["enabled"])
+        _, j = self.api.post("/api/dns/updates", {"enabled": False})
+        self.assertIn("mine.example=1.2.3.4\n", self.read())
+        self.assertNotIn("NeoWEB", self.read())
+
+    def test_bad_body(self):
+        self.write(NANODNS_INI)
+        for body in ({}, {"enabled": "yes"}, {"enabled": 1}):
+            st, _ = self.api.post("/api/dns/updates", body)
+            self.assertEqual(st, 400, body)
+        self.assertEqual(self.read(), NANODNS_INI)
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

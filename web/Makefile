@@ -23,6 +23,8 @@ ifndef SAFE
 COMMON_SRCS += src/api_mem.c src/api_dump.c src/api_saves.c src/api_captures.c src/api_stats.c src/api_trophies.c src/api_games.c src/api_cheats.c src/api_smp.c src/api_store.c src/api_launcher.c src/api_usb.c src/api_neohen.c src/api_unpack.c src/api_cleanup.c src/sqlite_ro.c src/zipstream.c src/discovery.c
 # NeoHEN's own update (System > NeoHEN update)
 COMMON_SRCS += src/api_update.c
+# the "Block system updates" preset in nanoDNS's config (Settings > NeoHEN)
+COMMON_SRCS += src/api_dns.c
 FULLDEF     := -DNEOWEB_FULL
 else
 # the handlers of the routes that are compiled out stay in the sources

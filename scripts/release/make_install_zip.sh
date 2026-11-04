@@ -2,7 +2,9 @@
 # Build the NeoHEN release zip.
 #   scripts/release/make_install_zip.sh <NeoHEN.elf> <version> <out_dir>
 # Produces <out_dir>/NeoHEN-<version>.zip with NeoHEN.elf, LEEME.txt,
-# TERCEROS.txt, neohen_ctl.py and the default config.ini as an example.
+# TERCEROS.txt, neohen_ctl.py, the default config.ini as an example, and
+# autoload/: an autoload.txt for the itsPLK PS5 autoloaders (see
+# scripts/release/autoload/LEEME.txt).
 #
 # There is nothing to install: NeoHEN.elf carries kstuff and the payloads it
 # starts (see source/bootstrapper/source/bundled_payloads.c) and writes them
@@ -19,7 +21,12 @@ mkdir -p "${DIR}"
 cp "${ELF}" "${DIR}/NeoHEN.elf"
 sed "s/@VERSION@/${VERSION}/" "${ROOT}/scripts/release/LEEME.txt" > "${DIR}/LEEME.txt"
 cp "${ROOT}/scripts/release/TERCEROS.txt" "${DIR}/TERCEROS.txt"
+cp "${ROOT}/LICENSE" "${DIR}/LICENSE.txt"
 cp "${ROOT}/scripts/neohen_ctl.py" "${DIR}/neohen_ctl.py"
+mkdir -p "${DIR}/autoload/ps5_autoloader"
+cp "${ROOT}/scripts/release/autoload/LEEME.txt" "${DIR}/autoload/LEEME.txt"
+cp "${ROOT}/scripts/release/autoload/autoload.txt" "${DIR}/autoload/ps5_autoloader/autoload.txt"
+grep -qx 'NeoHEN.elf' "${DIR}/autoload/ps5_autoloader/autoload.txt"
 
 # Default config.ini, printed by the settings code itself. NeoHEN runs with
 # these values when the file does not exist; it is only here as a reference.

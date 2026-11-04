@@ -330,6 +330,10 @@ struct Settings {
   // stable: final releases only, unless NeoHEN itself is a pre-release and
   // no newer final is out; prerelease: every release.
   int update_channel = kUpdateChannelStable;
+  // At every start, hand off to the release installed from NeoWEB
+  // (/data/neohen/update/current) when it is newer than the NeoHEN.elf
+  // that was sent. Off: it is used only when NeoWEB's "Restart now" asks.
+  bool update_apply_at_boot = false;
 
   // [diagnostics]
   // Log kstuff's sysentvec toggles (read-only kernel reads).

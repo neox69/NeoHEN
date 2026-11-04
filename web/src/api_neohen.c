@@ -67,6 +67,7 @@ typedef struct nh_key {
 
 static const nh_key_t g_keys[] = {
   {"update.channel", 'e', "stable|prerelease", 0, 0, "stable", "now"},
+  {"update.apply_at_boot", 'e', "on|off", 0, 0, "off", "start"},
   {"neoweb.watchdog", 'e', "off|notify|relaunch", 0, 0, "relaunch", "now"},
   {"shadowmount.watchdog", 'e', "off|notify|relaunch", 0, 0, "relaunch", "now"},
   {"shadowmount.watchdog_interval_seconds", 'i', NULL, 30, 3600, "60", "now"},
@@ -292,6 +293,12 @@ api_neohen_settings_get(http_req_t *req) {
   for(size_t i = 0; i < NKEYS; i++) {
     const nh_key_t *k = &g_keys[i];
     ini_get(text, k->key, v, sizeof(v));
+    if(k->type == 'e' && !strcmp(k->choices, "on|off") && v[0]) {
+      /* NeoHEN reads these as booleans: true/yes/1 are on too */
+      int on = !strcasecmp(v, "on") || !strcasecmp(v, "true") || !strcasecmp(v, "yes") || !strcmp(v, "1");
+      int off = !strcasecmp(v, "off") || !strcasecmp(v, "false") || !strcasecmp(v, "no") || !strcmp(v, "0");
+      snprintf(v, sizeof(v), "%s", on ? "on" : off ? "off" : "");
+    }
     jw_obj(&w);
     jw_kstr(&w, "key", k->key);
     jw_kstr(&w, "type", k->type == 'e' ? "enum" : k->type == 'b' ? "bool" : "int");

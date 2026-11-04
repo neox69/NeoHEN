@@ -10,8 +10,10 @@
  *
  * and every start of NeoHEN.elf (bootstrap_update.c), before it counts
  * itself for safe mode, looks there: when the installed release is newer
- * than the NeoHEN.elf that was sent, it sends the installed one to 9021 and
- * ends ("hand-off"). The ELF the user sends is therefore always the last
+ * than the NeoHEN.elf that was sent and update.apply_at_boot is on (off by
+ * default), it sends the installed one to 9021 and ends ("hand-off"). With
+ * it off the installed release runs only when NeoWEB's "Restart now" sends
+ * it. The ELF the user sends is therefore always the last
  * fallback: a broken install never stops them from starting what they send.
  *
  * A new install is "trial" until one of its starts reaches boot OK (see
@@ -249,16 +251,21 @@ typedef struct onion_update_decision {
   onion_update_action action;
   bool confirm_ok;  /* the last trial start reached boot OK: mark it ok */
   bool count_trial; /* this start runs the trial release: count it */
+  bool held;        /* newer one installed, but update.apply_at_boot is off */
+  bool reset_trial; /* held while on trial: its failed-in-a-row count restarts */
 } onion_update_decision;
 
 /* @installed: version.txt of current/ ("" when there is none), @mine: this
  * NeoHEN.elf's ONIONHEN_VERSION, @boot_attempts: the count before this start
- * adds itself (failed starts in a row). Pure: no files. */
+ * adds itself (failed starts in a row), @apply_at_boot: update.apply_at_boot
+ * (off: a newer installed release is not handed off to at boot; it runs only
+ * when NeoWEB's "Restart now" sends it). Pure: no files. */
 static inline onion_update_decision onion_update_decide(const onion_update_state *st,
                                                         const char *installed,
                                                         const char *mine,
-                                                        int boot_attempts) {
-  onion_update_decision d = {ONION_UPDATE_RUN_SELF, false, false};
+                                                        int boot_attempts,
+                                                        bool apply_at_boot) {
+  onion_update_decision d = {ONION_UPDATE_RUN_SELF, false, false, false, false};
   if (!installed || !installed[0] || strcmp(st->status, "rolled_back") == 0)
     return d;
   const int cmp = onion_update_version_cmp(installed, mine);
@@ -268,6 +275,15 @@ static inline onion_update_decision onion_update_decide(const onion_update_state
    * a crash: it has not been confirmed, so it is on trial from 0 */
   const bool described = onion_update_version_cmp(st->current, installed) == 0;
   const bool trial = !described || strcmp(st->status, "ok") != 0;
+  if (cmp > 0 && !apply_at_boot) {
+    /* the NeoHEN.elf that was sent runs: boot_attempts says nothing about
+     * the installed one, so it is neither confirmed nor rolled back, and the
+     * starts it had are no longer "in a row" (the next "Restart now" counts
+     * from 0, so an older boot OK cannot confirm it) */
+    d.held = true;
+    d.reset_trial = trial && described && st->trial_starts > 0;
+    return d;
+  }
   if (trial) {
     const int starts = described ? st->trial_starts : 0;
     if (starts >= 1 && boot_attempts == 0) {

@@ -48,8 +48,10 @@ rollback), NeoWEB `GET/POST /api/update` (`web/src/api_update.c`) and the
 
 NeoHEN.elf is not installed on the console: it is sent to the exploit's
 loader (9021) on every boot, from wherever the user keeps it. So an update
-keeps the new release on the console and the next NeoHEN.elf that starts
-hands off to it:
+keeps the new release on the console, and it is used when the user presses
+**Restart NeoHEN with ...** in NeoWEB, or, with `update.apply_at_boot=on`
+(off by default), at every start: the NeoHEN.elf that starts hands off to
+it:
 
 | Path (`/data/neohen/update/`) | Meaning |
 |---|---|
@@ -86,14 +88,29 @@ sends only the tag, util looks the release up on GitHub itself):
    undone if the next fails), then `trash/` is deleted and `state.json`
    says `trial`. A notification says it is installed.
 
-**When it takes effect.** At the next start of NeoHEN: whatever NeoHEN.elf
-is sent, its bootstrapper (after replacing a running NeoHEN, before it
-counts itself in `boot_attempts`) sees a newer release in `current/`,
-checks it against `sha256.txt`, sends it to 9021 and ends. That one starts
-as usual. Or at once with **Restart NeoHEN with ...** (`"action":"apply"`):
-util sends `current/NeoHEN.elf` to 9021 and the documented replace path
-(`replace_running.c`) stops the running stack and starts the new one (not
-with a game open; the home screen restarts).
+**When it takes effect.** Installing only stages it in `current/`; the
+running NeoHEN keeps running. Then:
+
+- **Restart NeoHEN with ...** (`"action":"apply"`), an explicit action in
+  NeoWEB, works whatever the setting: util sends `current/NeoHEN.elf` to
+  9021 and the documented replace path (`replace_running.c`) stops the
+  running stack and starts the new one (not with a game open; the home
+  screen restarts).
+- At boot, only with `update.apply_at_boot=on` (`[update]` in config.ini,
+  off by default; NeoWEB's NeoHEN settings, "Apply the update at start";
+  read by the bootstrapper's own `settings_load` in
+  `bootstrap_config.cpp`, before anything else): whatever NeoHEN.elf is
+  sent, its bootstrapper (after replacing a running NeoHEN, before it
+  counts itself in `boot_attempts`) sees a newer release in `current/`,
+  checks it against `sha256.txt`, sends it to 9021 and ends. That one
+  starts as usual.
+- With it off, the bootstrapper logs that a newer release is installed and
+  starts the NeoHEN.elf that was sent. It neither confirms, counts nor
+  rolls back the installed release at that start (`boot_attempts` then
+  describes the sent one, not it), and if the installed one was on trial
+  its `trial_starts` goes back to 0: its starts are no longer in a row, so
+  the next **Restart now** counts from 0 and an older boot OK cannot mark
+  it `ok`.
 
 What is sent still wins when it is newer than what is installed, and so
 does a developer build (`dirty-...`). Anything wrong with the installed
@@ -101,7 +118,8 @@ copy (missing, bad hash, 9021 not answering) starts the NeoHEN.elf that
 was sent.
 
 **Trial and automatic rollback.** A new release is `trial` until one of its
-starts reaches boot OK (safe mode's rule: the daemon removes
+starts (handed off at boot, sent by **Restart now**, or sent by hand)
+reaches boot OK (safe mode's rule: the daemon removes
 `boot_attempts` 60 s after `boot_autostart_done`); util then writes `ok`
 (and the bootstrapper does too at the next start if util did not get to).
 Each start of the trial release adds one to `trial_starts`. When a start
@@ -113,7 +131,11 @@ restored one does not go into safe mode for the other's failures; a
 `safe_mode` file stays), notifies "NeoHEN X did not finish starting twice:
 going back to Y" and decides again. Rollback comes at the second failed
 start, safe mode at the third, so a broken update is rolled back before
-safe mode would hide it.
+safe mode would hide it. With `update.apply_at_boot=off` a failed
+**Restart now** needs no rollback: the next boot starts the NeoHEN.elf
+that is sent (and resets the trial count, above); the installed release
+is rolled back by itself only if it is started twice in a row and fails
+both times (sent by hand, for example).
 
 **Manual rollback.** **Go back to the previous one** (`"action":"rollback"`)
 does the same by hand. It holds from the next start; the running NeoHEN
@@ -168,10 +190,27 @@ Decision 6.1 of `docs/roadmap-1.0.md`.
   zip's size as GitHub gives it, plus 256 MB) and again before unpacking
   (the size the zip says it unpacks to, with the zip still there), and
   refuses with "not enough free space: X GB needed, Y GB free".
+- Homebrew-folder zips (`"kind": "homebrew"`, `"dir"` in place of `"id"`;
+  the Homebrew section's "Homebrew to install", e.g.
+  ps5-payload-dev/offact's `OffAct.zip`) follow the same SHA-256, unverified
+  and free-space rules. The zip must hold `homebrew.js` or `eboot.elf` at
+  its top or inside one folder; any unsafe name (absolute, `..`, `.`,
+  backslash) refuses the whole zip before anything is written. It is
+  unpacked beside its place and swapped into `/data/homebrew/<dir>/` by
+  rename (the old folder is replaced whole). `<dir>` is letters, digits
+  and `._-`, not hidden, and not a title id. `apps.json` keeps it under
+  `"homebrew"`. Host tests: `source/util/tests/test_app_store.cpp`.
 - Automatic payload updates (`store_check_once` in
   `source/util/source/update_check.cpp`) only take a release file whose
   GitHub asset has a `sha256:` digest, and only when the download matches
-  it; otherwise the payload is left as it is.
+  it; otherwise the payload is left as it is. They look for the file name
+  in the stored `sources` URL, or, for a payload whose release file carries
+  its version (ps5debug-NG: `ps5debug-NG_v1.3.2.elf`, kept as
+  `ps5debug-NG.elf`), for the pattern in `store.json`'s `"assets"`
+  (`"ps5debug-NG*.elf"`, `*` and `?` only), which the page sends with the
+  install. Exactly one file of the new release must match; two and it is
+  not updated by itself. A payload installed before the pattern existed
+  gets it the next time it is installed from the store.
 
 ## store.json: two writers
 

@@ -1,0 +1,66 @@
+autoload/ - NeoHEN con un autoloader / NeoHEN with an autoloader
+================================================================
+
+Algunos cargadores de payloads leen al arrancar un fichero de texto con
+los .elf que tienen que enviar. Esta carpeta trae ese fichero ya escrito
+para cargar NeoHEN.elf. Solo hay plantilla para los cargadores cuyo
+formato está confirmado en su propia documentación.
+
+Some payload loaders read, when they start, a text file that lists the
+.elf files to send. This folder holds that file, ready to load NeoHEN.elf.
+There is only a template for loaders whose format their own docs confirm.
+
+
+Autoloaders de itsPLK / itsPLK's autoloaders
+----------------------------------------------------------------
+ps5-lua-autoloader, ps5-y2jb-autoloader, ps5-bdjb-autoloader,
+ps5-webkit-autoloader y ps5-yarpe-autoloader (https://github.com/itsPLK).
+Todos usan ps5-unified-autoloader, que busca autoload.txt en una carpeta
+ps5_autoloader:
+
+  - en la raíz de un USB:        /mnt/usbN/ps5_autoloader/autoload.txt
+  - en el disco de la consola:   /data/ps5_autoloader/autoload.txt
+
+(También ps5_autoloader_<TITLE_ID>, que va antes que la genérica.)
+Los nombres del fichero se buscan en la misma carpeta que autoload.txt y
+distinguen mayúsculas.
+
+  1. Copia la carpeta ps5_autoloader de aquí a la raíz del USB (o a /data
+     por FTP).
+  2. Copia NeoHEN.elf (el de este zip) dentro de esa carpeta, junto a
+     autoload.txt.
+  3. Prepara el cargador tal como dice su propio README.
+
+Si ya tienes un autoload.txt, añade la línea NeoHEN.elf a ese en lugar de
+sustituirlo. Con un autoload.txt presente el cargador no abre Payload
+Manager; si también lo quieres, pon pldmgr.elf en la carpeta y en la lista.
+
+All of them use ps5-unified-autoloader, which looks for autoload.txt in a
+ps5_autoloader folder at the root of a USB drive (/mnt/usbN/ps5_autoloader)
+or on the console's drive (/data/ps5_autoloader); a ps5_autoloader_<TITLE_ID>
+folder goes first. File names are looked up next to autoload.txt and are
+case-sensitive.
+
+  1. Copy the ps5_autoloader folder from here to the root of a USB drive
+     (or to /data over FTP).
+  2. Copy NeoHEN.elf (the one in this zip) into that folder, next to
+     autoload.txt.
+  3. Set the loader up as its own README says.
+
+If you already have an autoload.txt, add the line NeoHEN.elf to it instead
+of replacing it. While an autoload.txt is there the loader does not open
+Payload Manager; to keep it, put pldmgr.elf in the folder and in the list.
+
+Formato / Format: https://github.com/itsPLK/ps5-unified-autoloader#autoloadtxt-format
+                  https://github.com/itsPLK/ps5-lua-autoloader#readme
+
+
+Otros cargadores / Other loaders
+----------------------------------------------------------------
+Para cualquier otro cargador (los que tienen su carpeta payloads/ u otra
+lista propia), mira su propio README: aquí no hay plantilla porque su
+formato no está confirmado.
+
+For any other loader (the ones with their own payloads/ folder or list),
+see the loader's own README: there is no template here because its format
+is not confirmed.

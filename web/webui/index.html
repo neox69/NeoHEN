@@ -1320,7 +1320,7 @@ function show(v,push){
   if(push)history.replaceState(null,"","#"+(v==="game"?"game="+S.gp.id:v));
   $("side").className="side";paintNav();render();$("view").scrollTop=0;
   var sec=$("v-"+v);sec.classList.add("enter");clearTimeout(S.enterT);S.enterT=setTimeout(function(){sec.classList.remove("enter")},900);
-  if(v==="files")loadDir(S.cwd);if(v==="procs")loadProcs();if(v==="system"){loadLog();S.fanEdit=null;loadFan();loadLnch();loadNupd()}if(v==="transfers")loadJobs();if(v==="payloads"){loadPay();loadStore()}if(v==="themes")loadThemes();if(v==="saves")loadSaves();if(v==="captures")loadCaps();if(v==="cheats")loadCheats();if(v==="stats")loadStats();if(v==="trophies")loadTrophies();if(v==="smp")loadSmp();if(v==="install")loadInst();if(v==="apps")loadApps();if(v==="homebrew")loadHb();if(v==="fixes")loadFixes();if(v==="settings"&&S.full)api("/api/update/notice").then(function(j){S.updOn=j.enabled;if(S.view==="settings")paintCfg()}).catch(function(){});if(v==="settings")nhLoad();if(v==="remote")loadRemote();if(v==="game")loadGame();
+  if(v==="files")loadDir(S.cwd);if(v==="procs")loadProcs();if(v==="system"){loadLog();S.fanEdit=null;loadFan();loadLnch();loadNupd()}if(v==="transfers")loadJobs();if(v==="payloads"){loadPay();loadStore()}if(v==="themes")loadThemes();if(v==="saves")loadSaves();if(v==="captures")loadCaps();if(v==="cheats")loadCheats();if(v==="stats")loadStats();if(v==="trophies")loadTrophies();if(v==="smp")loadSmp();if(v==="install")loadInst();if(v==="apps")loadApps();if(v==="homebrew"){loadHb();hsLoad()}if(v==="fixes")loadFixes();if(v==="settings"&&S.full)api("/api/update/notice").then(function(j){S.updOn=j.enabled;if(S.view==="settings")paintCfg()}).catch(function(){});if(v==="settings"){nhLoad();loadDnsUpd()}if(v==="remote")loadRemote();if(v==="game")loadGame();
 }
 $("nav").onclick=function(e){var p=e.target.closest("[data-pin]"),f=e.target.closest("[data-fold]"),k;
   if(p){k=p.getAttribute("data-pin");var ps=CFG.pins.filter(function(x){return x!==k});if(CFG.pins.indexOf(k)<0)ps.push(k);cfgSet("pins",ps);return}
@@ -1386,7 +1386,7 @@ function paintPanel(){
   var act=upRows().slice(0,3).map(function(r){var st=r.b?r.a.st:r.u.st;return '<div class="rowl"><i class="dot'+(st==="run"?" on":"")+'"></i><div class="t"><b>'+esc(r.b?r.a.name:r.u.name)+'</b><small>'+(r.b?batState(r.a):upState(r.u))+'</small></div></div>'}).join("")+
     S.jobs.slice(-3).reverse().map(function(j){return '<div class="rowl"><i class="dot'+(j.state==="running"?" on":"")+'"></i><div class="t"><b>'+esc(j.title)+'</b><small>'+esc(j.state)+'</small></div></div>'}).join("");
   var vp=$("v-panel"),first=!S.panelOnce&&i.model;if(first){S.panelOnce=1;vp.classList.add("first");setTimeout(function(){vp.classList.remove("first")},1600);setTimeout(countUp,0)}
-  $("v-panel").innerHTML=updNote()+healthNote()+hero+k+qrCard()+
+  $("v-panel").innerHTML=updNote()+healthNote()+dnsNote()+hero+k+qrCard()+
     '<div class="g2"><div class="card pad chart"><h3 class="h">'+L("Temperatura","Temperature")+' <em>'+L("últimos 10 min","last 10 min")+'</em><span class="sp"></span><span class="lg"><b style="--c:#4DA3FF">CPU</b><b style="--c:#8E7BFF">SoC</b></span></h3>'+chart()+'</div>'+
     '<div class="card pad"><h3 class="h">'+L("Almacenamiento","Storage")+'</h3>'+(st||'<div class="empty">–</div>')+'</div></div>'+
     '<div class="g3"><div class="card pad"><h3 class="h">'+L("Accesos rápidos","Quick actions")+'</h3><div class="qa">'+
@@ -1565,7 +1565,56 @@ function paintHb(){
       (a.js?'<button class="btn sm'+(a.elf?"":" pri")+'" data-hb="open" data-v="'+d+'"'+(can?"":" disabled")+'>'+L("Menú","Menu")+'</button>':"")+
       (a.elf?'<button class="btn sm pri" data-hb="run" data-v="'+d+'"'+(can?"":" disabled")+'>'+ic("play")+L("Lanzar","Launch")+'</button>':"")+'</div></div>'}).join("")
     :'<div class="empty">'+L("No hay homebrew con eboot.elf o homebrew.js en esas carpetas.","No homebrew with eboot.elf or homebrew.js in those folders.")+'</div>')+'</div>';
-  v.innerHTML=h;
+  v.innerHTML=h+hsCard();
+}
+/* Homebrew from GitHub releases whose zip is laid out for websrv's homebrew
+ * folder (homebrew.js and/or eboot.elf, an icon): NeoHEN's service downloads
+ * it, checks GitHub's SHA-256 and unpacks it into /data/homebrew/<folder>
+ * (/api/apps/store with "kind": "homebrew"). [folder, name, repo, asset, what it is] */
+var HBSTORE=[
+ ["OffAct","OffAct","ps5-payload-dev/offact",/^OffAct\.zip$/,L("Activación de cuentas sin conexión","Offline account activation")]];
+S.hs={rel:{},inst:{},job:null,err:"",svc:"",tm:0};
+function hsBusy(j){return !!j&&j.kind==="homebrew"&&(j.state==="download"||j.state==="unpack")}
+function hsLoad(){
+  if(!S.full)return;var hs=S.hs;hs.err="";hsPoll();
+  HBSTORE.forEach(function(x){if(hs.rel[x[0]])return;
+    fetch("https://api.github.com/repos/"+x[2]+"/releases?per_page=1").then(function(r){if(!r.ok)throw new Error("GitHub "+r.status);return r.json()}).then(function(j){
+      var rl=j[0],a=rl&&rl.assets.filter(function(y){return x[3].test(y.name)})[0];
+      if(a)hs.rel[x[0]]={tag:rl.tag_name,url:a.browser_download_url,size:a.size,sha:/^sha256:[0-9a-f]{64}$/.test(a.digest||"")?a.digest.slice(7):""}},
+      function(e){hs.err=e.message}).then(function(){if(S.view==="homebrew")paintHb()})});
+}
+function hsPoll(){
+  var hs=S.hs;clearTimeout(hs.tm);
+  return api("/api/apps/store").then(function(j){
+    var was=hsBusy(hs.job);hs.inst=j.homebrew||{};hs.job=j.job;hs.svc="";
+    if(was&&!hsBusy(hs.job)&&hs.job){if(hs.job.state==="done"){toast(hs.job.id+L(" instalado en /data/homebrew/"," installed in /data/homebrew/")+hs.job.id);loadHb()}
+      else toast(L("No se pudo instalar: ","Could not install: ")+(hs.job.err||hs.job.state),true)}
+    if(hsBusy(hs.job))hs.tm=setTimeout(hsPoll,1000);
+  },function(e){hs.svc=e.message}).then(function(){if(S.view==="homebrew")paintHb()});
+}
+function hsCard(){
+  if(!S.full)return "";
+  var hs=S.hs,j=hs.job,busy=hsBusy(j)||(j&&(j.state==="download"||j.state==="unpack")),pct=j&&j.total?Math.round(j.got/j.total*100):0;
+  return '<h3 class="h" style="margin-top:22px">'+L("Homebrew para instalar","Homebrew to install")+' <em>'+HBSTORE.length+'</em></h3>'+
+    '<p style="margin:0 0 10px;color:var(--dim)">'+L("La consola lo descarga del GitHub de su autor, comprueba su SHA-256 y lo descomprime en /data/homebrew/<carpeta>. Al actualizar, la carpeta entera se cambia por la nueva.",
+      "The console downloads it from its author's GitHub, checks its SHA-256 and unpacks it into /data/homebrew/<folder>. Updating swaps the whole folder for the new one.")+'</p>'+
+    (hs.svc?'<div class="note">'+esc(hs.svc)+'</div>':"")+(hs.err?'<div class="note">'+L("GitHub no ha contestado a todo: ","GitHub did not answer everything: ")+esc(hs.err)+'</div>':"")+
+    (hsBusy(j)?'<div class="prog" style="margin-bottom:10px"><i style="width:'+Math.max(1,pct)+'%"></i></div>':"")+
+    '<div class="card">'+HBSTORE.map(function(x){var r=hs.rel[x[0]],it=hs.inst[x[0]],have=!!hbApp("/data/homebrew/"+x[0]),same=it&&r&&it.tag===r.tag,dis=busy||S.ro?" disabled":"";
+      return '<div class="item"><div class="av">'+esc(x[1].slice(0,1))+'</div><div class="t"><b>'+esc(x[1])+'</b><small>'+esc(x[4])+' · <a href="https://github.com/'+x[2]+'" target="_blank" rel="noopener">'+x[2]+'</a> · /data/homebrew/'+esc(x[0])+'</small></div><div class="acts">'+
+        (r?'<span class="chip">'+esc(r.tag)+" · "+size(r.size)+'</span>':'<span class="chip">'+(hs.err?"?":"…")+'</span>')+
+        (same?'<span class="chip ok">'+L("al día","up to date")+'</span>':it?'<span class="chip warn">'+L("tienes ","you have ")+esc(it.tag)+'</span>':have?'<span class="chip">'+L("en la consola","on the console")+'</span>':"")+
+        (r&&!same?'<button class="btn sm'+(it||have?"":" pri")+'" data-hs="'+esc(x[0])+'"'+dis+'>'+ic("download")+(hsBusy(j)&&j.id===x[0]?L("Descargando…","Downloading…"):it||have?L("Poner la ","Get ")+esc(r.tag):L("Instalar","Install"))+'</button>':"")+'</div></div>'}).join("")+'</div>';
+}
+function hsGet(dir){
+  var x=HBSTORE.filter(function(y){return y[0]===dir})[0],r=S.hs.rel[dir];if(!x||!r)return;
+  /* as in the app store: no SHA-256 from GitHub, only after saying so */
+  var nosha=!/^[0-9a-f]{64}$/.test(r.sha||"");
+  ask((nosha?L("Instalar sin verificar ","Install unverified "):L("Instalar ","Install "))+x[1]+" "+r.tag,L("La consola descarga ","The console downloads ")+size(r.size)+L(" de GitHub y lo descomprime en /data/homebrew/"," from GitHub and unpacks it into /data/homebrew/")+dir+L(" (lo que hubiera en esa carpeta se sustituye)."," (whatever was in that folder is replaced).")+
+    (nosha?L(" GitHub no publica el SHA-256 de este archivo, así que no se puede comprobar que llega intacto. Instálalo solo si confías en él."," GitHub publishes no SHA-256 for this file, so there is no way to check it arrives intact. Only install it if you trust it."):""),
+    nosha?L("Instalar sin verificar","Install unverified"):L("Instalar","Install"),nosha).then(function(ok){if(!ok)return;
+    var q={action:"install",kind:"homebrew",dir:dir,url:r.url,tag:r.tag,size:r.size||0};if(nosha)q.unverified=true;else q.sha256=r.sha;
+    return api("/api/apps/store",q).then(function(j){S.hs.job=j.job;toast(L("Descargando ","Downloading ")+x[1]+"…");hsPoll()})}).catch(fail);
 }
 function hbApp(dir){return (S.hb.list&&S.hb.list.apps||[]).filter(function(a){return a.dir===dir})[0]||null}
 function hbLaunch(dir,spec){spec=spec||{};
@@ -1620,8 +1669,8 @@ window.addEventListener("message",function(e){var H=S.hb,m=e.data;
     else if(m.op==="launch"&&H.busy&&a[0]&&a[0].path)hbLaunch(dir,a[0]).then(function(ok){back(m.id,ok)});
     else back(m.id,null,"not available")}});
 $("v-homebrew").onclick=function(e){var b=e.target.closest("button");if(!b||b.disabled)return;
-  var k=b.getAttribute("data-hb"),fn=b.getAttribute("data-hbf"),d=b.getAttribute("data-v");
-  if(fn)hbCall(fn);else if(k==="close"){hbClose();paintHb()}else if(k==="open")hbOpen(d);
+  var k=b.getAttribute("data-hb"),fn=b.getAttribute("data-hbf"),d=b.getAttribute("data-v"),hs=b.getAttribute("data-hs");
+  if(hs)hsGet(hs);else if(fn)hbCall(fn);else if(k==="close"){hbClose();paintHb()}else if(k==="open")hbOpen(d);
   else if(k==="run"){b.disabled=true;hbLaunch(d).then(function(){b.disabled=false})}};
 
 /* ------------------------------------------------------------ duplicates and leftovers
@@ -2503,7 +2552,9 @@ function paintPay(){
   d.addEventListener("drop",function(e){dzN=0;$("dropz").className="dropz";if(!S.ro&&e.dataTransfer)upPay(e.dataTransfer.files)});
 }
 /* the payload store: GitHub says what the latest release of each one is, the
- * console downloads it */
+ * console downloads it. [file, name, repo, asset, what it is, asset name
+ * pattern for NeoHEN's automatic update when the file's name carries its
+ * version (* and ? only; without one it looks for the same name)] */
 var STORE=[
  ["shadowmountplus.elf","ShadowMount+","drakmor/ShadowMountPlus",/^shadowmountplus\.elf$/,L("Monta los juegos guardados como imagen o carpeta","Mounts games kept as an image or a folder")],
  ["ftpsrv.elf","ftpsrv","ps5-payload-dev/ftpsrv",/^ftpsrv-ps5\.elf$/,L("Servidor FTP, puerto 2121","FTP server, port 2121")],
@@ -2512,10 +2563,10 @@ var STORE=[
  ["klogsrv.elf","klogsrv","ps5-payload-dev/klogsrv",/^klogsrv-ps5\.elf$/,L("Registro del sistema por red, puerto 3232","Kernel log over the network, port 3232")],
  ["shsrv.elf","shsrv","ps5-payload-dev/shsrv",/^shsrv-ps5\.elf$/,L("Consola de órdenes por telnet, puerto 2323","Telnet shell, port 2323")],
  ["gdbsrv.elf","gdbsrv","ps5-payload-dev/gdbsrv",/^gdbsrv-ps5\.elf$/,L("Depurador remoto","Remote debugger")],
- ["ps5-app-dumper.elf","PS5 App Dumper","EchoStretch/ps5-app-dumper",/^ps5-app-dumper.*\.elf$/,L("Vuelca el juego que está abierto","Dumps the game that is open")],
+ ["ps5-app-dumper.elf","PS5 App Dumper","EchoStretch/ps5-app-dumper",/^ps5-app-dumper.*\.elf$/,L("Vuelca el juego que está abierto","Dumps the game that is open"),"ps5-app-dumper*.elf"],
  ["garlic-savemgr.elf","Garlic SaveMgr","earthonion/garlic-savemgr",/^garlic-savemgr\.elf$/,L("Gestor de partidas por web","Save manager over the web")],
  ["ps5-backpork.elf","BackPork","BestPig/BackPork",/^ps5-backpork\.elf$/,L("Librerías de reemplazo para juegos de un firmware más nuevo","Replacement libraries for games of a newer firmware")],
- ["ps5debug-NG.elf","ps5debug-NG","Pharaoh2k/ps5debug-NG",/^ps5debug-NG(_v[\d.]+)?\.elf$/,L("Depurador por red, puerto 744; vive dentro de SceShellCore y no se arranca dos veces","Debugger over the network, port 744; it lives inside SceShellCore and is not started twice")]];
+ ["ps5debug-NG.elf","ps5debug-NG","Pharaoh2k/ps5debug-NG",/^ps5debug-NG(_v[\d.]+)?\.elf$/,L("Depurador por red, puerto 744; vive dentro de SceShellCore y no se arranca dos veces","Debugger over the network, port 744; it lives inside SceShellCore and is not started twice"),"ps5debug-NG*.elf"]];
 S.st={rel:{},inst:{},busy:{},err:"",asked:false};
 function loadStore(){
   if(!S.full)return Promise.resolve();
@@ -2546,8 +2597,9 @@ function paintStore(){
         (r&&!same?'<button class="btn sm'+(p?"":" pri")+'" data-store="'+n+'"'+(busy||S.ro?" disabled":"")+'>'+(busy?L("Descargando…","Downloading…"):p?L("Poner la ","Get ")+esc(r.tag):L("Instalar","Install"))+'</button>':"")+'</div></div>'}).join("")+'</div>';
 }
 function storeGet(n){
-  var st=S.st,r=st.rel[n];if(!r||st.busy[n])return;st.busy[n]=1;paintStore();
-  api("/api/store/fetch",{url:r.url,name:n,tag:r.tag}).then(function(j){delete st.busy[n];st.inst[n]=r.tag;toast(n+" "+r.tag+L(" descargado en la consola"," downloaded to the console")+" · "+size(j.bytes));return loadPay()},
+  var st=S.st,r=st.rel[n],x=STORE.filter(function(y){return y[0]===n})[0],q;if(!r||st.busy[n])return;st.busy[n]=1;paintStore();
+  q={url:r.url,name:n,tag:r.tag};if(x&&x[5])q.asset=x[5];
+  api("/api/store/fetch",q).then(function(j){delete st.busy[n];st.inst[n]=r.tag;toast(n+" "+r.tag+L(" descargado en la consola"," downloaded to the console")+" · "+size(j.bytes));return loadPay()},
     function(e){delete st.busy[n];fail(e);paintStore()});
 }
 function pact(path,body,before,after){
@@ -2947,6 +2999,7 @@ function nhLoad(){if(!S.full||S.guest)return;api("/api/neohen/settings").then(fu
 var NHWD={off:L("Apagado","Off"),notify:L("Avisar","Notify"),relaunch:L("Relanzar","Relaunch")};
 var NH={
  "update.channel":[L("Canal de actualizaciones","Update channel"),L("Qué versiones de NeoHEN avisa que hay. Estable: solo las finales (con una rc puesta, también la rc siguiente hasta que salga la final). Pre-release: todas, rc incluidas.","Which NeoHEN releases the update notice offers. Stable: final releases only (while on an rc, the next rc too until a final is out). Pre-release: every release, rcs included."),{stable:L("Estable","Stable"),prerelease:"Pre-release"}],
+ "update.apply_at_boot":[L("Usar la actualización al arrancar","Apply the update at start"),L("Encendido: cada arranque pasa a la versión de NeoHEN instalada desde NeoWEB si es más nueva que el NeoHEN.elf que envías (y vuelve atrás sola si no termina de arrancar dos veces). Apagado: solo se usa cuando pulsas Reiniciar ahora en la tarjeta de actualización.","On: every start hands off to the NeoHEN installed from NeoWEB when it is newer than the NeoHEN.elf you send (and goes back by itself if it fails to start twice). Off: it is used only when you press Restart now on the update card."),{on:L("Encendido","On"),off:L("Apagado","Off")}],
  "neoweb.watchdog":[L("Vigilante de NeoWEB","NeoWEB watchdog"),L("Cada minuto y al salir del reposo mira que NeoWEB responde. Avisar: una notificación; relanzar: además lo arranca otra vez. Un NeoWEB parado a propósito se queda parado.","Every minute and after Rest Mode it checks that NeoWEB answers. Notify: a notification; relaunch: it also starts it again. A NeoWEB stopped on purpose stays stopped."),NHWD],
  "shadowmount.watchdog":[L("Vigilante de ShadowMount+","ShadowMount+ watchdog"),L("Tras el reposo y cada intervalo mira que el gancho de ShadowMount+ sigue puesto.","After Rest Mode and every interval it checks that ShadowMount+'s hook is still in place."),NHWD],
  "shadowmount.watchdog_interval_seconds":[L("Intervalo de ese vigilante","That watchdog's interval"),L("En segundos, de 30 a 3600.","In seconds, 30 to 3600.")],
@@ -2965,7 +3018,7 @@ var NH={
  "cheats.mirror":[L("Servidor de los trucos","Cheats mirror"),L("De dónde bajan los catálogos de trucos. Automático: cnb.cool en chino simplificado, GitHub si no.","Where cheat catalogs come from. Automatic: cnb.cool in Simplified Chinese, GitHub otherwise."),{auto:L("Automático","Automatic"),github:"GitHub",cnb:"cnb.cool"}],
  "logging.level":[L("Nivel del registro","Log level"),L("Súbelo a debug para reproducir un fallo para un informe.","Raise it to debug to reproduce a problem for a report.")],
  "logging.max_bytes":[L("Tamaño de cada registro","Size of each log file"),L("En bytes; se guardan cuatro (el actual y tres copias).","In bytes; four are kept (the live one and three copies).")]};
-var NHG=[[L("Avisos y vigilantes","Notices and watchdogs"),["update.channel","neoweb.watchdog","shadowmount.watchdog","shadowmount.watchdog_interval_seconds"]],
+var NHG=[[L("Avisos y vigilantes","Notices and watchdogs"),["update.channel","update.apply_at_boot","neoweb.watchdog","shadowmount.watchdog","shadowmount.watchdog_interval_seconds"]],
   [L("Reposo","Rest Mode"),["rest_mode.toolbox_after_resume","rest_mode.stable_seconds","rest_mode.resume_reinject_delay_seconds"]],
   [L("Arranque","Start"),["startup.open_after_load","startup.show_thanks","kstuff.autoload","shellui.wait_for_tracer"]],
   ["Toolbox",["toolbox.language","home_screen.show_title_ids","game_menu.show_onionhen_options","shortcuts.cheats_menu","shortcuts.toolbox"]],
@@ -3031,8 +3084,41 @@ $("v-settings").addEventListener("click",function(e){var b=e.target.closest("[da
   else if(a==="g-new")api("/api/auth/guest",{action:"new"}).then(function(j){S.guestTok=j.guest;S.qrTv="";toast(L("Enlace de invitado listo","Guest link ready"));done()}).catch(fail);
   else if(a==="g-rev")api("/api/auth/guest",{action:"revoke"}).then(function(){S.guestTok="";S.qrTv="";toast(L("Revocado","Revoked"));done()}).catch(fail);
   else if(a==="bk-up"){var i=document.createElement("input");i.type="file";i.accept=".json,application/json";i.onchange=function(){var f=i.files[0];if(f)f.text().then(bkRestore)};i.click()}});
+/* "Block system updates": NeoWEB's preset in nanoDNS's config
+ * (/api/dns/updates, web/src/api_dns.c). nanoDNS reads it only when it
+ * starts, and only answers what the PS5 asks it: its DNS has to point at
+ * nanoDNS's bind= address. */
+function loadDnsUpd(){S.dnsT=Date.now();if(!S.full||S.guest)return Promise.resolve();
+  return api("/api/dns/updates").then(function(j){S.dnsUpd=j},function(){S.dnsUpd=null}).then(function(){if(S.view==="settings")paintCfg();else if(S.view==="panel")paintPanel()})}
+function dnsHow(d){var b=d&&d.bind||"127.0.0.1",any=b==="0.0.0.0";
+  return L("Cuenta cuando nanoDNS vuelve a arrancar (el botón de aquí, o Payloads: parar y arrancar nanodns.elf) o en el próximo arranque; nanoDNS solo lee su config al empezar. Y solo si la PS5 le pregunta a él: en Ajustes > Red > Configurar conexión a Internet > tu red > Ajustes avanzados > DNS manual, pon como DNS primario ",
+    "It counts once nanoDNS starts again (the button here, or Payloads: stop and start nanodns.elf) or at the next boot; nanoDNS reads its config only when it starts. And only if the PS5 asks it: in Settings > Network > Set Up Internet Connection > your network > Advanced Settings > DNS manual, set the primary DNS to ")+
+    '<b>'+esc(any?L("la IP de la propia PS5","the PS5's own IP"):b)+'</b>'+
+    (any?L(" (nanoDNS escucha en todas sus direcciones: bind=0.0.0.0)."," (nanoDNS listens on all of its addresses: bind=0.0.0.0)."):L(", la dirección en la que escucha nanoDNS (bind= en "+esc(d&&d.config||"/data/nanodns/nanodns.ini")+"). Con bind=0.0.0.0 vale también la IP de la PS5.",", the address nanoDNS listens on (bind= in "+esc(d&&d.config||"/data/nanodns/nanodns.ini")+"). With bind=0.0.0.0 the PS5's own IP works too."))}
+function dnsBody(){var d=S.dnsUpd;
+  if(!d)return '<p style="margin:0;color:var(--dim)">'+L("Cargando…","Loading…")+'</p>';
+  return '<div class="opt"><div class="t"><b>'+L("Bloquear actualizaciones del sistema","Block system updates")+'</b><small>'+
+      L("nanoDNS responde 0.0.0.0 a los "+d.hosts.length+" servidores de los que la PS5 baja la lista y los ficheros de actualización (*.ps5.update.playstation.net), así la consola no descarga una versión nueva del sistema. El resto de PSN no se toca.",
+        "nanoDNS answers 0.0.0.0 for the "+d.hosts.length+" servers the PS5 gets the update list and files from (*.ps5.update.playstation.net), so the console does not download a new system version. The rest of PSN is left alone.")+'</small></div>'+
+      '<label class="sw"><input type="checkbox" id="cfg-dnsupd"'+(d.enabled?" checked":"")+(d.configFound&&!S.ro?"":" disabled")+'><i></i></label></div>'+
+    (d.covered&&!d.enabled?'<p style="margin:0 0 12px;color:var(--dim);font-size:13px">'+L("Ahora mismo ya los bloquea otra regla de [overrides] (los valores de nanoDNS cortan todo *.playstation.net). Encender esto los deja bloqueados aunque cambies esa regla para volver a tener PSN.","Another [overrides] rule blocks them right now (nanoDNS's defaults cut all of *.playstation.net). Turning this on keeps them blocked if you change that rule to get PSN back.")+'</p>':"")+
+    (d.configFound?"":'<div class="note">'+L("Aún no está "+esc(d.config)+": nanoDNS lo escribe la primera vez que arranca. Arráncalo una vez (Payloads) y vuelve aquí.","There is no "+esc(d.config)+" yet: nanoDNS writes it the first time it starts. Start it once (Payloads) and come back.")+'</div>')+
+    (d.bypass&&d.bypass.length?'<div class="note">'+L("Ojo: en [exceptions] hay ","Careful: [exceptions] has ")+'<b>'+esc(d.bypass.join(", "))+'</b>'+L(", que deja pasar a esos servidores aunque el bloqueo esté puesto. Quítalo de "+esc(d.config)+" si quieres que valga.",", which lets those servers through even with the block on. Take it out of "+esc(d.config)+" for the block to hold.")+'</div>':"")+
+    '<p style="margin:0 0 12px;color:var(--dim);font-size:13px">'+dnsHow(d)+'</p>'+
+    '<div class="row"><button class="btn" id="dns-rst"'+(S.ro||!d.configFound?" disabled":"")+'>'+L("Reiniciar nanoDNS","Restart nanoDNS")+'</button></div>'}
+function dnsNote(){var d=S.dnsUpd,hid;try{hid=localStorage.getItem("nw-dnsupd-hide")==="1"}catch(_){}
+  if(!d||d.enabled||d.covered||!d.configFound||hid)return "";
+  return '<div class="note" id="dns-note"><span style="flex:1">'+L("Las actualizaciones del sistema <b>no están bloqueadas</b>: si la PS5 baja una versión nueva, puede que no vuelvas a poder cargar NeoHEN. nanoDNS puede bloquearlas.","System updates are <b>not blocked</b>: if the PS5 downloads a new version you may not be able to load NeoHEN again. nanoDNS can block them.")+'</span>'+
+    '<button class="btn sm" data-dnsupd="go">'+L("Ver","See")+'</button><button class="btn sm ghost" data-dnsupd="hide" title="'+L("No volver a avisar","Do not show again")+'">'+ic("x")+'</button></div>'}
+$("v-panel").addEventListener("click",function(e){var b=e.target.closest("button[data-dnsupd]");if(!b)return;
+  if(b.getAttribute("data-dnsupd")==="hide"){try{localStorage.setItem("nw-dnsupd-hide","1")}catch(_){}paintPanel();return}
+  S.cfgTab="neohen";show("settings",true)});
+function dnsRestart(){toast(L("Reiniciando nanoDNS…","Restarting nanoDNS…"));
+  return api("/api/payloads/stop",{name:"nanodns.elf"}).catch(function(){}).then(function(){return wait(1500)}).then(function(){return api("/api/payloads/start",{name:"nanodns.elf"})})
+    .then(function(){toast(L("nanoDNS arrancado con la config nueva","nanoDNS started with the new config"))}).catch(fail)}
 function nhCards(){var h="";
   if(S.full&&!S.guest)h+='<div class="card" data-tab="neohen"><h3 class="h">'+L("Ajustes de NeoHEN","NeoHEN settings")+'</h3>'+nhBody()+'</div>';
+  if(S.full&&!S.guest)h+='<div class="card" data-tab="neohen"><h3 class="h">nanoDNS</h3>'+dnsBody()+'</div>';
   h+='<div class="card" data-tab="access"><h3 class="h">'+L("Acceso y QR","Access and QR")+'</h3>'+acBody()+'</div>';
   if(S.full&&!S.guest)h+='<div class="card" data-tab="keep"><h3 class="h">'+L("Copia de la configuración","Settings backup")+'</h3>'+bkBody()+'</div>';
   return h}
@@ -3097,6 +3183,7 @@ function paintCfg(){
 $("v-settings").addEventListener("click",function(e){
   var b=e.target.closest("button");if(!b)return;var k=b.getAttribute("data-ck");
   if(b.hasAttribute("data-ctab")){S.cfgTab=b.getAttribute("data-ctab");paintCfg();return}
+  if(b.id==="dns-rst"){dnsRestart();return}
   if(b.hasAttribute("data-unpin")){var u=b.getAttribute("data-unpin");cfgSet("pins",CFG.pins.filter(function(x){return x!==u}));return}
   if(k==="fold"){cfgSet("fold",[]);return}
   if(k){var v=b.getAttribute("data-cv"),d=CFG_DEF[k];cfgSet(k,typeof d==="number"?+v:typeof d==="boolean"?v==="true":v,b.hasAttribute("data-cr"));return}
@@ -3106,6 +3193,7 @@ $("v-settings").addEventListener("click",function(e){
     if(!ok)return;for(var x in CFG_DEF)CFG[x]=JSON.parse(JSON.stringify(CFG_DEF[x]));cfgSet("lang",CFG_DEF.lang,true)})});
 $("v-settings").addEventListener("change",function(e){
   var t=e.target,k;
+  if(t.id==="cfg-dnsupd"){var on=t.checked;api("/api/dns/updates",{enabled:on}).then(function(j){S.dnsUpd=j;paintCfg();toast(on?L("Bloqueo puesto: reinicia nanoDNS para que cuente","Block on: restart nanoDNS for it to count"):L("Bloqueo quitado: reinicia nanoDNS para que cuente","Block off: restart nanoDNS for it to count"))}).catch(function(er){fail(er);loadDnsUpd()});return}
   if(t.id==="cfg-upd"){api("/api/update/notice",{enabled:t.checked}).then(function(j){S.updOn=j.enabled;toast(L("Hecho","Done"))}).catch(fail);return}
   if(t.getAttribute("data-cb")==="sysNote"&&t.checked&&window.Notification&&Notification.permission!=="granted"){Notification.requestPermission().then(function(r){cfgSet("sysNote",r==="granted");if(r!=="granted")toast(L("El navegador no dio permiso","The browser did not allow it"),true)});return}
   if((k=t.getAttribute("data-cb")))cfgSet(k,t.checked);
@@ -4126,9 +4214,9 @@ function netTest(){
 /* ------------------------------------------------------------ NeoHEN update
  * NeoHEN's util service downloads the release update.channel picks, checks
  * GitHub's SHA-256 and the files in it, and keeps it on the console next to
- * the one before it. The next NeoHEN.elf that is sent hands off to it (or
- * "Restart now" does it at once); one that does not finish starting twice
- * is rolled back by itself. See docs/robustness.md. */
+ * the one before it. "Restart now" starts it; with update.apply_at_boot on
+ * (off by default) every NeoHEN.elf that is sent also hands off to it. One
+ * that does not finish starting twice is rolled back by itself. See docs/robustness.md. */
 S.nu=null;S.nuT=0;
 var NU_BUSY={check:1,download:1,unpack:1,install:1,applying:1};
 function loadNupd(){if(!S.full)return Promise.resolve();return api("/api/update").then(function(j){S.nu=j;paintNupd();nupdPoll()}).catch(function(){})}
@@ -4155,8 +4243,11 @@ function paintNupd(){
   var newer=!!(av&&av.newer&&rel),inst=newer&&rel.installable&&!(cur&&verKey(rel.tag)&&ck&&verCmp(verKey(rel.tag),ck)===0);
   var canApply=!!(cur&&ck&&(!rk||verCmp(ck,rk)>0));
   var h='<div class="card pad" style="margin-top:16px"><h3 class="h">'+L("Actualizar NeoHEN","NeoHEN update")+' <em>'+L("canal ","channel ")+esc(u.channel==="prerelease"?L("pre-release","pre-release"):L("estable","stable"))+'</em></h3>'+
-    '<p style="margin:0 0 12px;color:var(--dim)">'+L("NeoHEN descarga la versión de GitHub, comprueba su SHA-256 y la guarda en la consola junto a la anterior. Se usa la próxima vez que envíes NeoHEN.elf (aunque envíes uno más antiguo), o al reiniciar NeoHEN desde aquí. Si no termina de arrancar dos veces seguidas, vuelve sola a la anterior.",
-      "NeoHEN downloads the release from GitHub, checks its SHA-256 and keeps it on the console next to the one before it. It is used the next time you send NeoHEN.elf (even an older one), or when you restart NeoHEN from here. If it does not finish starting twice in a row, it goes back to the previous one by itself.")+'</p>'+
+    '<p style="margin:0 0 12px;color:var(--dim)">'+L("NeoHEN descarga la versión de GitHub, comprueba su SHA-256 y la deja instalada en la consola junto a la anterior. Se usa cuando pulsas «Reiniciar NeoHEN con…» aquí, o en cada arranque si «Usar la actualización al arrancar» está encendido (Ajustes de NeoHEN; ahora ",
+      "NeoHEN downloads the release from GitHub, checks its SHA-256 and keeps it installed on the console next to the one before it. It is used when you press “Restart NeoHEN with…” here, or at every start if “Apply the update at start” is on (NeoHEN settings; now ")+
+      (u.apply_at_boot?L("encendido","on"):L("apagado: al arrancar se usa el NeoHEN.elf que envías","off: at start the NeoHEN.elf you send runs"))+
+      ")."+(u.apply_at_boot?L(" Si no termina de arrancar dos veces seguidas, vuelve sola a la anterior."," If it does not finish starting twice in a row, it goes back to the previous one by itself."):
+        L(" Si falla tras reiniciar, reinicia la consola: arranca el NeoHEN.elf que envíes."," If it fails after the restart, restart the console: the NeoHEN.elf you send starts."))+'</p>'+
     '<dl class="kv" style="margin:0 0 12px">'+kv(L("Cargada","Loaded"),esc(run||"?"))+kv(L("Instalada desde NeoWEB","Installed from NeoWEB"),curTxt||esc(L("ninguna","none")))+
       kv(L("Anterior (para volver)","Previous (to go back)"),esc(prev))+
       kv(L("Disponible","Available"),rel?esc(String(rel.tag||"").replace(/^v/,""))+(rel.date?" · "+esc(rel.date):"")+(rel.prerelease?' <span class="chip">pre-release</span>':"")+(newer?' <span class="chip new">'+L("nueva","new")+'</span>':' <span class="chip">'+L("ya la tienes","you have it")+'</span>'):"")+
@@ -4182,7 +4273,7 @@ function paintNupd(){
 $("v-system").addEventListener("click",function(e){var bt=e.target.closest("button[data-nu]");if(!bt)return;var a=bt.getAttribute("data-nu"),u=S.nu||{},rel=u.available&&u.available.release,
     cur=u.installed&&u.installed.current,prev=u.installed&&u.installed.previous;
   if(a==="check"||a==="cancel"){nupdAct({action:a}).catch(fail);return}
-  if(a==="install"){ask(L("Instalar NeoHEN ","Install NeoHEN ")+String(rel.tag).replace(/^v/,""),L("Se descarga de GitHub (unos 15 MB), se comprueba y se guarda en la consola. La versión cargada sigue en marcha hasta que reinicies NeoHEN o la consola.","It is downloaded from GitHub (about 15 MB), checked and kept on the console. The loaded version keeps running until you restart NeoHEN or the console."),L("Instalar","Install")).then(function(ok){
+  if(a==="install"){ask(L("Instalar NeoHEN ","Install NeoHEN ")+String(rel.tag).replace(/^v/,""),L("Se descarga de GitHub (unos 15 MB), se comprueba y se guarda en la consola. La versión cargada sigue en marcha: la instalada se usa cuando pulses «Reiniciar NeoHEN con…», o en cada arranque si «Usar la actualización al arrancar» está encendido.","It is downloaded from GitHub (about 15 MB), checked and kept on the console. The loaded version keeps running: the installed one is used when you press “Restart NeoHEN with…”, or at every start if “Apply the update at start” is on."),L("Instalar","Install")).then(function(ok){
     if(ok)nupdAct({action:"install",tag:rel.tag}).then(function(){toast(L("Descargando NeoHEN ","Downloading NeoHEN ")+String(rel.tag).replace(/^v/,""))}).catch(fail)});return}
   if(a==="apply"){ask(L("Reiniciar NeoHEN con ","Restart NeoHEN with ")+cur,L("NeoHEN se para y arranca la versión instalada, como al enviar un NeoHEN.elf nuevo: el menú de la PS5 se reinicia. Cierra antes el juego abierto. NeoWEB deja de responder unos segundos.","NeoHEN stops and starts the installed version, as when a new NeoHEN.elf is sent: the PS5 home screen restarts. Close the open game first. NeoWEB stops answering for a few seconds."),L("Reiniciar","Restart")).then(function(ok){
     if(ok)nupdAct({action:"apply"}).then(function(){toast(L("NeoHEN se está reiniciando","NeoHEN is restarting"))}).catch(fail)});return}
@@ -4258,6 +4349,7 @@ function fast(){
   return api("/api/sys/info").then(function(i){
     S.info=i;online(true);hudPaint(i);
     if(!S.hlT||Date.now()-S.hlT>6e4)loadHealth();
+    if(S.full&&!S.guest&&(!S.dnsT||Date.now()-S.dnsT>3e5))loadDnsUpd();
     $("ps-m").innerHTML=[i.model,i.firmware&&"FW "+i.firmware,i.ips&&i.ips[0]&&i.ips[0].ip].filter(Boolean).map(esc).join("<br>")+
       (S.upd&&S.upd.new?'<br><a href="'+esc(S.upd.new.url)+'" target="_blank" rel="noopener" style="color:var(--warn)">'+L("Hay NeoHEN ","NeoHEN ")+esc(S.upd.new.tag.replace(/^v/,""))+L(""," is out")+'</a>':"");
     $("ver").textContent="NeoWEB · v"+(i.version||"")+(i.neohen?" · NeoHEN "+String(i.neohen).replace(/\+.*$/,""):"");

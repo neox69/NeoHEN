@@ -65,9 +65,10 @@ int main(void) {
   /* The directory exists now, so this pass is the one that sticks. */
   onion_log_configure("Bootstrapper", ONION_DATA_DIR "/" ONION_BRAND_NAME ".log");
   onion_log_configure_crash(ONION_DATA_DIR "/" ONION_BRAND_NAME "_crash.log");
-  /* NeoHEN: a newer NeoHEN installed from NeoWEB takes over from here (this
-   * start ends; that one counts itself), and a failed one is rolled back. */
-  if (!bootstrap_update_begin())
+  /* NeoHEN: a newer NeoHEN installed from NeoWEB takes over from here when
+   * update.apply_at_boot is on (this start ends; that one counts itself),
+   * and a failed one is rolled back. */
+  if (!bootstrap_update_begin(config.update_apply_at_boot))
     return 0;
 
   if (!bootstrap_filesystem_mount_system())

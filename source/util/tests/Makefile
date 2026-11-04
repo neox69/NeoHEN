@@ -145,6 +145,8 @@ TEST_CXX_SRCS := \
 	test_cheat_catalog.cpp \
 	test_cheat_sync.cpp \
 	test_settings.cpp \
+	test_app_store.cpp \
+	test_store_glob.cpp \
 	test_msg_protocol.cpp \
 	test_app_jailbreak_policy.cpp \
 	test_big_app_collect_policy.cpp \

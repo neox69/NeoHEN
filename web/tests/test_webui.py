@@ -290,6 +290,7 @@ class WebUiTest(unittest.TestCase):
         with open(ini) as f:
             text = f.read()
         self.assertIn("channel=prerelease\n", text)
+        self.assertIn("apply_at_boot=on\n", text)
         self.assertIn("my_own_key=keep me\n", text)
 
 
@@ -316,6 +317,13 @@ const wait = async (p, f, ms) => { for (let t = 0; t < ms; t += 100) { if (await
     await p.selectOption('select[data-nh="update.channel"]', 'prerelease');
     await p.waitForTimeout(800);
     if (!/channel=prerelease/.test(fs.readFileSync(path.join(ROOT, 'data/neohen/config.ini'), 'utf8'))) bad.push('update.channel not saved');
+    // the hand-off at boot to an installed update: off until asked
+    if (await p.$eval('select[data-nh="update.apply_at_boot"]', e => e.value).catch(() => '') !== 'off') bad.push('update.apply_at_boot is not off');
+    else {
+      await p.selectOption('select[data-nh="update.apply_at_boot"]', 'on');
+      await p.waitForTimeout(800);
+      if (!/apply_at_boot=on/.test(fs.readFileSync(path.join(ROOT, 'data/neohen/config.ini'), 'utf8'))) bad.push('update.apply_at_boot not saved');
+    }
   }
   await p.evaluate(() => document.querySelector('[data-ctab="all"]').click());
   await p.waitForTimeout(300);

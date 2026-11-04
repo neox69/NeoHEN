@@ -909,6 +909,8 @@ bool apply_parser(IniParser *parser, Settings *out) {
                                             out->neoweb_watchdog);
   out->update_channel = parse_update_channel(ini_get(parser, "update.channel"),
                                              out->update_channel);
+  out->update_apply_at_boot = parse_bool(ini_get(parser, "update.apply_at_boot"),
+                                        out->update_apply_at_boot);
   out->diag_kstuff_tables = parse_bool(
       ini_get(parser, "diagnostics.kstuff_tables"), out->diag_kstuff_tables);
   out->shellui_wait_for_tracer = parse_bool(
@@ -1138,6 +1140,12 @@ std::string settings_serialize(const Settings &in) {
   b += "# release, release candidates included.\n";
   b += "# Available values: stable, prerelease\n";
   b += "channel=" + std::string(update_channel_name(in.update_channel)) + "\n";
+  b += "# apply_at_boot: on, every start hands off to the NeoHEN installed\n";
+  b += "# from NeoWEB when it is newer than the NeoHEN.elf you send (with\n";
+  b += "# automatic rollback if it fails to start twice). off: it is used only\n";
+  b += "# when you press Restart now in NeoWEB; at boot the NeoHEN.elf you send runs.\n";
+  b += "# Available values: on, off\n";
+  b += "apply_at_boot=" + std::string(in.update_apply_at_boot ? "on" : "off") + "\n";
   b += "\n";
   b += "[diagnostics]\n";
   b += "# kstuff_tables logs kstuff's PS5/PS4 syscall-table switches at start,\n";

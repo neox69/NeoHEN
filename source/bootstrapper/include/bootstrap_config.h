@@ -12,6 +12,7 @@ typedef struct BootstrapConfig {
   uint32_t firmware_version;
   bool kstuff_autoload;
   bool system_ex_icon;
+  bool update_apply_at_boot; /* update.apply_at_boot */
 } BootstrapConfig;
 
 /** Configure notifications/logging and resolve the startup settings. */

@@ -19,6 +19,8 @@ extern "C" int test_cheat_catalog_suite(void);
 extern "C" int test_cheat_sync_suite(void);
 extern "C" int test_reg_entity_suite(void);
 extern "C" int test_settings_suite(void);
+extern "C" int test_app_store_suite(void);
+extern "C" int test_store_glob_suite(void);
 extern "C" int test_ready_suite(void);
 extern "C" int test_platform_fs_suite(void);
 extern "C" int test_bootstrap_cache_suite(void);
@@ -79,6 +81,8 @@ int main() {
   failures += test_cheat_sync_suite();
   failures += test_reg_entity_suite();
   failures += test_settings_suite();
+  failures += test_app_store_suite();
+  failures += test_store_glob_suite();
   failures += test_ready_suite();
   failures += test_platform_fs_suite();
   failures += test_bootstrap_cache_suite();

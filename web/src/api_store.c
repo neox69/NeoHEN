@@ -122,12 +122,34 @@ payload_name_ok(const char *n) {
   return 1;
 }
 
-/* POST /api/store/fetch {"url": "https://github.com/...", "name": "x.elf", "tag": "v1.2"}
+/* the name of a release file, with * and ? for what changes from one
+ * release to the next ("ps5debug-NG*.elf"): what NeoHEN's automatic update
+ * looks for when the file's name carries its version */
+static int
+asset_glob_ok(const char *g) {
+  size_t len = strlen(g);
+  int plain = 0;
+
+  if(!len || len > 80 || g[0] == '.') {
+    return 0;
+  }
+  for(; *g; g++) {
+    if(isalnum((unsigned char)*g)) {
+      plain++;
+    } else if(*g != '.' && *g != '_' && *g != '-' && *g != '*' && *g != '?') {
+      return 0;
+    }
+  }
+  return plain > 0;
+}
+
+/* POST /api/store/fetch {"url": "https://github.com/...", "name": "x.elf", "tag": "v1.2",
+ *                        "asset": "x_v*.elf" (optional)}
  * has the console download a release file into the payloads folder */
 void
 api_store_fetch(http_req_t *req) {
   char var[256], local[PATH_MAX];
-  const char *url, *name, *tag;
+  const char *url, *name, *tag, *asset;
   jval_t *b, *s;
   jw_t w, q;
   int rc;
@@ -138,9 +160,15 @@ api_store_fetch(http_req_t *req) {
   url = json_get_str(b, "url", "");
   name = json_get_str(b, "name", "");
   tag = json_get_str(b, "tag", "");
+  asset = json_get_str(b, "asset", "");
   if(strncmp(url, "https://github.com/", 19) || !payload_name_ok(name) || strlen(tag) > 60) {
     json_free(b);
     http_send_error(req, 400, "a github.com release file and a .elf or .bin name are needed");
+    return;
+  }
+  if(asset[0] && !asset_glob_ok(asset)) {
+    json_free(b);
+    http_send_error(req, 400, "asset is a file name with * and ? only");
     return;
   }
   jw_init(&q);
@@ -163,6 +191,11 @@ api_store_fetch(http_req_t *req) {
     json_set_str(json_get_or_add_obj(s, "installed"), name, tag);
     /* where it came from, so NeoHEN can look for newer releases of it */
     json_set_str(json_get_or_add_obj(s, "sources"), name, url);
+    /* the release file's name when it changes with each release (otherwise
+     * the one in the URL is looked for) */
+    if(asset[0] || (json_get(s, "assets") && json_get(json_get(s, "assets"), name))) {
+      json_set_str(json_get_or_add_obj(s, "assets"), name, asset); /* "": the URL's */
+    }
     jw_init(&w);
     json_write(&w, s);
     plat_path(STORE, local, sizeof(local));
@@ -213,12 +246,44 @@ api_store_auto(http_req_t *req) {
  * NeoHEN's util service downloads and unpacks into /data/homebrew in the
  * background (BREW_UTIL_APP_STORE); ShadowMount+ then registers them.
  *
- * GET  /api/apps/store   {"installed": {id: {tag, url, time}}, "job": {...}}
+ * GET  /api/apps/store   {"installed": {id: {tag, url, time}}, "homebrew":
+ *                        {dir: {tag, url, time}}, "job": {...}}
  * POST /api/apps/store   {"action": "install", "url", "id", "tag", "sha256", "size"}
  *                        (or "unverified": true in place of "sha256") or
- *                        {"action": "cancel"}; answers with the job */
+ *                        {"action": "cancel"}; answers with the job
+ *
+ * "kind": "homebrew" with "dir" in place of "id" installs a zip laid out for
+ * websrv's homebrew folder (homebrew.js or eboot.elf at its top, or in one
+ * folder) into /data/homebrew/<dir>/, for the Homebrew section. */
 #define APPS       PS5AIO_DATA_DIR "/apps.json"
 #define CMD_APPS   0x800001Bu /* BREW_UTIL_APP_STORE */
+
+/* a folder name for /data/homebrew/<dir>: what util's dir_ok takes */
+static int
+hb_dir_ok(const char *d) {
+  size_t n = strlen(d);
+
+  if(!n || n > 64 || d[0] == '.' || is_title_id(d)) {
+    return 0;
+  }
+  for(; *d; d++) {
+    if(!isalnum((unsigned char)*d) && *d != '.' && *d != '_' && *d != '-') {
+      return 0;
+    }
+  }
+  return 1;
+}
+
+static void
+put_list(jw_t *w, jval_t *list, const char *key) {
+  jw_key(w, key);
+  if(list && json_get(list, key)) {
+    json_write(w, json_get(list, key));
+  } else {
+    jw_obj(w);
+    jw_obj_end(w);
+  }
+}
 
 static void
 apps_job(jw_t *w, const char *var) {
@@ -265,17 +330,24 @@ api_apps_store(http_req_t *req) {
        * before NeoHEN's service downloads it (and the service checks the
        * same again). */
       const char *url = json_get_str(b, "url", ""), *sha = json_get_str(b, "sha256", "");
+      const char *kind = json_get_str(b, "kind", "app");
       int unverified = json_get_bool(b, "unverified", 0);
+      int hb = !strcmp(kind, "homebrew");
       size_t i;
       for(i = 0; sha[i] && isxdigit((unsigned char)sha[i]); i++) {
       }
       if(strncmp(url, "https://github.com/", 19) || strpbrk(url, " \r\n\"") ||
-         !is_title_id(json_get_str(b, "id", "")) || sha[i] || (i && i != 64) ||
-         strlen(json_get_str(b, "tag", "")) > 60) {
+         (hb ? !hb_dir_ok(json_get_str(b, "dir", "")) : strcmp(kind, "app") || !is_title_id(json_get_str(b, "id", ""))) ||
+         sha[i] || (i && i != 64) || strlen(json_get_str(b, "tag", "")) > 60) {
         json_free(b);
         jw_free(&q);
-        http_send_error(req, 400, "a github.com release file, a title id and a SHA-256 are needed");
+        http_send_error(req, 400, hb ? "a github.com release file, a folder name and a SHA-256 are needed"
+                                     : "a github.com release file, a title id and a SHA-256 are needed");
         return;
+      }
+      if(hb) {
+        jw_kstr(&q, "kind", "homebrew");
+        jw_kstr(&q, "dir", json_get_str(b, "dir", ""));
       }
       if(!i && !unverified) {
         json_free(b);
@@ -290,7 +362,8 @@ api_apps_store(http_req_t *req) {
       /* the zip's size as GitHub gives it, for the free space check */
       jw_kint(&q, "size", json_get_int(b, "size", 0) > 0 ? json_get_int(b, "size", 0) : 0);
       if(unverified) {
-        LOG_INFO("apps: %s installed without a SHA-256 (the user said yes)", json_get_str(b, "id", ""));
+        LOG_INFO("apps: %s installed without a SHA-256 (the user said yes)",
+                 json_get_str(b, hb ? "dir" : "id", ""));
       }
     }
     jw_kstr(&q, "action", action);
@@ -316,14 +389,11 @@ api_apps_store(http_req_t *req) {
   api_begin(&w);
   apps_job(&w, var);
   plat_path(APPS, local, sizeof(local));
-  jw_key(&w, "installed");
-  if(!fs_read_file(local, &data, &len, 1 << 20) && (list = json_parse(data, len)) &&
-     json_get(list, "installed")) {
-    json_write(&w, json_get(list, "installed"));
-  } else {
-    jw_obj(&w);
-    jw_obj_end(&w);
+  if(!fs_read_file(local, &data, &len, 1 << 20)) {
+    list = json_parse(data, len);
   }
+  put_list(&w, list, "installed");
+  put_list(&w, list, "homebrew");
   json_free(list);
   free(data);
   api_finish(req, &w);

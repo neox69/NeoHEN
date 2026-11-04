@@ -101,6 +101,8 @@ void api_remoteplay(http_req_t *req);
 void api_update_notice(http_req_t *req);
 /* NeoHEN's own update: status, check, install, rollback, apply (api_update.c) */
 void api_update(http_req_t *req);
+/* GET/POST /api/dns/updates: nanoDNS's "block system updates" preset (api_dns.c) */
+void api_dns_updates(http_req_t *req);
 void api_remoteplay_request(http_req_t *req);
 void api_launcher_install(http_req_t *req);
 void api_launcher_remove(http_req_t *req);

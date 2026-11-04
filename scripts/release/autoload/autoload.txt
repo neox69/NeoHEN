@@ -1,0 +1,6 @@
+# NeoHEN for the itsPLK PS5 autoloaders (ps5-lua-autoloader, Y2JB, BD-JB,
+# WebKit and yarpe autoloaders). They all read this file through
+# ps5-unified-autoloader: one file per line, looked up next to this
+# autoload.txt; lines that start with # are comments, !<ms> waits.
+# Copy NeoHEN.elf into this same folder. See ../LEEME.txt.
+NeoHEN.elf

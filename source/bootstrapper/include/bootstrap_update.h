@@ -8,9 +8,10 @@ extern "C" {
 #endif
 
 /** Before this start counts itself for safe mode: rolls a failed update
- *  back, and hands off to an installed NeoHEN newer than this one. False
- *  when it handed off: this start must end without launching anything. */
-bool bootstrap_update_begin(void);
+ *  back, and hands off to an installed NeoHEN newer than this one when
+ *  @apply_at_boot (update.apply_at_boot) is on. False when it handed off:
+ *  this start must end without launching anything. */
+bool bootstrap_update_begin(bool apply_at_boot);
 
 #ifdef __cplusplus
 }

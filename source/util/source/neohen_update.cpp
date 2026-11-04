@@ -2,10 +2,11 @@
  *
  * NeoHEN.elf is sent to the exploit's loader on every boot; it is not
  * installed anywhere. So an update keeps the new release on the console
- * (/data/neohen/update/current) and the next NeoHEN.elf that starts hands
- * off to it when it is newer than itself (bootstrapper, bootstrap_update.c;
- * the shared rules are in onion/update_state.h). The NeoHEN.elf the user
- * sends stays the last fallback.
+ * (/data/neohen/update/current); "apply" (NeoWEB's Restart now) starts it,
+ * and with update.apply_at_boot on (off by default) every NeoHEN.elf that
+ * starts hands off to it when it is newer than itself (bootstrapper,
+ * bootstrap_update.c; the shared rules are in onion/update_state.h). The
+ * NeoHEN.elf the user sends stays the last fallback.
  *
  * check    GitHub's releases of neox69/NeoHEN, picked by update.channel the
  *          same way as the notice in update_check.cpp, into available.json
@@ -324,7 +325,7 @@ void check_job() {
   set("done", "", newer(best) ? "new: " + tag : "up to date");
 }
 
-/* zip -> kStaging; one NeoHEN-<ver>/ folder of plain files */
+/* zip -> kStaging; one NeoHEN-<ver>/ folder of plain files (and autoload/) */
 std::string unpack(const std::string &ver) {
   mz_zip_archive zip;
   memset(&zip, 0, sizeof(zip));
@@ -349,7 +350,9 @@ std::string unpack(const std::string &ver) {
       break;
     }
     const std::string rel = name.substr(prefix.size());
-    if (rel.empty())
+    /* autoload/ is for a payload loader on a USB drive or /data, not for
+     * the update: it is skipped */
+    if (rel.empty() || rel.compare(0, 9, "autoload/") == 0)
       continue;
     bool plain = rel.size() < 64 && rel[0] != '.';
     for (char c : rel)
@@ -382,7 +385,7 @@ std::string unpack(const std::string &ver) {
     mz_zip_archive_file_stat st;
     mz_zip_reader_file_stat(&zip, i, &st);
     const std::string rel = std::string(st.m_filename).substr(prefix.size());
-    if (rel.empty())
+    if (rel.empty() || rel.compare(0, 9, "autoload/") == 0)
       continue;
     const std::string dest = kStaging + "/" + rel;
     if (!mz_zip_reader_extract_to_file(&zip, i, dest.c_str(), 0)) {
@@ -804,7 +807,7 @@ bool util_neohen_update(const cJSON *request, std::string &out) {
       return false;
     }
     if (onion_update_version_cmp(tag.c_str(), word(kCurrent + "/" ONION_UPDATE_VERSION_FILE).c_str()) == 0) {
-      out = tag + " is already installed (restart NeoHEN to use it)";
+      out = tag + " is already installed (Restart now in NeoWEB uses it)";
       return false;
     }
     LOG_INFO("[neohen-update] install %s (running %s)", tag.c_str(), ONIONHEN_VERSION);

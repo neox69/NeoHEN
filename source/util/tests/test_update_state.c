@@ -29,42 +29,63 @@ static int test_versions(void) {
 static int test_decide(void) {
   onion_update_state st;
   memset(&st, 0, sizeof(st));
-  onion_update_decision d = onion_update_decide(&st, "", "0.1.0-rc16", 0);
+  onion_update_decision d = onion_update_decide(&st, "", "0.1.0-rc16", 0, true);
   TEST_ASSERT_TRUE(d.action == ONION_UPDATE_RUN_SELF && !d.count_trial);
 
   /* rc17 on trial, rc16 sent: hand off; the outer one does not count */
   strcpy(st.status, "trial");
   strcpy(st.current, "0.1.0-rc17");
-  d = onion_update_decide(&st, "0.1.0-rc17", "0.1.0-rc16+ab", 0);
+  d = onion_update_decide(&st, "0.1.0-rc17", "0.1.0-rc16+ab", 0, true);
   TEST_ASSERT_TRUE(d.action == ONION_UPDATE_HAND_OFF && !d.count_trial && !d.confirm_ok);
-  d = onion_update_decide(&st, "0.1.0-rc17", "0.1.0-rc17+cd", 0);
+  d = onion_update_decide(&st, "0.1.0-rc17", "0.1.0-rc17+cd", 0, true);
   TEST_ASSERT_TRUE(d.action == ONION_UPDATE_RUN_SELF && d.count_trial);
 
   st.trial_starts = 1; /* one trial start that failed */
-  d = onion_update_decide(&st, "0.1.0-rc17", "0.1.0-rc16", 1);
+  d = onion_update_decide(&st, "0.1.0-rc17", "0.1.0-rc16", 1, true);
   TEST_ASSERT_TRUE(d.action == ONION_UPDATE_HAND_OFF);
-  d = onion_update_decide(&st, "0.1.0-rc17", "0.1.0-rc16", 0); /* it held */
+  d = onion_update_decide(&st, "0.1.0-rc17", "0.1.0-rc16", 0, true); /* it held */
   TEST_ASSERT_TRUE(d.confirm_ok && d.action == ONION_UPDATE_HAND_OFF);
   /* failures from before the trial are not the trial's */
-  d = onion_update_decide(&st, "0.1.0-rc17", "0.1.0-rc16", 3);
+  d = onion_update_decide(&st, "0.1.0-rc17", "0.1.0-rc16", 3, true);
   TEST_ASSERT_TRUE(d.action == ONION_UPDATE_HAND_OFF);
 
   st.trial_starts = 2; /* two in a row */
-  d = onion_update_decide(&st, "0.1.0-rc17", "0.1.0-rc16", 2);
+  d = onion_update_decide(&st, "0.1.0-rc17", "0.1.0-rc16", 2, true);
   TEST_ASSERT_TRUE(d.action == ONION_UPDATE_ROLL_BACK);
-  d = onion_update_decide(&st, "0.1.0-rc17", "0.1.0-rc17", 2);
+  d = onion_update_decide(&st, "0.1.0-rc17", "0.1.0-rc17", 2, true);
   TEST_ASSERT_TRUE(d.action == ONION_UPDATE_ROLL_BACK);
 
   strcpy(st.status, "ok"); /* confirmed: later crashes are safe mode's */
-  d = onion_update_decide(&st, "0.1.0-rc17", "0.1.0-rc16", 4);
+  d = onion_update_decide(&st, "0.1.0-rc17", "0.1.0-rc16", 4, true);
   TEST_ASSERT_TRUE(d.action == ONION_UPDATE_HAND_OFF && !d.confirm_ok);
-  d = onion_update_decide(&st, "0.1.0-rc17", "0.1.0-rc18", 0); /* newer sent */
+  d = onion_update_decide(&st, "0.1.0-rc17", "0.1.0-rc18", 0, true); /* newer sent */
   TEST_ASSERT_TRUE(d.action == ONION_UPDATE_RUN_SELF && !d.count_trial);
-  d = onion_update_decide(&st, "0.1.0-rc17", "dirty-ab", 0); /* developer build */
+  d = onion_update_decide(&st, "0.1.0-rc17", "dirty-ab", 0, true); /* developer build */
   TEST_ASSERT_TRUE(d.action == ONION_UPDATE_RUN_SELF);
+  /* update.apply_at_boot off: the sent one runs, nothing is decided for the
+   * installed one, and a trial's count starts over */
+  strcpy(st.status, "trial");
+  st.trial_starts = 2;
+  d = onion_update_decide(&st, "0.1.0-rc17", "0.1.0-rc16", 2, false);
+  TEST_ASSERT_TRUE(d.action == ONION_UPDATE_RUN_SELF && d.held && d.reset_trial &&
+                   !d.confirm_ok && !d.count_trial);
+  d = onion_update_decide(&st, "0.1.0-rc17", "0.1.0-rc16", 0, false);
+  TEST_ASSERT_TRUE(d.held && !d.confirm_ok);
+  /* "Restart now" sent it: it runs and counts as usual */
+  st.trial_starts = 0;
+  d = onion_update_decide(&st, "0.1.0-rc17", "0.1.0-rc17", 0, false);
+  TEST_ASSERT_TRUE(!d.held && d.count_trial && d.action == ONION_UPDATE_RUN_SELF);
+  st.trial_starts = 2;
+  d = onion_update_decide(&st, "0.1.0-rc17", "0.1.0-rc17", 2, false);
+  TEST_ASSERT_TRUE(d.action == ONION_UPDATE_ROLL_BACK);
+  strcpy(st.status, "ok");
+  d = onion_update_decide(&st, "0.1.0-rc17", "0.1.0-rc16", 0, false);
+  TEST_ASSERT_TRUE(d.held && !d.reset_trial);
+  d = onion_update_decide(&st, "0.1.0-rc17", "0.1.0-rc18", 0, false); /* newer sent */
+  TEST_ASSERT_TRUE(!d.held && d.action == ONION_UPDATE_RUN_SELF);
   /* current/ that state.json does not describe: on trial from 0 */
   strcpy(st.current, "0.1.0-rc16");
-  d = onion_update_decide(&st, "0.1.0-rc17", "0.1.0-rc17", 3);
+  d = onion_update_decide(&st, "0.1.0-rc17", "0.1.0-rc17", 3, true);
   TEST_ASSERT_TRUE(d.count_trial && d.action == ONION_UPDATE_RUN_SELF);
   return 0;
 }
@@ -107,7 +128,7 @@ static int test_state_and_rollback(void) {
   onion_update_state c;
   onion_update_state_load(dir, &c);
   TEST_ASSERT_TRUE(!strcmp(c.status, "rolled_back") && !strcmp(c.reason, "manual"));
-  TEST_ASSERT_TRUE(onion_update_decide(&c, "", "0.1.0-rc16", 0).action == ONION_UPDATE_RUN_SELF);
+  TEST_ASSERT_TRUE(onion_update_decide(&c, "", "0.1.0-rc16", 0, true).action == ONION_UPDATE_RUN_SELF);
   rmtree(dir);
   return 0;
 }
