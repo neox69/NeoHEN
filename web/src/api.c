@@ -6,7 +6,9 @@
 #include <errno.h>
 #include <time.h>
 #include <sys/stat.h>
+#include <fcntl.h>
 #include <limits.h>
+#include <pthread.h>
 #include <signal.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -23,9 +25,17 @@
 #include "jobs.h"
 #include "log.h"
 #include "plat.h"
+#include "sha256.h"
 #include "zipstream.h"
 
-static char g_token[128]; /* optional shared secret */
+/* Optional shared secrets from config.json: "token" gives every route,
+ * "guestToken" only the read-only routes of guest_allowed(). Changed at run
+ * time from the page (api_auth_*), so read and written under g_tok_lock. */
+static char g_token[128];
+static char g_guest[128];
+static pthread_mutex_t g_tok_lock = PTHREAD_MUTEX_INITIALIZER;
+
+enum { ROLE_NONE, ROLE_GUEST, ROLE_ADMIN };
 
 /* ------------------------------------------------------------ helpers */
 
@@ -119,16 +129,75 @@ is_title_id(const char *s) {
 
 /* ------------------------------------------------------------ system */
 
+static int request_role(http_req_t *req, int *by_cookie);
+static int same_origin(http_req_t *req);
+
+/* Send `w` with the page's cookie set to `tok` ("" takes it away; NULL
+ * leaves it). HttpOnly: a page on another port of the console sees the
+ * cookie's requests go by but cannot read the token out of it. */
+static void
+send_with_cookie(http_req_t *req, jw_t *w, const char *tok) {
+  char extra[400];
+  size_t o;
+
+  jw_obj_end(w);
+  if(!tok || w->oom) {
+    http_send_json(req, 200, w);
+    jw_free(w);
+    return;
+  }
+  o = (size_t)snprintf(extra, sizeof(extra), "Set-Cookie: nwtok=");
+  for(const unsigned char *c = (const unsigned char *)tok; *c && o < sizeof(extra) - 100; c++) {
+    o += isalnum(*c) || strchr("._~-", *c) ? (size_t)snprintf(extra + o, 2, "%c", *c)
+                                           : (size_t)snprintf(extra + o, 4, "%%%02X", *c);
+  }
+  snprintf(extra + o, sizeof(extra) - o, "; Path=/; HttpOnly; SameSite=Strict; Max-Age=%d\r\n",
+           tok[0] ? 31536000 : 0);
+  http_send_buf_ex(req, 200, "application/json; charset=utf-8", w->data, w->len, extra);
+  jw_free(w);
+}
+
+/* Open to anyone (the watchdog and the page ask it before they have a
+ * token): says whether a token is needed and what the one sent gives. A
+ * token sent in the header or as ?token= by NeoWEB's own page becomes its
+ * cookie (images and downloads carry it); a wrong one takes the cookie away. */
 static void
 api_ping(http_req_t *req) {
+  static const char *const roles[] = {"none", "guest", "admin"};
+  int has_token, has_guest, cookie;
+  int role = request_role(req, &cookie);
+  const char *h = http_header(req, "X-PS5AIO-Token");
+  char sent[128] = "";
   jw_t w;
+
+  if(h) {
+    snprintf(sent, sizeof(sent), "%s", h);
+  } else {
+    http_query(req, "token", sent, sizeof(sent));
+  }
+
+  pthread_mutex_lock(&g_tok_lock);
+  has_token = g_token[0] != 0;
+  has_guest = g_token[0] && g_guest[0];
+  pthread_mutex_unlock(&g_tok_lock);
   api_begin(&w);
   jw_kstr(&w, "name", PS5AIO_NAME);
   jw_kstr(&w, "version", PS5AIO_VERSION);
   jw_kstr(&w, "neohenBuild", NEOHEN_VERSION);
   jw_kstr(&w, "platform", plat_name());
-  jw_kbool(&w, "auth", g_token[0] != 0);
-  api_finish(req, &w);
+  jw_kbool(&w, "auth", has_token);
+  jw_kbool(&w, "guestLink", has_guest);
+  jw_kstr(&w, "role", roles[role]);
+#ifdef NEOWEB_FULL
+  jw_kbool(&w, "full", 1);
+#else
+  jw_kbool(&w, "full", 0);
+#endif
+  if(!cookie && (h || sent[0]) && has_token && same_origin(req)) {
+    send_with_cookie(req, &w, role == ROLE_NONE ? "" : sent);
+  } else {
+    api_finish(req, &w);
+  }
 }
 
 static void
@@ -695,6 +764,8 @@ api_sys_report(http_req_t *req) {
   report_scrubbed(&z, PS5AIO_DATA_DIR "/config.json", "neoweb-config.json");
   report_scrubbed(&z, PS5AIO_DATA_DIR "/store.json", "store.json");
   report_scrubbed(&z, PS5AIO_DATA_DIR "/apps.json", "apps.json");
+  /* NeoHEN installed from NeoWEB: trial, rollback (docs/robustness.md) */
+  report_scrubbed(&z, "/data/neohen/update/state.json", "update-state.json");
 
   jw_init(&w);
   log_dump_json(&w, 0);
@@ -753,6 +824,190 @@ api_jobs_clear(http_req_t *req) {
   http_send_ok(req);
 }
 
+/* ------------------------------------------------------------ access
+ * config.json may hold "token" (every route) and "guestToken" (the
+ * read-only routes of guest_allowed()). A guest token only means something
+ * next to a token: without one anybody on the network has every route. The
+ * page asks for both here, so they are kept in config.json with whatever
+ * else the user put there. */
+#define NEOWEB_CONFIG PS5AIO_DATA_DIR "/config.json"
+
+static void
+token_new(char out[33]) {
+  unsigned char raw[16];
+  int fd = open("/dev/urandom", O_RDONLY);
+  ssize_t got = fd >= 0 ? read(fd, raw, sizeof(raw)) : -1;
+
+  if(fd >= 0) {
+    close(fd);
+  }
+  if(got != (ssize_t)sizeof(raw)) {
+    /* no urandom: the clock, the stack and a counter, through SHA-256 */
+    static unsigned counter;
+    struct timespec ts[2];
+    sha256_t s;
+    char hex[65];
+    clock_gettime(CLOCK_REALTIME, &ts[0]);
+    clock_gettime(CLOCK_MONOTONIC, &ts[1]);
+    unsigned c = __atomic_add_fetch(&counter, 1, __ATOMIC_RELAXED);
+    void *where = &s;
+    pid_t pid = getpid();
+    sha256_init(&s);
+    sha256_update(&s, ts, sizeof(ts));
+    sha256_update(&s, &c, sizeof(c));
+    sha256_update(&s, &where, sizeof(where));
+    sha256_update(&s, &pid, sizeof(pid));
+    sha256_final(&s, hex);
+    memcpy(out, hex, 32);
+    out[32] = 0;
+    return;
+  }
+  for(int i = 0; i < 16; i++) {
+    snprintf(out + i * 2, 3, "%02x", raw[i]);
+  }
+}
+
+/* Set "token" and "guestToken" in config.json (NULL leaves one as it is),
+ * keeping the rest of the file; then use them. */
+static int
+tokens_save(http_req_t *req, const char *token, const char *guest) {
+  char local[PATH_MAX], tmp[PATH_MAX + 8];
+  char *text = NULL;
+  size_t len = 0;
+  jval_t *cfg;
+  jw_t w;
+  int rc = -1;
+
+  plat_path(NEOWEB_CONFIG, local, sizeof(local));
+  if(fs_read_file(local, &text, &len, 64 * 1024)) {
+    cfg = json_parse("{}", 2);
+  } else {
+    cfg = json_parse(text, len);
+    free(text);
+    if(!cfg || cfg->type != J_OBJ) {
+      json_free(cfg);
+      http_send_error(req, 409, "%s is not valid JSON: fix it by hand first", NEOWEB_CONFIG);
+      return -1;
+    }
+  }
+  if(!cfg || (token && !json_set_str(cfg, "token", token)) ||
+     (guest && !json_set_str(cfg, "guestToken", guest))) {
+    json_free(cfg);
+    http_send_error(req, 500, "out of memory");
+    return -1;
+  }
+  jw_init(&w);
+  json_write(&w, cfg);
+  json_free(cfg);
+  snprintf(tmp, sizeof(tmp), "%s.tmp", local);
+  fs_mkparents(local);
+  if(w.oom || !w.data || fs_write_file(tmp, w.data, w.len) || rename(tmp, local)) {
+    unlink(tmp);
+    http_send_error(req, 500, "%s: %s", NEOWEB_CONFIG, strerror(errno));
+  } else {
+    pthread_mutex_lock(&g_tok_lock);
+    if(token) {
+      snprintf(g_token, sizeof(g_token), "%s", token);
+    }
+    if(guest) {
+      snprintf(g_guest, sizeof(g_guest), "%s", guest);
+    }
+    pthread_mutex_unlock(&g_tok_lock);
+    rc = 0;
+  }
+  jw_free(&w);
+  return rc;
+}
+
+/* GET /api/auth (the token's own route): whether there is a token, and the
+ * guest token, to make the guest link of */
+static void
+api_auth_get(http_req_t *req) {
+  char guest[128];
+  int has;
+  jw_t w;
+
+  pthread_mutex_lock(&g_tok_lock);
+  has = g_token[0] != 0;
+  snprintf(guest, sizeof(guest), "%s", has ? g_guest : "");
+  pthread_mutex_unlock(&g_tok_lock);
+  api_begin(&w);
+  jw_kbool(&w, "token", has);
+  jw_kstr(&w, "guest", guest);
+  api_finish(req, &w);
+}
+
+/* POST /api/auth/token {"action":"new"|"clear"}: a new token comes back in
+ * the answer, the only time it is shown; clearing it ends the guest token too */
+static void
+api_auth_token(http_req_t *req) {
+  char action[16], tok[33] = "";
+  jval_t *b = api_body(req);
+  jw_t w;
+
+  if(!b) {
+    return;
+  }
+  snprintf(action, sizeof(action), "%s", json_get_str(b, "action", ""));
+  json_free(b);
+  if(!strcmp(action, "new")) {
+    token_new(tok);
+    if(tokens_save(req, tok, NULL)) {
+      return;
+    }
+    LOG_INFO("a new API token was made from %s", req->client_ip);
+  } else if(!strcmp(action, "clear")) {
+    if(tokens_save(req, "", "")) {
+      return;
+    }
+    LOG_INFO("API token removed from %s", req->client_ip);
+  } else {
+    http_send_error(req, 400, "action is new or clear");
+    return;
+  }
+  api_begin(&w);
+  jw_kstr(&w, "token", tok);
+  send_with_cookie(req, &w, tok);
+}
+
+/* POST /api/auth/guest {"action":"new"|"revoke"} */
+static void
+api_auth_guest(http_req_t *req) {
+  char action[16], tok[33] = "";
+  int has;
+  jval_t *b = api_body(req);
+  jw_t w;
+
+  if(!b) {
+    return;
+  }
+  snprintf(action, sizeof(action), "%s", json_get_str(b, "action", ""));
+  json_free(b);
+  pthread_mutex_lock(&g_tok_lock);
+  has = g_token[0] != 0;
+  pthread_mutex_unlock(&g_tok_lock);
+  if(!strcmp(action, "new")) {
+    if(!has) {
+      http_send_error(req, 409, "set a token first: without one everybody has every route");
+      return;
+    }
+    token_new(tok);
+    if(tokens_save(req, NULL, tok)) {
+      return;
+    }
+  } else if(!strcmp(action, "revoke")) {
+    if(tokens_save(req, NULL, "")) {
+      return;
+    }
+  } else {
+    http_send_error(req, 400, "action is new or revoke");
+    return;
+  }
+  api_begin(&w);
+  jw_kstr(&w, "guest", tok);
+  api_finish(req, &w);
+}
+
 /* ------------------------------------------------------------ routing */
 
 /*
@@ -787,6 +1042,11 @@ static const api_route_t g_routes[] = {
   {"POST", "/api/payloads/autostart", api_payloads_autostart},
   {"GET",  "/api/health",             api_health},
   {"POST", "/api/health/safemode",    api_health_safe_mode_clear},
+  {"GET",  "/api/auth",               api_auth_get},
+  {"POST", "/api/auth/token",         api_auth_token},
+  {"POST", "/api/auth/guest",         api_auth_guest},
+  {"GET",  "/api/homebrew/list",      api_homebrew_list},
+  {"GET",  "/api/homebrew/icon",      api_homebrew_icon},
 
 #ifdef NEOWEB_FULL
   {"POST", "/api/sys/kill",         api_sys_kill},
@@ -795,6 +1055,10 @@ static const api_route_t g_routes[] = {
   {"POST", "/api/sys/eject",        api_sys_eject},
   {"GET",  "/api/sys/fan",          api_sys_fan_get},
   {"POST", "/api/sys/fan",          api_sys_fan_set},
+  {"GET",  "/api/neohen/settings",   api_neohen_settings_get},
+  {"POST", "/api/neohen/settings",   api_neohen_settings_set},
+  {"GET",  "/api/neohen/backup",     api_neohen_backup},
+  {"POST", "/api/neohen/restore",    api_neohen_restore},
   {"POST", "/api/sys/browser",      api_sys_browser},
   {"POST", "/api/sys/menu",         api_sys_menu},
   {"GET",  "/api/net/down",         api_net_down},
@@ -817,6 +1081,7 @@ static const api_route_t g_routes[] = {
   {"GET",  "/api/launcher",         api_launcher},
   {"GET",  "/api/remoteplay",       api_remoteplay},
   {NULL,   "/api/update/notice",    api_update_notice},
+  {NULL,   "/api/update",           api_update},
   {"POST", "/api/remoteplay",       api_remoteplay_request},
   {"POST", "/api/launcher/install", api_launcher_install},
   {"POST", "/api/launcher/remove",  api_launcher_remove},
@@ -829,6 +1094,10 @@ static const api_route_t g_routes[] = {
   {"GET",  "/api/stats/playtime",   api_stats_playtime},
   {"GET",  "/api/library/status",   api_library_status_get},
   {"POST", "/api/library/status",   api_library_status_set},
+  {"GET",  "/api/library/cleanup",  api_library_cleanup},
+  {"GET",  "/api/homebrew/js",      api_homebrew_js},
+  {"GET",  "/api/homebrew/ls",      api_homebrew_ls},
+  {"POST", "/api/homebrew/launch",  api_homebrew_launch},
 
   {"GET",  "/api/captures/list",    api_captures_list},
   {"GET",  "/api/captures/zip",     api_captures_zip},
@@ -888,22 +1157,32 @@ load_config(void) {
   char path[1024];
   char *data = NULL;
   size_t len = 0;
+  jval_t *cfg;
 
-  plat_path(PS5AIO_DATA_DIR "/config.json", path, sizeof(path));
+  plat_path(NEOWEB_CONFIG, path, sizeof(path));
   if(fs_read_file(path, &data, &len, 64 * 1024)) {
-    return;
+    cfg = json_parse("{}", 2);
+  } else {
+    cfg = json_parse(data, len);
+    free(data);
   }
-  jval_t *cfg = json_parse(data, len);
-  free(data);
   if(!cfg) {
     LOG_WARN("config.json is not valid JSON");
     return;
   }
+  pthread_mutex_lock(&g_tok_lock);
   snprintf(g_token, sizeof(g_token), "%s", json_get_str(cfg, "token", ""));
+  snprintf(g_guest, sizeof(g_guest), "%s", json_get_str(cfg, "guestToken", ""));
+  pthread_mutex_unlock(&g_tok_lock);
   json_free(cfg);
   if(g_token[0]) {
-    LOG_INFO("API token authentication enabled");
+    LOG_INFO("API token authentication enabled%s", g_guest[0] ? ", with a guest token" : "");
   }
+}
+
+void
+api_tokens_reload(void) {
+  load_config();
 }
 
 void
@@ -919,18 +1198,96 @@ api_init(void) {
 #endif
 }
 
+/* the same in a time that does not depend on where they differ */
 static int
-authorized(http_req_t *req) {
-  char tok[128];
+tok_eq(const char *a, const char *b) {
+  size_t la = strlen(a), lb = strlen(b);
+  unsigned char d = la != lb;
+  for(size_t i = 0; i < la && i < lb; i++) {
+    d |= (unsigned char)(a[i] ^ b[i]);
+  }
+  return !d;
+}
+
+/* the value of cookie `name`, url-decoded, or 0 */
+static int
+cookie_get(http_req_t *req, const char *name, char *out, size_t size) {
+  const char *c = http_header(req, "Cookie");
+  size_t n = strlen(name);
+
+  for(; c && *c; c += strcspn(c, ";"), c += *c == ';') {
+    c += strspn(c, " \t");
+    if(!strncmp(c, name, n) && c[n] == '=') {
+      url_decode(c + n + 1, strcspn(c + n + 1, ";"), out, size);
+      return 1;
+    }
+  }
+  return 0;
+}
+
+/* What the request may do: with no token set, everything; otherwise what
+ * the token it carries gives, from the X-PS5AIO-Token header, ?token= or
+ * the page's nwtok cookie, in that order. A cookie goes with any request
+ * the browser makes, so *by_cookie says the caller has to check where the
+ * request comes from. */
+static int
+request_role(http_req_t *req, int *by_cookie) {
+  char tok[128], admin[128], guest[128];
   const char *h;
 
-  if(!g_token[0]) {
-    return 1;
+  *by_cookie = 0;
+  pthread_mutex_lock(&g_tok_lock);
+  snprintf(admin, sizeof(admin), "%s", g_token);
+  snprintf(guest, sizeof(guest), "%s", g_guest);
+  pthread_mutex_unlock(&g_tok_lock);
+  if(!admin[0]) {
+    return ROLE_ADMIN;
   }
-  if((h = http_header(req, "X-PS5AIO-Token")) && !strcmp(h, g_token)) {
-    return 1;
+  if((h = http_header(req, "X-PS5AIO-Token"))) {
+    snprintf(tok, sizeof(tok), "%s", h);
+  } else if(!http_query(req, "token", tok, sizeof(tok)) || !tok[0]) {
+    if(!cookie_get(req, "nwtok", tok, sizeof(tok)) || !tok[0]) {
+      return ROLE_NONE;
+    }
+    *by_cookie = 1;
   }
-  if(http_query(req, "token", tok, sizeof(tok)) && !strcmp(tok, g_token)) {
+  if(tok_eq(tok, admin)) {
+    return ROLE_ADMIN;
+  }
+  if(guest[0] && tok_eq(tok, guest)) {
+    return ROLE_GUEST;
+  }
+  return ROLE_NONE;
+}
+
+/* What a guest token may use: an explicit list (a route not named here,
+ * new ones included, is refused), only to read, and nothing that hands out
+ * files by path except the console's captures. No settings, tokens, logs,
+ * file manager, memory, payload start/stop, installs, power or reports. */
+static int
+guest_allowed(http_req_t *req) {
+  static const char *const reads[] = {
+    "/api/ping", "/api/sys/info", "/api/sys/sensors", "/api/sys/mounts",
+    "/api/apps/list", "/api/apps/param", "/apps/icon", "/api/apps/running",
+    "/api/payloads/list", "/api/health",
+    "/api/homebrew/list", "/api/homebrew/icon",
+    "/api/trophies", "/api/trophies/set", "/api/trophies/icon",
+    "/api/games/images", "/api/stats/playtime", "/api/library/status",
+    "/api/captures/list",
+  };
+  char path[1024];
+
+  if(strcmp(req->method, "GET") && strcmp(req->method, "HEAD")) {
+    return 0;
+  }
+  for(size_t i = 0; i < sizeof(reads) / sizeof(reads[0]); i++) {
+    if(!strcmp(req->path, reads[i])) {
+      return 1;
+    }
+  }
+  /* the screenshots and clips themselves, and their thumbnails */
+  if(!strcmp(req->path, "/fs/get") && http_query(req, "path", path, sizeof(path)) &&
+     !strncmp(path, "/user/av_contents/", 18) && !strstr(path, "..") && !strstr(path, "//")) {
     return 1;
   }
   return 0;
@@ -1034,12 +1391,19 @@ api_dispatch(http_req_t *req) {
     webui_serve(req);
     return;
   }
-  if(strcmp(req->path, "/api/ping") && !authorized(req)) {
+  int by_cookie, has_token;
+  int role = request_role(req, &by_cookie);
+
+  pthread_mutex_lock(&g_tok_lock);
+  has_token = g_token[0] != 0;
+  pthread_mutex_unlock(&g_tok_lock);
+  if(strcmp(req->path, "/api/ping") && role == ROLE_NONE) {
     http_send_error(req, 401, "invalid or missing token");
     return;
   }
-  /* with a token, a page elsewhere cannot get in anyway: it does not know it */
-  if(!g_token[0] && !same_origin(req)) {
+  /* with a token, a page elsewhere cannot get in anyway: it does not know
+   * it; but the browser sends the page's cookie to anybody's request */
+  if((!has_token || by_cookie) && !same_origin(req)) {
     http_send_error(req, 403, "cross-origin request refused (open NeoWEB at the "
                     "console's address, or set a token in config.json)");
     return;
@@ -1060,6 +1424,10 @@ api_dispatch(http_req_t *req) {
     if(strcmp(req->method, "GET") && strcmp(req->method, "HEAD") && read_only_marker()) {
       http_send_error(req, 403, "NeoWEB is read-only (%s exists)",
                       PS5AIO_DATA_DIR "/readonly");
+      return;
+    }
+    if(role == ROLE_GUEST && !guest_allowed(req)) {
+      http_send_error(req, 403, "the guest link can only look, not change or download things");
       return;
     }
     r->fn(req);

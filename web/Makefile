@@ -15,12 +15,14 @@ HOST_BIN := build/neoweb-host
 
 COMMON_SRCS := src/main.c src/http.c src/json.c src/log.c src/jobs.c \
                src/fsutil.c src/sha256.c src/sfo.c src/api.c src/api_fs.c src/api_apps.c \
-               src/api_payloads.c src/webui.c src/plat_common.c
+               src/api_payloads.c src/api_homebrew.c src/webui.c src/plat_common.c
 # The default build has every route: file manager, memory tools, dumper,
 # installer and power. SAFE=1 builds the restricted variant, which only reads
 # state, launches or closes games and manages NeoHEN's own payloads.
 ifndef SAFE
-COMMON_SRCS += src/api_mem.c src/api_dump.c src/api_saves.c src/api_captures.c src/api_stats.c src/api_trophies.c src/api_games.c src/api_cheats.c src/api_smp.c src/api_store.c src/api_launcher.c src/api_usb.c src/api_unpack.c src/sqlite_ro.c src/zipstream.c src/discovery.c
+COMMON_SRCS += src/api_mem.c src/api_dump.c src/api_saves.c src/api_captures.c src/api_stats.c src/api_trophies.c src/api_games.c src/api_cheats.c src/api_smp.c src/api_store.c src/api_launcher.c src/api_usb.c src/api_neohen.c src/api_unpack.c src/api_cleanup.c src/sqlite_ro.c src/zipstream.c src/discovery.c
+# NeoHEN's own update (System > NeoHEN update)
+COMMON_SRCS += src/api_update.c
 FULLDEF     := -DNEOWEB_FULL
 else
 # the handlers of the routes that are compiled out stay in the sources

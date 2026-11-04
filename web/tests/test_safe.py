@@ -11,6 +11,7 @@ reachable, whatever the method.
 import json
 import os
 import shutil
+import socket
 import subprocess
 import tempfile
 import time
@@ -37,6 +38,8 @@ FORBIDDEN = [
     "/api/usb/eject", "/api/games/autofix",
     "/api/remoteplay", "/api/update/notice",
     "/api/store/auto",
+    "/api/homebrew/js", "/api/homebrew/ls", "/api/homebrew/launch", "/api/library/cleanup",
+    "/api/neohen/settings", "/api/neohen/backup", "/api/neohen/restore",
 ]
 
 
@@ -100,11 +103,32 @@ class SafeBuildTest(unittest.TestCase):
         for key in ("serial", "userName", "userId"):
             self.assertNotIn(key, j)
 
+    def test_pwa_files(self):
+        st, body, hdr = self.api.req("GET", "/manifest.webmanifest")
+        self.assertEqual(st, 200)
+        self.assertEqual(json.loads(body)["name"], "NeoWEB")
+        st, body, hdr = self.api.req("GET", "/icon-512.png")
+        self.assertEqual(st, 200)
+        self.assertTrue(body.startswith(b"\x89PNG"))
+        st, _, _ = self.api.req("GET", "/sw.js")
+        self.assertEqual(st, 200)
+
     def test_library_and_icon(self):
         _, j = self.api.get("/api/apps/list")
         titles = {a["titleId"]: a for a in j["apps"]}
         self.assertEqual(titles["PPSA01234"]["title"], "Test Game")
         st, body, _ = self.api.req("GET", "/apps/icon?id=PPSA01234")
+        self.assertEqual(st, 200)
+        self.assertTrue(body.startswith(b"\x89PNG"))
+
+    def test_homebrew_is_listed_not_launched(self):
+        from test_api import seed_homebrew
+        seed_homebrew(self.root)
+        st, j = self.api.get("/api/homebrew/list")
+        self.assertEqual(st, 200, j)
+        self.assertIn("/data/homebrew/Plain", {a["dir"] for a in j["apps"]})
+        self.assertFalse(j["launch"])
+        st, body, _ = self.api.req("GET", "/api/homebrew/icon?dir=/data/homebrew/Plain")
         self.assertEqual(st, 200)
         self.assertTrue(body.startswith(b"\x89PNG"))
 
@@ -116,6 +140,31 @@ class SafeBuildTest(unittest.TestCase):
         self.assertEqual(j["titleId"], "PPSA01234")
         st, _ = self.api.post("/api/apps/kill", {})
         self.assertEqual(st, 200)
+
+    def test_guest_token_in_the_safe_build_too(self):
+        # with no token there is nothing to be a guest of
+        st, j = self.api.post("/api/auth/guest", {"action": "new"})
+        self.assertEqual(st, 409, j)
+        st, j = self.api.get("/api/ping")
+        self.assertEqual((j["role"], j["full"]), ("admin", False))
+        st, j = self.api.post("/api/auth/token", {"action": "new"})
+        self.assertEqual(st, 200, j)
+        admin = {"X-PS5AIO-Token": j["token"]}
+        try:
+            st, body, _ = self.api.req("POST", "/api/auth/guest", body={"action": "new"}, headers=admin)
+            self.assertEqual(st, 200, body)
+            guest = {"X-PS5AIO-Token": json.loads(body)["guest"]}
+            st, _, _ = self.api.req("GET", "/api/apps/list", headers=guest)
+            self.assertEqual(st, 200)
+            for method, path in (("POST", "/api/apps/launch"), ("POST", "/api/payloads/start"),
+                                 ("POST", "/api/payloads/delete"), ("POST", "/api/health/safemode")):
+                st, _, _ = self.api.req(method, path, body={}, headers=guest)
+                self.assertEqual(st, 403, path)
+            st, _, _ = self.api.req("GET", "/api/apps/list")
+            self.assertEqual(st, 401)
+        finally:
+            st, body, _ = self.api.req("POST", "/api/auth/token", body={"action": "clear"}, headers=admin)
+            self.assertEqual(st, 200, body)
 
     def test_everything_else_is_missing(self):
         for path in FORBIDDEN:
@@ -186,6 +235,44 @@ class SafeBuildTest(unittest.TestCase):
         self.assertEqual(st, 200)
         self.assertNotIn(name, self.pay())
         self.assertFalse(os.path.exists(stopped))
+
+    def test_ps5debug_is_not_started_twice(self):
+        # ps5debug(-NG) moves into SceShellCore and leaves no process of its
+        # own: its command port says whether it is there.
+        name = "ps5debug-NG.elf"
+        self.assertEqual(self.upload(name)[0], 200)
+        try:
+            p = self.pay()[name]
+            self.assertEqual(p["port"], 744)
+            busy = socket.socket()
+            try:
+                busy.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                busy.bind(("127.0.0.1", 744))
+                busy.listen(4)
+            except OSError:
+                busy.close()
+                self.skipTest("port 744 cannot be bound here (not root, or in use)")
+            try:
+                self.assertTrue(self.pay()[name]["serving"])
+                self.assertFalse(self.pay()[name]["running"])
+                st, body, _ = self.api.req("POST", "/api/payloads/start", raw=json.dumps({"name": name}).encode())
+                self.assertEqual(st, 409, body)
+                self.assertIn(b"already running", body)
+            finally:
+                busy.close()
+            self.assertFalse(self.pay()[name]["serving"])
+            st, j = self.api.post("/api/payloads/start", {"name": name})
+            self.assertEqual(st, 200, j)
+            # its own (installer) process is running now: still not twice
+            st, _ = self.api.post("/api/payloads/start", {"name": name})
+            self.assertEqual(st, 409)
+            self.api.post("/api/payloads/stop", {"name": name})
+            for _ in range(40):
+                if not self.pay()[name]["running"]:
+                    break
+                time.sleep(0.05)
+        finally:
+            self.api.post("/api/payloads/delete", {"name": name})
 
     def test_health_in_the_safe_build(self):
         _, j = self.api.get("/api/health")

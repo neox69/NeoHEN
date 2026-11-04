@@ -62,6 +62,82 @@ extern const char ps5aio_jxrjs[];
 extern const char ps5aio_jxrjs_end[];
 #endif
 
+/* ---- what makes the page an app on a phone's home screen
+ *
+ * The manifest, the icon (the launcher's icon0.png, which the full build
+ * already carries for the console's own NeoWEB icon) and a service worker.
+ * Browsers only take the service worker, and only offer to install, in a
+ * secure context: https or localhost. NeoWEB is plain http on the home
+ * network, so on a phone this gives the home-screen icon, the name, the
+ * colour and full screen (iOS "Add to Home Screen", an Android shortcut), and
+ * the service worker only runs where the page is secure (the console's own
+ * browser at 127.0.0.1, or a browser told to trust the console's address). */
+#ifndef LAUNCHER_DIR
+#error "LAUNCHER_DIR must point to web/launcher"
+#endif
+#ifndef NEOWEB_FULL
+__asm__(".section .rodata\n"
+        ".global neoweb_icon0\n"
+        "neoweb_icon0:\n"
+        ".incbin \"" LAUNCHER_DIR "/icon0.png\"\n"
+        ".global neoweb_icon0_end\n"
+        "neoweb_icon0_end:\n"
+        ".previous\n");
+#endif
+/* in the full build, from api_launcher.c */
+extern const char neoweb_icon0[], neoweb_icon0_end[];
+
+static const char manifest[] =
+  "{\"name\":\"NeoWEB\",\"short_name\":\"NeoWEB\","
+  "\"description\":\"NeoHEN's remote for the PS5\","
+  "\"id\":\"/\",\"start_url\":\"/\",\"scope\":\"/\",\"display\":\"standalone\","
+  "\"orientation\":\"any\",\"background_color\":\"#0B0D12\",\"theme_color\":\"#0B0D12\","
+  "\"icons\":[{\"src\":\"/icon-512.png\",\"sizes\":\"512x512\",\"type\":\"image/png\",\"purpose\":\"any\"},"
+  "{\"src\":\"/icon-512.png\",\"sizes\":\"512x512\",\"type\":\"image/png\",\"purpose\":\"maskable\"}]}\n";
+
+/* Network first, always: the service worker never keeps a copy of the page
+ * or of anything under /api. It is only there so that an installed NeoWEB
+ * whose console is off or out of reach says so, instead of the browser's
+ * own error page. */
+static const char service_worker[] =
+  "/* NeoWEB service worker: only says when the console cannot be reached */\n"
+  "self.addEventListener('install',function(){self.skipWaiting()});\n"
+  "self.addEventListener('activate',function(e){e.waitUntil(self.clients.claim())});\n"
+  "var OFF='<!doctype html><html><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">'+\n"
+  "'<meta name=\"theme-color\" content=\"#0B0D12\"><title>NeoWEB</title><style>body{margin:0;min-height:100vh;display:grid;place-items:center;'+\n"
+  "'background:#0B0D12;color:#ECEEF3;font:15px/1.5 system-ui,sans-serif;text-align:center;padding:24px;box-sizing:border-box}'+\n"
+  "'img{width:84px;height:84px;border-radius:20px}h1{font-size:20px;margin:18px 0 6px}p{color:#9AA3B5;margin:0 0 4px}'+\n"
+  "'button{margin-top:20px;font:600 15px system-ui,sans-serif;color:#fff;background:#3B6FF5;border:0;border-radius:12px;padding:12px 22px}</style></head>'+\n"
+  "'<body><div><img alt=\"\" src=\"/icon-512.png\" onerror=\"this.remove()\"><h1>The console cannot be reached</h1>'+\n"
+  "'<p>Is the PS5 on, on this network, with NeoHEN running?</p><p lang=\"es\">No se puede llegar a la consola: \\u00bfest\\u00e1 encendida, en esta red y con NeoHEN?</p>'+\n"
+  "'<button onclick=\"location.reload()\">Retry / Reintentar</button></div></body></html>';\n"
+  "self.addEventListener('fetch',function(e){var r=e.request;\n"
+  "  if(r.method!=='GET'||r.mode!=='navigate'||new URL(r.url).origin!==self.location.origin)return;\n"
+  "  e.respondWith(fetch(r).catch(function(){return new Response(OFF,{status:503,headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store'}})}))});\n";
+
+/* 1 when `p` is one of the app's files, which it then sends */
+static int
+send_app_file(http_req_t *req, const char *p) {
+  if(!strcmp(p, "/manifest.webmanifest")) {
+    http_send_buf_ex(req, 200, "application/manifest+json", manifest, sizeof(manifest) - 1,
+                     "Cache-Control: no-cache\r\n");
+    return 1;
+  }
+  if(!strcmp(p, "/sw.js")) {
+    http_send_buf_ex(req, 200, "application/javascript; charset=utf-8", service_worker,
+                     sizeof(service_worker) - 1, "Cache-Control: no-cache\r\n");
+    return 1;
+  }
+  /* iOS asks for the apple-touch-icon names by itself */
+  if(!strcmp(p, "/icon-512.png") || !strcmp(p, "/apple-touch-icon.png") ||
+     !strcmp(p, "/apple-touch-icon-precomposed.png")) {
+    http_send_buf_ex(req, 200, "image/png", neoweb_icon0, (size_t)(neoweb_icon0_end - neoweb_icon0),
+                     "Cache-Control: max-age=86400\r\n");
+    return 1;
+  }
+  return 0;
+}
+
 /* where the deflate stream of a gzip file starts, 0 when it is not one */
 static size_t
 gzip_start(const unsigned char *gz, size_t len) {
@@ -159,6 +235,9 @@ webui_serve(http_req_t *req) {
   if(!strcmp(p, "/index.html")) {
     send_embedded(req, "text/html; charset=utf-8", ps5aio_webui, ps5aio_webui_end,
                   WEBUI_ETAG);
+    return;
+  }
+  if(send_app_file(req, p)) {
     return;
   }
 #ifdef NEOWEB_FULL

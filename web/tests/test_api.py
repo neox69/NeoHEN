@@ -18,6 +18,7 @@ import tempfile
 import time
 import unittest
 import urllib.error
+import urllib.parse
 import urllib.request
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -415,6 +416,45 @@ class PayloadTest(unittest.TestCase):
         self.assertIn(b"NeoWEB", body)
         self.assertIn("text/html", hdr["Content-Type"])
 
+    def test_pwa_files(self):
+        """The manifest, its icon, the iOS icon names and the service worker
+        are served next to the page, without a token, and the page links
+        them."""
+        st, body, hdr = self.api.req("GET", "/manifest.webmanifest")
+        self.assertEqual(st, 200)
+        self.assertEqual(hdr["Content-Type"], "application/manifest+json")
+        m = json.loads(body)
+        self.assertEqual(m["name"], "NeoWEB")
+        self.assertEqual(m["display"], "standalone")
+        self.assertEqual(m["start_url"], "/")
+        self.assertRegex(m["theme_color"], r"^#[0-9A-Fa-f]{6}$")
+        self.assertNotIn("share_target", m)
+        launcher = os.path.join(HERE, "..", "launcher", "icon0.png")
+        with open(launcher, "rb") as f:
+            icon = f.read()
+        for ic in m["icons"]:
+            self.assertEqual(ic["sizes"], "512x512")
+        for path in {ic["src"] for ic in m["icons"]} | {"/apple-touch-icon.png", "/apple-touch-icon-precomposed.png"}:
+            st, body, hdr = self.api.req("GET", path)
+            self.assertEqual((path, st), (path, 200))
+            self.assertEqual(hdr["Content-Type"], "image/png")
+            self.assertEqual(body, icon)
+        st, body, hdr = self.api.req("GET", "/sw.js")
+        self.assertEqual(st, 200)
+        self.assertIn("javascript", hdr["Content-Type"])
+        self.assertEqual(hdr["Cache-Control"], "no-cache")
+        # it only answers for page loads when the network fails, never /api
+        self.assertIn(b"mode!=='navigate'", body)
+        self.assertNotIn(b"caches", body)
+        st, _, _ = self.api.req("HEAD", "/manifest.webmanifest")
+        self.assertEqual(st, 200)
+        st, _, _ = self.api.req("POST", "/manifest.webmanifest", raw=b"x")
+        self.assertEqual(st, 405)
+        _, page, _ = self.api.req("GET", "/")
+        for tag in (b'rel="manifest" href="/manifest.webmanifest"', b'rel="apple-touch-icon"',
+                    b'name="apple-mobile-web-app-capable"', b'name="theme-color"'):
+            self.assertIn(tag, page)
+
     def test_webui_gzip_etag(self):
         import gzip
         for path, kind in (("/", "text/html"), ("/jxr.js", "javascript")):
@@ -781,6 +821,122 @@ class PayloadTest(unittest.TestCase):
         _, j = self.api.post("/api/update/notice", {"enabled": True})
         self.assertTrue(j["enabled"])
         self.assertFalse(os.path.exists(off))
+
+    def _update_files(self, files):
+        """write files under data/neohen for a test; returns what to put back"""
+        d = f"{self.root}/data/neohen"
+        old = {}
+        for rel, body in files.items():
+            path = f"{d}/{rel}"
+            old[path] = None
+            if os.path.exists(path):
+                with open(path, "rb") as f:
+                    old[path] = f.read()
+            if body is None:
+                if os.path.exists(path):
+                    os.unlink(path)
+                continue
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            with open(path, "wb") as f:
+                f.write(body)
+        return old
+
+    def _update_restore(self, old):
+        for path, body in old.items():
+            if body is None:
+                if os.path.exists(path):
+                    os.unlink(path)
+            else:
+                with open(path, "wb") as f:
+                    f.write(body)
+
+    def test_update_status_from_files(self):
+        # what is installed and what a check found are files util writes;
+        # NeoWEB shows them even with NeoHEN's service not answering
+        state = {"status": "trial", "current": "0.1.0-rc17", "previous": "0.1.0-rc16",
+                 "from": "0.1.0-rc16+ab12", "trial_starts": 1, "installed_at": 1700000000}
+        avail = {"checked_at": 1700000000, "channel": "prerelease", "running": "0.1.0-rc16+ab12",
+                 "newer": True, "release": {"tag": "v0.1.0-rc17", "notes": "## Fixes\n- <b>x</b>",
+                                            "installable": True, "sha256": "ab" * 32, "size": 15000000}}
+        old = self._update_files({
+            "version.txt": b"0.1.0-rc16+ab12\n",
+            "update/state.json": json.dumps(state).encode(),
+            "update/available.json": json.dumps(avail).encode(),
+            "update/current/version.txt": b"0.1.0-rc17\n",
+            "update/previous/version.txt": b"0.1.0-rc16\n",
+            "config.ini": b"[meta]\nschema_version=1\n[update]\n; which releases\nchannel = prerelease ; all of them\n",
+        })
+        try:
+            st, j = self.api.get("/api/update")
+            self.assertEqual(st, 200, j)
+            self.assertEqual((j["running"], j["channel"], j["job"]), ("0.1.0-rc16+ab12", "prerelease", None))
+            self.assertEqual(j["installed"]["state"], state)
+            self.assertEqual((j["installed"]["current"], j["installed"]["previous"]), ("0.1.0-rc17", "0.1.0-rc16"))
+            self.assertEqual(j["available"], avail)
+            # no config.ini, nothing installed: the stable channel and nulls
+            self._update_files({"config.ini": None, "update/state.json": None, "update/available.json": None,
+                                "update/current/version.txt": None, "update/previous/version.txt": None})
+            _, j = self.api.get("/api/update")
+            self.assertEqual((j["channel"], j["installed"]["state"], j["available"], j["installed"]["current"]),
+                             ("stable", None, None, ""))
+        finally:
+            self._update_restore(old)
+
+    def test_update_actions_checked(self):
+        old = self._update_files({"version.txt": b"0.1.0-rc16+ab12\n"})
+        try:
+            for bad in ({"action": "nope"}, {"action": "install"}, {"action": "install", "tag": "../x"},
+                        {"action": "install", "tag": "v1.2"}, {"action": "install", "tag": "v1.2.3 x"},
+                        {"action": "install", "tag": "v" + "1." * 30 + "0"}):
+                st, body, _ = self.api.req("POST", "/api/update", body=bad)
+                self.assertEqual(st, 400, (bad, body))
+            # NeoHEN's service is not there in the tests
+            st, j = self.api.post("/api/update", {"action": "check"})
+            self.assertEqual(st, 502, j)
+        finally:
+            self._update_restore(old)
+
+    def test_update_reaches_the_service(self):
+        sock = f"{self.root}/system_tmp/neohen/ipc/util_service"
+        seen = []
+        job = {"state": "download", "action": "install", "tag": "v0.1.0-rc17", "got": 10, "total": 100,
+               "err": "", "msg": "", "running": "0.1.0-rc16+ab12"}
+        srv = fake_util_service(sock, lambda cmd, ask: (json.dumps(job), 0), seen)
+        old = self._update_files({"version.txt": b"0.1.0-rc16+ab12\n"})
+        try:
+            st, j = self.api.post("/api/update", {"action": "install", "tag": "v0.1.0-rc17", "url": "https://evil.example/x.zip"})
+            self.assertEqual(st, 200, j)
+            self.assertEqual(j["job"], job)
+            cmd, ask = seen[-1]
+            # only the action and the tag go: util finds the file on GitHub itself
+            self.assertEqual((cmd, ask), (0x8000030, {"tag": "v0.1.0-rc17", "action": "install"}))
+            for action in ("check", "cancel", "rollback", "apply"):
+                st, _ = self.api.post("/api/update", {"action": action})
+                self.assertEqual((st, seen[-1][1]), (200, {"action": action}))
+            _, j = self.api.get("/api/update")
+            self.assertEqual((j["job"]["state"], seen[-1][1]), ("download", {"action": "status"}))
+            # what the service says no to comes back as it is
+            srv.close()
+            srv = fake_util_service(sock, lambda cmd, ask: ("close the open game first", -1), seen)
+            st, j = self.api.post("/api/update", {"action": "apply"})
+            self.assertEqual(st, 409)
+            self.assertIn("close the open game", j["error"])
+            # a GET still answers with the files
+            st, j = self.api.get("/api/update")
+            self.assertEqual((st, j["job"]), (200, None))
+            # a NeoHEN older than the command is not asked (it would say
+            # "unknown command" on the TV)
+            self._update_files({"version.txt": b"0.1.0-rc15+ab12\n"})
+            n = len(seen)
+            st, j = self.api.post("/api/update", {"action": "check"})
+            self.assertEqual(st, 409)
+            self.assertIn("0.1.0-rc16", j["error"])
+            st, j = self.api.get("/api/update")
+            self.assertEqual((st, j["job"], len(seen)), (200, None, n))
+        finally:
+            self._update_restore(old)
+            srv.close()
+            os.unlink(sock)
 
     def test_launcher(self):
         # the NeoWEB icon in Media: a web shortcut (65536 + deeplinkUri) to this
@@ -1782,6 +1938,676 @@ class PayloadTest(unittest.TestCase):
                                    headers={"Content-Type": "application/octet-stream"})
         self.assertEqual(st, 200)
         self.assertEqual(json.loads(body)["bytes"], 3000000)
+
+
+ELF = b"\x7fELF" + b"\0" * 60
+
+
+def seed_homebrew(r):
+    """websrv-style homebrew: eboot.elf, homebrew.js, both, neither."""
+    hb = f"{r}/data/homebrew"
+    os.makedirs(f"{hb}/Plain/sce_sys", exist_ok=True)
+    with open(f"{hb}/Plain/eboot.elf", "wb") as f:
+        f.write(ELF)
+    with open(f"{hb}/Plain/sce_sys/icon0.png", "wb") as f:
+        f.write(b"\x89PNG\r\n\x1a\nHBICON")
+    with open(f"{hb}/Plain/sce_sys/param.json", "w") as f:
+        # a titleId of a game installed in HomebrewCleanupTest: not a copy of it
+        json.dump({"titleId": "PPSA01111", "localizedParameters": {
+            "defaultLanguage": "en-US", "en-US": {"titleName": "Plain Homebrew"}}}, f)
+    os.makedirs(f"{hb}/Doom/roms", exist_ok=True)
+    with open(f"{hb}/Doom/homebrew.js", "w") as f:
+        f.write("async function main(){const CWD=window.workingDir;return {mainText:'Doom',"
+                "onclick:async()=>{showCarousel([{mainText:'E1',onclick:async()=>({path:CWD+'/doom.elf',"
+                "args:['-iwad',CWD+'/DOOM 1.WAD'],cwd:CWD,env:{TMPDIR:'/user/temp'}})}])}}}\n")
+    with open(f"{hb}/Doom/doom.elf", "wb") as f:
+        f.write(ELF)
+    with open(f"{hb}/Doom/notelf.elf", "wb") as f:
+        f.write(b"MZ")
+    with open(f"{hb}/Doom/roms/a.wad", "wb") as f:
+        f.write(b"x")
+    os.makedirs(f"{hb}/NotHomebrew/sce_sys", exist_ok=True)  # no eboot.elf, no homebrew.js
+    os.makedirs(f"{r}/mnt/usb1/homebrew/UsbApp", exist_ok=True)
+    with open(f"{r}/mnt/usb1/homebrew/UsbApp/eboot.elf", "wb") as f:
+        f.write(ELF)
+
+
+class HomebrewCleanupTest(unittest.TestCase):
+    """The websrv-style homebrew launcher and the library's duplicates and
+    leftovers, each on a console of their own."""
+
+    @classmethod
+    def setUpClass(cls):
+        import http.server
+        import threading
+        cls.root = r = tempfile.mkdtemp(prefix="fakeps5-hb-")
+        seed_homebrew(r)
+
+        def param(tid):
+            return {"titleId": tid, "localizedParameters": {"defaultLanguage": "en-US",
+                                                            "en-US": {"titleName": tid}}}
+        # PPSA01111: installed by the console, and a game folder of it on USB
+        os.makedirs(f"{r}/user/app/PPSA01111/sce_sys")
+        with open(f"{r}/user/app/PPSA01111/app.pkg", "wb") as f:
+            f.write(b"p" * 1000)
+        os.makedirs(f"{r}/mnt/usb0/PPSA01111-copy/sce_sys")
+        with open(f"{r}/mnt/usb0/PPSA01111-copy/sce_sys/param.json", "w") as f:
+            json.dump(param("PPSA01111"), f)
+        with open(f"{r}/mnt/usb0/PPSA01111-copy/eboot.bin", "wb") as f:
+            f.write(b"e" * 500)
+        # PPSA02222: ShadowMount+ serves it from an image on the internal drive;
+        # a second image of it (by name) on USB, and the active one again under
+        # another name of the same file
+        os.makedirs(f"{r}/user/app/PPSA02222/sce_sys")
+        os.makedirs(f"{r}/data/homebrew", exist_ok=True)
+        with open(f"{r}/data/homebrew/Game A.ffpfsc", "wb") as f:
+            f.write(b"i" * 3000)
+        with open(f"{r}/user/app/PPSA02222/mount_img.lnk", "w") as f:
+            f.write("/data/homebrew/Game A.ffpfsc\n/mnt/shadowmnt/pfsc/x.exfat")
+        with open(f"{r}/user/app/PPSA02222/mount.lnk", "w") as f:
+            f.write("/mnt/shadowmnt/PPSA02222_ab")
+        with open(f"{r}/mnt/usb0/PPSA02222 Game A.ffpfsc", "wb") as f:
+            f.write(b"j" * 2000)
+        os.makedirs(f"{r}/mnt/usb1", exist_ok=True)
+        os.link(f"{r}/data/homebrew/Game A.ffpfsc", f"{r}/mnt/usb1/PPSA02222 hardlink.ffpfsc")
+        # one copy only: not a duplicate; an image with no id: left alone
+        os.makedirs(f"{r}/user/app/PPSA03333/sce_sys")
+        with open(f"{r}/user/app/PPSA03333/app.pkg", "wb") as f:
+            f.write(b"p")
+        with open(f"{r}/mnt/usb0/whatever.exfat", "wb") as f:
+            f.write(b"z")
+        # a title id inside a longer word is not one
+        with open(f"{r}/mnt/usb0/XPPSA03333.exfat", "wb") as f:
+            f.write(b"z")
+        # leftovers
+        old = time.time() - 7200
+        with open(f"{r}/mnt/usb0/Big Game.ffpfsc.subiendo", "wb") as f:
+            f.write(b"u" * 4096)
+        os.utime(f"{r}/mnt/usb0/Big Game.ffpfsc.subiendo", (old, old))
+        with open(f"{r}/mnt/usb0/Fresh.ffpfsc.subiendo", "wb") as f:
+            f.write(b"u")  # being written right now
+        os.makedirs(f"{r}/data/homebrew/PPSA04444.subiendo/sce_sys")
+        with open(f"{r}/data/homebrew/PPSA04444.subiendo/sce_sys/x.bin", "wb") as f:
+            f.write(b"d" * 100)
+        for p in (f"{r}/data/homebrew/PPSA04444.subiendo/sce_sys/x.bin",
+                  f"{r}/data/homebrew/PPSA04444.subiendo/sce_sys",
+                  f"{r}/data/homebrew/PPSA04444.subiendo"):
+            os.utime(p, (old, old))
+        with open(f"{r}/mnt/usb1/Game A.ffpfsc.moving", "wb") as f:
+            f.write(b"m" * 10)
+        os.utime(f"{r}/mnt/usb1/Game A.ffpfsc.moving", (old, old))
+        for d in ("user/patch/CUSA09999", "user/addcont/PPSA08888/DLC1", "user/patch/PPSA01111",
+                  "user/addcont/CUSA07777", "mnt/ext1/user/patch/PPSA06666"):
+            os.makedirs(f"{r}/{d}")
+            with open(f"{r}/{d}/x.pkg", "wb") as f:
+                f.write(b"p" * 50)
+        os.makedirs(f"{r}/user/appmeta/CUSA07777")  # a game on a drive not plugged in
+        os.makedirs(f"{r}/data/homebrew/backports/PPSA05555/fakelib")
+        with open(f"{r}/data/homebrew/backports/PPSA05555/fakelib/libScePlayGo.sprx", "wb") as f:
+            f.write(b"s" * 20)
+        os.makedirs(f"{r}/data/homebrew/backports/PPSA02222.off")
+        os.makedirs(f"{r}/data/neohen/web/fakelib/PPSA05555")
+        os.makedirs(f"{r}/data/neohen/web/fakelib/PPSA02222")
+
+        class Websrv(http.server.BaseHTTPRequestHandler):
+            calls = []
+            def log_message(self, *a):
+                pass
+            def do_GET(self):
+                Websrv.calls.append(self.path)
+                self.send_response(200)
+                self.send_header("Content-Length", "0")
+                self.end_headers()
+        cls.websrv_calls = Websrv.calls
+        cls.websrv = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Websrv)
+        threading.Thread(target=cls.websrv.serve_forever, daemon=True).start()
+        cls.port = free_port()
+        env = dict(os.environ, PS5AIO_ROOT=cls.root, NEOWEB_CTL_PORT=str(free_port()),
+                   NEOWEB_WEBSRV_PORT=str(cls.websrv.server_address[1]))
+        cls.proc = subprocess.Popen([BIN, str(cls.port)], env=env,
+                                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        cls.api = Api(f"http://127.0.0.1:{cls.port}")
+        for _ in range(100):
+            try:
+                cls.api.get("/api/ping")
+                break
+            except Exception:
+                time.sleep(0.05)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.proc.kill()
+        cls.proc.wait()
+        cls.websrv.shutdown()
+        shutil.rmtree(cls.root, ignore_errors=True)
+
+    # ------------------------------------------------------------ homebrew
+    def test_list(self):
+        st, j = self.api.get("/api/homebrew/list")
+        self.assertEqual(st, 200, j)
+        apps = {a["dir"]: a for a in j["apps"]}
+        self.assertEqual(set(apps), {"/data/homebrew/Plain", "/data/homebrew/Doom",
+                                     "/mnt/usb1/homebrew/UsbApp"})
+        p = apps["/data/homebrew/Plain"]
+        self.assertEqual((p["title"], p["name"], p["elf"], p["js"], p["icon"], p["root"]),
+                         ("Plain Homebrew", "Plain", True, False, True, "/data/homebrew"))
+        d = apps["/data/homebrew/Doom"]
+        self.assertEqual((d["title"], d["elf"], d["js"], d["icon"]), ("Doom", False, True, False))
+        self.assertIn("/mnt/usb1/homebrew", j["roots"])
+        self.assertTrue(j["launch"])
+        self.assertTrue(j["websrv"])
+
+    def test_icon_and_js(self):
+        st, body, _ = self.api.req("GET", "/api/homebrew/icon?dir=/data/homebrew/Plain")
+        self.assertEqual((st, body), (200, b"\x89PNG\r\n\x1a\nHBICON"))
+        for bad in ("/data/homebrew/NotHomebrew", "/data/homebrew/../homebrew/Plain",
+                    "/data/homebrew", "/user/app/PPSA01111", "/data/homebrew/Plain/sce_sys"):
+            st, _, _ = self.api.req("GET", "/api/homebrew/icon?dir=" + urllib.parse.quote(bad))
+            self.assertEqual(st, 404, bad)
+        st, j = self.api.get("/api/homebrew/js?dir=/data/homebrew/Doom")
+        self.assertEqual(st, 200)
+        self.assertIn("showCarousel", j["js"])
+        st, _ = self.api.get("/api/homebrew/js?dir=/data/homebrew/Plain")
+        self.assertEqual(st, 404)
+
+    def test_ls_stays_inside(self):
+        st, j = self.api.get("/api/homebrew/ls?dir=/data/homebrew/Doom&path=/data/homebrew/Doom/roms/")
+        self.assertEqual(st, 200, j)
+        self.assertEqual([(e["name"], e["dir"]) for e in j["entries"]], [("a.wad", False)])
+        for bad in ("/data/homebrew/Doom/../Plain", "/data/homebrew/DoomX", "/data", "/data/homebrew/Doom//roms"):
+            st, _ = self.api.get("/api/homebrew/ls?dir=/data/homebrew/Doom&path=" + urllib.parse.quote(bad))
+            self.assertEqual(st, 403, bad)
+
+    def test_launch_plain(self):
+        st, j = self.api.post("/api/homebrew/launch", {"dir": "/data/homebrew/Plain"})
+        self.assertEqual(st, 200, j)
+        self.assertEqual((j["via"], j["path"]), ("elfldr", "/data/homebrew/Plain/eboot.elf"))
+        st, j = self.api.post("/api/homebrew/launch", {"dir": "/mnt/usb1/homebrew/UsbApp"})
+        self.assertEqual(st, 200, j)
+
+    def test_launch_with_args_goes_to_websrv(self):
+        del self.websrv_calls[:]
+        st, j = self.api.post("/api/homebrew/launch", {
+            "dir": "/data/homebrew/Doom", "path": "/data/homebrew/Doom/doom.elf",
+            "args": ["-iwad", "/data/homebrew/Doom/DOOM 1.WAD"], "cwd": "/data/homebrew/Doom",
+            "env": {"TMPDIR": "/user/temp"}})
+        self.assertEqual(st, 200, j)
+        self.assertEqual(j["via"], "websrv")
+        hb = [c for c in self.websrv_calls if c.startswith("/hbldr?")]
+        self.assertEqual(len(hb), 1, self.websrv_calls)
+        q = urllib.parse.parse_qs(hb[0].split("?", 1)[1])
+        self.assertEqual(q["path"], ["/data/homebrew/Doom/doom.elf"])
+        # websrv's own encoding: spaces inside a value are "\ "
+        self.assertEqual(q["args"], ["-iwad /data/homebrew/Doom/DOOM\\ 1.WAD"])
+        self.assertEqual(q["env"], ["TMPDIR=/user/temp"])
+        self.assertEqual(q["cwd"], ["/data/homebrew/Doom"])
+        self.assertEqual(q["pipe"], ["0"])
+        self.assertEqual(q["daemon"], ["0"])
+        # a single string is a single argument, as websrv takes it
+        st, j = self.api.post("/api/homebrew/launch", {
+            "dir": "/data/homebrew/Doom", "path": "/data/homebrew/Doom/doom.elf", "args": "a b"})
+        self.assertEqual(st, 200, j)
+        q = urllib.parse.parse_qs([c for c in self.websrv_calls if c.startswith("/hbldr?")][-1].split("?", 1)[1])
+        self.assertEqual(q["args"], ["a\\ b"])
+
+    def test_launch_refusals(self):
+        for body, code in (
+                ({"dir": "/data/homebrew/NotHomebrew"}, 404),
+                ({"dir": "/data/homebrew/Doom"}, 404),  # no eboot.elf
+                ({"dir": "/data/homebrew/Doom", "path": "/data/homebrew/Plain/eboot.elf"}, 403),
+                ({"dir": "/data/homebrew/Doom", "path": "/data/homebrew/Doom/../Plain/eboot.elf"}, 403),
+                ({"dir": "/data/homebrew/Doom", "path": "/data/homebrew/Doom/notelf.elf"}, 404),
+                ({"dir": "/data/homebrew/Doom", "path": "/data/homebrew/Doom/doom.elf", "cwd": "/"}, 403),
+                ({"dir": "/data/homebrew/Doom", "path": "/data/homebrew/Doom/doom.elf", "args": [1, {}]}, 400),
+                ({"dir": "/data/homebrew/Doom", "path": "/data/homebrew/Doom/doom.elf", "env": ["A=1"]}, 400)):
+            st, j = self.api.post("/api/homebrew/launch", body)
+            self.assertEqual(st, code, (body, j))
+
+    def test_launch_with_args_needs_websrv(self):
+        self.websrv.shutdown()
+        self.websrv.server_close()
+        try:
+            st, j = self.api.get("/api/homebrew/list")
+            self.assertFalse(j["websrv"])
+            st, j = self.api.post("/api/homebrew/launch", {
+                "dir": "/data/homebrew/Doom", "path": "/data/homebrew/Doom/doom.elf", "args": ["x"]})
+            self.assertEqual(st, 409, j)
+            self.assertIn("websrv", j["error"])
+        finally:
+            import http.server
+            import threading
+            handler = self.websrv.RequestHandlerClass
+            port = self.websrv.server_address[1]
+            type(self).websrv = http.server.ThreadingHTTPServer(("127.0.0.1", port), handler)
+            threading.Thread(target=self.websrv.serve_forever, daemon=True).start()
+
+    # ------------------------------------------------------------ cleanup
+    def test_duplicates(self):
+        st, j = self.api.get("/api/library/cleanup")
+        self.assertEqual(st, 200, j)
+        dup = {d["id"]: d["copies"] for d in j["duplicates"]}
+        self.assertEqual(set(dup), {"PPSA01111", "PPSA02222"})
+        a = {c["path"]: c for c in dup["PPSA01111"]}
+        self.assertEqual(set(a), {"/user/app/PPSA01111", "/mnt/usb0/PPSA01111-copy"})
+        self.assertEqual((a["/user/app/PPSA01111"]["kind"], a["/user/app/PPSA01111"]["active"],
+                          a["/user/app/PPSA01111"]["deletable"]), ("installed", True, False))
+        c = a["/mnt/usb0/PPSA01111-copy"]
+        self.assertEqual((c["kind"], c["where"], c["active"], c["deletable"]), ("folder", "usb", False, True))
+        self.assertGreater(c["size"], 500)  # eboot.bin and param.json
+        b = {c["path"]: c for c in dup["PPSA02222"]}
+        # the hard link is the active image under another name: not a copy
+        self.assertEqual(set(b), {"/data/homebrew/Game A.ffpfsc", "/mnt/usb0/PPSA02222 Game A.ffpfsc"})
+        act = b["/data/homebrew/Game A.ffpfsc"]
+        self.assertEqual((act["kind"], act["active"], act["deletable"], act["size"]), ("image", True, False, 3000))
+        other = b["/mnt/usb0/PPSA02222 Game A.ffpfsc"]
+        self.assertEqual((other["active"], other["deletable"], other["size"]), (False, True, 2000))
+        self.assertTrue(dup["PPSA02222"][0]["active"])  # the one in use first
+
+    def test_leftovers(self):
+        st, j = self.api.get("/api/library/cleanup")
+        self.assertEqual(st, 200, j)
+        lo = {x["path"]: x for x in j["leftovers"]}
+        self.assertEqual(set(lo), {
+            "/mnt/usb0/Big Game.ffpfsc.subiendo", "/data/homebrew/PPSA04444.subiendo",
+            "/mnt/usb1/Game A.ffpfsc.moving",
+            "/user/patch/CUSA09999", "/user/addcont/PPSA08888", "/mnt/ext1/user/patch/PPSA06666",
+            "/data/homebrew/backports/PPSA05555", "/data/neohen/web/fakelib/PPSA05555"})
+        self.assertEqual((lo["/mnt/usb0/Big Game.ffpfsc.subiendo"]["kind"],
+                          lo["/mnt/usb0/Big Game.ffpfsc.subiendo"]["size"]), ("upload", 4096))
+        self.assertEqual(lo["/data/homebrew/PPSA04444.subiendo"]["size"], 100)
+        self.assertEqual(lo["/mnt/usb1/Game A.ffpfsc.moving"]["kind"], "move")
+        self.assertEqual((lo["/user/addcont/PPSA08888"]["kind"], lo["/user/addcont/PPSA08888"]["id"],
+                          lo["/user/addcont/PPSA08888"]["size"]), ("addcont", "PPSA08888", 50))
+        self.assertEqual(lo["/user/patch/CUSA09999"]["kind"], "patch")
+        self.assertTrue(lo["/data/homebrew/backports/PPSA05555"]["stub"])
+        self.assertEqual(j["staleAfter"], 3600)
+        # deleting one goes through the file manager's own route
+        st, _ = self.api.post("/api/fs/delete", {"path": "/user/patch/CUSA09999"})
+        self.assertEqual(st, 200)
+        _, j = self.api.get("/api/library/cleanup")
+        self.assertNotIn("/user/patch/CUSA09999", {x["path"] for x in j["leftovers"]})
+        # nothing else was touched by listing
+        self.assertTrue(os.path.exists(f"{self.root}/mnt/usb0/Big Game.ffpfsc.subiendo"))
+
+
+def start_neoweb(root, env_extra=None):
+    """build/neoweb-host on a free port over `root`; (proc, Api)."""
+    port = free_port()
+    env = dict(os.environ, PS5AIO_ROOT=root, **(env_extra or {}))
+    proc = subprocess.Popen([BIN, str(port)], env=env,
+                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    api = Api(f"http://127.0.0.1:{port}")
+    for _ in range(100):
+        try:
+            api.get("/api/ping")
+            break
+        except Exception:
+            time.sleep(0.05)
+    return proc, api
+
+
+NEOHEN_INI = """# NeoHEN configuration
+# a comment the user wrote
+
+[meta]
+schema_version=1
+
+[startup]
+open_after_load=none
+show_thanks=true
+
+[neoweb]
+# watchdog: off, notify, relaunch
+watchdog = relaunch
+
+[update]
+channel=stable
+my_own_key=keep me
+
+[shadowmount]
+watchdog=relaunch
+watchdog_interval_seconds=60
+
+[shortcuts]
+cheats_menu=share
+toolbox=off
+"""
+
+
+class NeoHenSettingsTest(unittest.TestCase):
+    """NeoHEN's config.ini from NeoWEB, and the settings backup."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.root = tempfile.mkdtemp(prefix="neoweb-cfg-")
+        cls.ini = f"{cls.root}/data/neohen/config.ini"
+        cls.twin = f"{cls.root}/user/data/neohen/config.ini"
+        for p in (cls.ini, cls.twin):
+            os.makedirs(os.path.dirname(p))
+            with open(p, "w") as f:
+                f.write(NEOHEN_INI)
+        cls.util_seen = []
+        cls.util = fake_util_service(f"{cls.root}/system_tmp/neohen/ipc/util_service",
+                                     lambda cmd, ask: ("", 0), cls.util_seen)
+        cls.proc, cls.api = start_neoweb(cls.root)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.proc.kill()
+        cls.proc.wait()
+        cls.util.close()
+        shutil.rmtree(cls.root, ignore_errors=True)
+
+    def setUp(self):
+        for p in (self.ini, self.twin):
+            with open(p, "w") as f:
+                f.write(NEOHEN_INI)
+
+    def read(self, p=None):
+        with open(p or self.ini) as f:
+            return f.read()
+
+    def test_read(self):
+        st, j = self.api.get("/api/neohen/settings")
+        self.assertEqual(st, 200, j)
+        self.assertTrue(j["valid"])
+        keys = {k["key"]: k for k in j["keys"]}
+        for k in ("update.channel", "neoweb.watchdog", "shadowmount.watchdog",
+                  "shadowmount.watchdog_interval_seconds", "rest_mode.toolbox_after_resume",
+                  "startup.open_after_load", "kstuff.autoload", "toolbox.language"):
+            self.assertIn(k, keys)
+        self.assertEqual(keys["neoweb.watchdog"]["value"], "relaunch")  # "watchdog = relaunch"
+        self.assertTrue(keys["neoweb.watchdog"]["set"])
+        self.assertEqual(keys["neoweb.watchdog"]["choices"], ["off", "notify", "relaunch"])
+        self.assertEqual((keys["rest_mode.toolbox_after_resume"]["value"],
+                          keys["rest_mode.toolbox_after_resume"]["set"]), ("stable", False))
+        self.assertEqual((keys["shadowmount.watchdog_interval_seconds"]["min"],
+                          keys["shadowmount.watchdog_interval_seconds"]["max"]), (30, 3600))
+        self.assertEqual(keys["update.channel"]["when"], "now")
+        self.assertEqual(keys["startup.show_thanks"]["when"], "start")
+        self.assertEqual(keys["rest_mode.stable_seconds"]["when"], "resume")
+
+    def test_write_keeps_the_rest(self):
+        self.util_seen.clear()
+        st, j = self.api.post("/api/neohen/settings", {"values": {
+            "update.channel": "prerelease", "neoweb.watchdog": "NOTIFY",
+            "shadowmount.watchdog_interval_seconds": 120, "startup.show_thanks": False,
+            "rest_mode.toolbox_after_resume": "manual", "cheats.mirror": "github"}})
+        self.assertEqual(st, 200, j)
+        self.assertTrue(j["util"])
+        self.assertEqual(self.util_seen[-1][0], 0xC0FFEE)
+        self.assertEqual({c["key"]: c["when"] for c in j["changed"]}["rest_mode.toolbox_after_resume"], "resume")
+        text = self.read()
+        want = (NEOHEN_INI.replace("channel=stable", "channel=prerelease")
+                .replace("watchdog = relaunch", "watchdog = notify")
+                .replace("watchdog_interval_seconds=60", "watchdog_interval_seconds=120")
+                .replace("show_thanks=true", "show_thanks=false")
+                + "\n[rest_mode]\ntoolbox_after_resume=manual\n\n[cheats]\nmirror=github\n")
+        self.assertEqual(text, want)
+        self.assertEqual(self.read(self.twin), want)
+        # a key missing from its section goes at the end of that section
+        st, j = self.api.post("/api/neohen/settings", {"values": {"startup.open_after_load": "home_menu",
+                                                                   "update.channel": "stable"}})
+        self.assertEqual(st, 200, j)
+        st, j = self.api.post("/api/neohen/settings", {"values": {"neoweb.watchdog": "off"}})
+        st, j = self.api.post("/api/neohen/settings", {"values": {"shadowmount.watchdog": "notify",
+                                                                   "logging.level": "debug"}})
+        self.assertEqual(st, 200, j)
+        text = self.read()
+        self.assertIn("[startup]\nopen_after_load=home_menu\nshow_thanks=false\n", text)
+        self.assertIn("my_own_key=keep me\n", text)
+        self.assertIn("# a comment the user wrote\n", text)
+        self.assertIn("[logging]\nlevel=debug\n", text)
+        _, j = self.api.get("/api/neohen/settings")
+        keys = {k["key"]: k["value"] for k in j["keys"]}
+        self.assertEqual((keys["neoweb.watchdog"], keys["shadowmount.watchdog"], keys["update.channel"]),
+                         ("off", "notify", "stable"))
+
+    def test_write_refused(self):
+        for values in ({"meta.schema_version": "2"}, {"overlay.enabled": True},
+                       {"update.channel": "nightly"}, {"shadowmount.watchdog_interval_seconds": 5},
+                       {"rest_mode.stable_seconds": "12x"}, {"startup.show_thanks": "yes"},
+                       {"kstuff.autoload": 1}):
+            st, j = self.api.post("/api/neohen/settings", {"values": values})
+            self.assertEqual(st, 400, (values, j))
+        st, j = self.api.post("/api/neohen/settings", {"values": {}})
+        self.assertEqual(st, 400, j)
+        # the same button for both shortcuts, as the Toolbox refuses it
+        st, j = self.api.post("/api/neohen/settings", {"values": {"shortcuts.toolbox": "share"}})
+        self.assertEqual(st, 409, j)
+        self.assertEqual(self.read(), NEOHEN_INI)
+        # a file NeoHEN would ignore is left alone
+        with open(self.ini, "w") as f:
+            f.write("[update]\nchannel=stable\n")
+        st, j = self.api.post("/api/neohen/settings", {"values": {"update.channel": "prerelease"}})
+        self.assertEqual(st, 409, j)
+        self.assertEqual(self.read(), "[update]\nchannel=stable\n")
+        os.unlink(self.ini)
+        st, j = self.api.get("/api/neohen/settings")
+        self.assertEqual(st, 404, j)
+
+    def test_mtime_moves_on(self):
+        # the daemon reloads when the mtime is newer, to the second
+        os.utime(self.ini, (time.time() + 5, time.time() + 5))
+        before = os.stat(self.ini).st_mtime
+        st, j = self.api.post("/api/neohen/settings", {"values": {"update.channel": "prerelease"}})
+        self.assertEqual(st, 200, j)
+        self.assertGreater(os.stat(self.ini).st_mtime, before)
+
+    def test_backup_and_restore(self):
+        w = f"{self.root}/data/neohen/web"
+        os.makedirs(w, exist_ok=True)
+        files = {"web/config.json": json.dumps({"port": 8686, "other": [1, 2]}),
+                 "web/store.json": json.dumps({"sources": {"x": "y"}}),
+                 "web/apps.json": json.dumps([{"id": "a"}]),
+                 "web/ui.json": json.dumps({"theme": "oled"}),
+                 "web/games.json": json.dumps({"PPSA01234": "note ñ"})}
+        for name, text in files.items():
+            with open(f"{self.root}/data/neohen/{name}", "w") as f:
+                f.write(text)
+        st, raw, hdrs = self.api.req("GET", "/api/neohen/backup")
+        self.assertEqual(st, 200)
+        self.assertIn("attachment", hdrs["Content-Disposition"])
+        bk = json.loads(raw)
+        self.assertEqual(bk["neohenBackup"], 1)
+        self.assertEqual(bk["files"]["config.ini"], NEOHEN_INI)
+        for name, text in files.items():
+            self.assertEqual(bk["files"][name], text)
+        # things change, then the backup goes back
+        changed = NEOHEN_INI.replace("channel=stable", "channel=prerelease")
+        with open(self.ini, "w") as f:
+            f.write(changed)
+        with open(f"{w}/ui.json", "w") as f:
+            f.write("{}")
+        st, body, _ = self.api.req("POST", "/api/neohen/restore", raw=raw,
+                                   headers={"Content-Type": "application/json"})
+        self.assertEqual(st, 200, body)
+        self.assertEqual(sorted(json.loads(body)["restored"]), sorted(["config.ini", *files]))
+        self.assertEqual(self.read(), NEOHEN_INI)
+        self.assertEqual(self.read(self.ini + ".bak"), changed)
+        self.assertEqual(self.read(f"{w}/ui.json"), files["web/ui.json"])
+        self.assertEqual(self.read(f"{w}/ui.json.bak"), "{}")
+        self.assertFalse(os.path.exists(f"{w}/store.json.lock"))
+        # anything wrong in it: refused before a single file is touched
+        with open(f"{w}/ui.json", "w") as f:
+            f.write('{"theme":"holo"}')
+        for bad in ({**bk, "files": {**bk["files"], "web/apps.json": "[not json"}},
+                    {**bk, "files": {**bk["files"], "../../etc/passwd": "x"}},
+                    {**bk, "files": {**bk["files"], "config.ini": "[update]\nchannel=stable\n"}},
+                    {**bk, "files": {**bk["files"], "web/config.json": '{"token": 5}'}},
+                    {**bk, "files": {"web/ui.json": 5}},
+                    {**bk, "neohenBackup": 2}, {"files": bk["files"]}, {**bk, "files": {}}):
+            st, body, _ = self.api.req("POST", "/api/neohen/restore", raw=json.dumps(bad).encode(),
+                                       headers={"Content-Type": "application/json"})
+            self.assertEqual(st, 400, body)
+        st, body, _ = self.api.req("POST", "/api/neohen/restore", raw=b"not json at all")
+        self.assertEqual(st, 400, body)
+        self.assertEqual(self.read(f"{w}/ui.json"), '{"theme":"holo"}')
+        # only some of the files
+        part = {**bk, "files": {"web/ui.json": bk["files"]["web/ui.json"]}}
+        st, body, _ = self.api.req("POST", "/api/neohen/restore", raw=json.dumps(part).encode())
+        self.assertEqual(st, 200, body)
+        self.assertEqual(json.loads(body)["restored"], ["web/ui.json"])
+        self.assertEqual(self.read(f"{w}/ui.json"), files["web/ui.json"])
+
+    def test_zz_restore_brings_the_token(self):
+        _, raw, _ = self.api.req("GET", "/api/neohen/backup")
+        bk = json.loads(raw)
+        bk["files"] = {"web/config.json": json.dumps({"token": "fromthebackup"})}
+        st, body, _ = self.api.req("POST", "/api/neohen/restore", raw=json.dumps(bk).encode())
+        self.assertEqual(st, 200, body)
+        st, _ = self.api.get("/api/sys/info")
+        self.assertEqual(st, 401)
+        st, _, _ = self.api.req("GET", "/api/sys/info", headers={"X-PS5AIO-Token": "fromthebackup"})
+        self.assertEqual(st, 200)
+
+
+class GuestTest(unittest.TestCase):
+    """A token, and a guest token that only reads."""
+    ADMIN = {"X-PS5AIO-Token": "admintok"}
+
+    @classmethod
+    def setUpClass(cls):
+        cls.root = tempfile.mkdtemp(prefix="neoweb-guest-")
+        r = cls.root
+        os.makedirs(f"{r}/data/neohen/web")
+        cls.cfg = f"{r}/data/neohen/web/config.json"
+        with open(cls.cfg, "w") as f:
+            json.dump({"token": "admintok", "port": 8686, "mine": {"a": 1}}, f)
+        with open(f"{r}/data/neohen/config.ini", "w") as f:
+            f.write(NEOHEN_INI)
+        os.makedirs(f"{r}/user/av_contents/photo/x")
+        with open(f"{r}/user/av_contents/photo/x/shot.jpg", "wb") as f:
+            f.write(b"\xff\xd8JPEG")
+        with open(f"{r}/data/secret.txt", "w") as f:
+            f.write("no")
+        os.makedirs(f"{r}/data/neohen/payloads")
+        cls.proc, cls.api = start_neoweb(r)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.proc.kill()
+        cls.proc.wait()
+        shutil.rmtree(cls.root, ignore_errors=True)
+
+    def call(self, method, path, tok=None, body=None, headers=None):
+        h = dict(headers or {})
+        if tok:
+            h["X-PS5AIO-Token"] = tok
+        st, data, _ = self.api.req(method, path, body=body, headers=h)
+        return st, data
+
+    def new_guest(self):
+        st, data = self.call("POST", "/api/auth/guest", "admintok", {"action": "new"})
+        self.assertEqual(st, 200, data)
+        g = json.loads(data)["guest"]
+        self.assertEqual(len(g), 32)
+        return g
+
+    def test_roles_in_ping(self):
+        g = self.new_guest()
+        for tok, role in ((None, "none"), ("wrong", "none"), ("admintok", "admin"), (g, "guest")):
+            st, data = self.call("GET", "/api/ping", tok)
+            self.assertEqual(st, 200)
+            j = json.loads(data)
+            self.assertEqual(j["role"], role, tok)
+            self.assertTrue(j["auth"])
+            self.assertTrue(j["guestLink"])
+        st, _ = self.call("GET", "/api/sys/info")
+        self.assertEqual(st, 401)
+        st, _ = self.call("GET", "/api/sys/info?token=" + g)
+        self.assertEqual(st, 200)
+
+    def test_guest_reads_only(self):
+        g = self.new_guest()
+        allowed = ["/api/sys/info", "/api/sys/sensors", "/api/sys/mounts", "/api/apps/list",
+                   "/api/apps/running", "/api/payloads/list", "/api/health", "/api/captures/list",
+                   "/api/trophies", "/fs/get?path=/user/av_contents/photo/x/shot.jpg"]
+        for path in allowed:
+            st, data = self.call("GET", path, g)
+            self.assertNotIn(st, (401, 403), (path, data))
+        st, data = self.call("GET", "/fs/get?path=/user/av_contents/photo/x/shot.jpg", g)
+        self.assertEqual((st, data), (200, b"\xff\xd8JPEG"))
+        refused = [("GET", "/fs/get?path=/data/secret.txt"), ("GET", "/fs/get?path=/user/av_contents/../../data/secret.txt"),
+                   ("GET", "/api/fs/list?path=/data"), ("GET", "/api/fs/text?path=/data/secret.txt"),
+                   ("GET", "/api/sys/log"), ("GET", "/api/sys/report"), ("GET", "/api/sys/procs"),
+                   ("GET", "/api/neohen/settings"), ("GET", "/api/neohen/backup"), ("GET", "/api/auth"),
+                   ("GET", "/api/mem/maps"), ("GET", "/api/remoteplay"), ("GET", "/api/captures/zip"),
+                   ("POST", "/api/payloads/start"), ("POST", "/api/payloads/stop"), ("POST", "/api/sys/power"),
+                   ("POST", "/api/apps/launch"), ("POST", "/api/neohen/settings"), ("POST", "/api/neohen/restore"),
+                   ("POST", "/api/auth/guest"), ("POST", "/api/auth/token"), ("POST", "/api/fs/delete"),
+                   ("POST", "/api/apps/install-pkg"), ("POST", "/api/dump/start"), ("PUT", "/fs/put?path=/data/x"),
+                   ("POST", "/api/health/safemode"), ("POST", "/api/sys/fan")]
+        for method, path in refused:
+            st, data = self.call(method, path, g, body={"action": "new", "pid": 2, "action2": "rest"})
+            self.assertEqual(st, 403, (method, path, data))
+        self.assertFalse(os.path.exists(f"{self.root}/data/x"))
+        # the same as the admin: allowed
+        st, _ = self.call("GET", "/api/sys/procs", "admintok")
+        self.assertEqual(st, 200)
+        st, _ = self.call("GET", "/api/neohen/settings", "admintok")
+        self.assertEqual(st, 200)
+
+    def test_cookie(self):
+        g = self.new_guest()
+        st, data = self.call("GET", "/api/ping", headers={"Cookie": "a=b; nwtok=" + g})
+        self.assertEqual(json.loads(data)["role"], "guest")
+        st, _ = self.call("GET", "/api/sys/info", headers={"Cookie": "nwtok=admintok"})
+        self.assertEqual(st, 200)
+        # sent by somebody else's page: refused even with the right cookie
+        st, _ = self.call("POST", "/api/auth/guest", body={"action": "revoke"},
+                          headers={"Cookie": "nwtok=admintok", "Origin": "http://evil.example"})
+        self.assertEqual(st, 403)
+        st, _ = self.call("POST", "/api/auth/guest", body={"action": "new"},
+                          headers={"Cookie": "nwtok=admintok", "Origin": "http://127.0.0.1:%s" % self.api.base.rsplit(":", 1)[1],
+                                   "Host": "127.0.0.1:%s" % self.api.base.rsplit(":", 1)[1]})
+        self.assertEqual(st, 200)
+
+    def test_ping_sets_the_cookie(self):
+        g = self.new_guest()
+        port = self.api.base.rsplit(":", 1)[1]
+        here = {"Host": "127.0.0.1:" + port}
+        st, _, h = self.api.req("GET", "/api/ping", headers={**here, "X-PS5AIO-Token": g})
+        ck = h.get("Set-Cookie", "")
+        self.assertIn("nwtok=" + g, ck)
+        self.assertIn("HttpOnly", ck)
+        self.assertIn("SameSite=Strict", ck)
+        st, _, h = self.api.req("GET", "/api/ping?token=nope", headers=here)
+        self.assertIn("Max-Age=0", h.get("Set-Cookie", ""))
+        # not for another site, nor without a token sent
+        st, _, h = self.api.req("GET", "/api/ping?token=" + g, headers={"Host": "evil.example"})
+        self.assertIsNone(h.get("Set-Cookie"))
+        st, _, h = self.api.req("GET", "/api/ping", headers=here)
+        self.assertIsNone(h.get("Set-Cookie"))
+
+    def test_revoke_and_config_kept(self):
+        g = self.new_guest()
+        st, data = self.call("GET", "/api/auth", "admintok")
+        self.assertEqual(json.loads(data)["guest"], g)
+        with open(self.cfg) as f:
+            cfg = json.load(f)
+        self.assertEqual((cfg["guestToken"], cfg["port"], cfg["mine"], cfg["token"]), (g, 8686, {"a": 1}, "admintok"))
+        st, _ = self.call("POST", "/api/auth/guest", "admintok", {"action": "revoke"})
+        self.assertEqual(st, 200)
+        st, _ = self.call("GET", "/api/sys/info", g)
+        self.assertEqual(st, 401)
+        st, _ = self.call("POST", "/api/auth/guest", "admintok", {"action": "maybe"})
+        self.assertEqual(st, 400)
+
+    def test_zz_token_new_and_clear(self):
+        st, data = self.call("POST", "/api/auth/token", "admintok", {"action": "new"})
+        self.assertEqual(st, 200, data)
+        tok = json.loads(data)["token"]
+        self.assertNotEqual(tok, "admintok")
+        st, _ = self.call("GET", "/api/sys/info", "admintok")
+        self.assertEqual(st, 401)
+        st, _ = self.call("POST", "/api/auth/token", tok, {"action": "clear"})
+        self.assertEqual(st, 200)
+        st, data = self.call("GET", "/api/ping")
+        self.assertEqual(json.loads(data)["role"], "admin")
+        # no token: a guest token cannot be made, it would mean nothing
+        st, _ = self.call("POST", "/api/auth/guest", body={"action": "new"})
+        self.assertEqual(st, 409)
 
 
 if __name__ == "__main__":

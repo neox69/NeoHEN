@@ -24,7 +24,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
+#include <sys/socket.h>
 #include <sys/stat.h>
+#include <sys/time.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 #include <unistd.h>
 
 #include "api.h"
@@ -222,6 +227,48 @@ untrack(const char *name) {
   pthread_mutex_unlock(&g_lock);
 }
 
+/* ------------------------------------------------------------ resident payloads
+ * Some payloads move into a system process and leave none of their own:
+ * ps5debug and ps5debug-NG run inside SceShellCore, and only their command
+ * port shows they are there. A second copy must not be started over them
+ * (ps5debug-NG refuses by itself; Ctn's ps5debug does not). */
+static const struct {
+  const char *prefix; /* of the file name, any case */
+  int         port;
+} k_resident[] = {
+  {"ps5debug", 744},
+};
+
+static int
+resident_port(const char *name) {
+  for(size_t i = 0; i < sizeof(k_resident) / sizeof(k_resident[0]); i++) {
+    if(!strncasecmp(name, k_resident[i].prefix, strlen(k_resident[i].prefix))) {
+      return k_resident[i].port;
+    }
+  }
+  return 0;
+}
+
+/* something on this console takes connections on 127.0.0.1:port */
+static int
+port_answers(int port) {
+  struct sockaddr_in a;
+  struct timeval tv = {1, 0};
+  int fd = socket(AF_INET, SOCK_STREAM, 0), ok;
+
+  if(fd < 0) {
+    return 0;
+  }
+  setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
+  memset(&a, 0, sizeof(a));
+  a.sin_family = AF_INET;
+  a.sin_port = htons((uint16_t)port);
+  a.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+  ok = !connect(fd, (struct sockaddr *)&a, sizeof(a));
+  close(fd);
+  return ok;
+}
+
 /* ------------------------------------------------------------ list */
 
 static int
@@ -268,6 +315,11 @@ write_payload(jw_t *w, const char *name) {
 
   n = payload_pids(name, pids, MAX_PIDS);
   jw_kbool(w, "running", n > 0);
+  if(resident_port(name)) {
+    /* at work inside a system process: "running" is about its own one */
+    jw_kbool(w, "serving", port_answers(resident_port(name)));
+    jw_kint(w, "port", resident_port(name));
+  }
   if(n > 0) {
     int self = 0;
     for(int i = 0; i < n; i++) {
@@ -449,6 +501,14 @@ api_payloads_start(http_req_t *req) {
   if(!exists(local)) {
     http_send_error(req, 404, "%s is not in %s", name, NEOWEB_PAYLOAD_DIR);
     return;
+  }
+  if(resident_port(name)) {
+    pid_t pids[MAX_PIDS];
+    if(payload_pids(name, pids, MAX_PIDS) > 0 || port_answers(resident_port(name))) {
+      http_send_error(req, 409, "%s is already running (port %d answers): it is not started twice",
+                      name, resident_port(name));
+      return;
+    }
   }
   if(!(before = calloc(1, sizeof(*before))) || !(after = calloc(1, sizeof(*after)))) {
     free(before);

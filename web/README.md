@@ -61,6 +61,8 @@ something then answers 403.
 | POST | `/api/payloads/autostart` | `{"name": "x.elf", "enabled": true}` |
 | GET | `/api/health` | NeoHEN's safe mode (`{"active", "failedBoots"}`) and conflicting homebrew running (BackPork, etaHEN, CheatRunner, a second kstuff) |
 | POST | `/api/health/safemode` | turn safe mode off: the next NeoHEN start is a normal one |
+| GET | `/api/homebrew/list` | homebrew in websrv's layout (see below), with `launch` false in this build |
+| GET | `/api/homebrew/icon?dir=` | its `sce_sys/icon0.png` |
 
 Payload notes:
 
@@ -75,6 +77,73 @@ Payload notes:
 
 `/api/sys/info` never includes the serial number, the user id or the account
 name.
+
+## Homebrew (websrv's layout)
+
+The same folders [websrv](https://github.com/ps5-payload-dev/websrv) scans:
+`/data/homebrew`, `/mnt/usb0..6/homebrew` and `/mnt/ext0..1/homebrew`, every
+folder in them with `eboot.elf` or `homebrew.js`; `sce_sys/icon0.png` is the
+icon and, when there is one, `sce_sys/param.json` gives the name. The full
+build adds:
+
+| Method | Path | Result |
+|---|---|---|
+| GET | `/api/homebrew/js?dir=` | the text of its `homebrew.js` |
+| GET | `/api/homebrew/ls?dir=&path=` | a folder inside the app's own folder (what `ApiClient.fsListDir` gives a `homebrew.js`) |
+| POST | `/api/homebrew/launch` | `{"dir", "path"?, "args"?, "env"?, "cwd"?, "daemon"?}`: the ELF must be inside `dir` |
+
+With no arguments, environment or working directory the ELF goes to the ELF
+loader on port 9021, as a payload does. With any of them it is handed to
+websrv's own `/hbldr` on 127.0.0.1:8080, the way websrv launches it, and is
+refused (409) when websrv is not running. The page runs `homebrew.js` in an
+iframe with `sandbox="allow-scripts allow-modals"` and no same origin: it
+cannot call NeoWEB or read the page, and only talks to it by message.
+
+`GET /api/library/cleanup` (full build) lists title ids found in more than
+one place and leftovers (unfinished `.subiendo` uploads and `.moving`
+copies, patches, DLC and backports of titles with no app and no appmeta,
+NeoWEB's kept fakelibs of titles no longer registered). It deletes nothing;
+the page deletes through `/api/fs/delete` after asking.
+
+## Token and guest link
+
+`/data/neohen/web/config.json` may hold `"token"`: then every route but
+`/api/ping` needs it, in an `X-PS5AIO-Token` header, as `?token=`, or in the
+page's `nwtok` cookie (taken only from NeoWEB's own pages, as with no token).
+`"guestToken"` is a second, read-only token: it gets only the GET routes in
+`guest_allowed()` (`src/api.c`), an explicit list: state, library, covers,
+payload list, health, trophies, play time, captures, and `/fs/get` below
+`/user/av_contents/` (the captures themselves). Everything else answers 403,
+routes added later included. A guest token without a token means nothing and
+cannot be made. `GET /api/ping` says `role` (`admin`, `guest`, `none`).
+Both builds.
+
+| Method | Path | Result |
+|---|---|---|
+| GET | `/api/auth` | whether there is a token, and the guest token |
+| POST | `/api/auth/token` | `{"action":"new"}` (the new token comes back once) or `"clear"` (the guest token goes too) |
+| POST | `/api/auth/guest` | `{"action":"new"}` or `"revoke"` |
+
+The page reads `?token=` from its address (a link or the QR code), keeps it
+in the browser and removes it from the address bar; Settings > Access makes
+and removes both tokens and shows the QR code (drawn by the page itself, no
+internet needed), with no token, the page's token or the guest one.
+
+## NeoHEN settings and backup (full build)
+
+| Method | Path | Result |
+|---|---|---|
+| GET | `/api/neohen/settings` | the keys of NeoHEN's `config.ini` NeoWEB can change, with type, choices or range, default, value and `when` it counts |
+| POST | `/api/neohen/settings` | `{"values":{"update.channel":"prerelease"}}`; edits those lines only, keeps comments and unknown keys, writes the `/user/data` twin when it is another file, tells util to reload |
+| GET | `/api/neohen/backup` | one JSON file: `config.ini`, `config.json` (with the token), `store.json`, `apps.json`, `ui.json`, `games.json` |
+| POST | `/api/neohen/restore` | that file back: all checked first, each old file kept as `.bak`, then temp file and rename |
+
+`when`: `now` (the daemon reads `config.ini` within a second of a change;
+util is told to), `resume` (next Rest Mode resume), `start` (next NeoHEN
+start), `toolbox` (the Toolbox reads it when its settings page opens and at
+start; a Toolbox settings page left open saves its own copy over changes made
+here). Play time and library marks are not in the backup: NeoWEB keeps them in
+memory and would write them over a restored copy.
 
 ## Web page
 

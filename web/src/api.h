@@ -99,6 +99,8 @@ void api_usb_eject(http_req_t *req);
 void api_launcher(http_req_t *req);
 void api_remoteplay(http_req_t *req);
 void api_update_notice(http_req_t *req);
+/* NeoHEN's own update: status, check, install, rollback, apply (api_update.c) */
+void api_update(http_req_t *req);
 void api_remoteplay_request(http_req_t *req);
 void api_launcher_install(http_req_t *req);
 void api_launcher_remove(http_req_t *req);
@@ -133,6 +135,21 @@ void api_health_safe_mode_clear(http_req_t *req);
 void api_health_conflicts(jw_t *w);
 void api_health_safe_mode(jw_t *w);
 void api_payloads_manifest(jw_t *w);
+/* read "token" and "guestToken" from config.json again (api.c) */
+void api_tokens_reload(void);
+/* NeoHEN's config.ini, and a backup of every setting (api_neohen.c) */
+void api_neohen_settings_get(http_req_t *req);
+void api_neohen_settings_set(http_req_t *req);
+void api_neohen_backup(http_req_t *req);
+void api_neohen_restore(http_req_t *req);
+/* websrv-style homebrew (api_homebrew.c) */
+void api_homebrew_list(http_req_t *req);
+void api_homebrew_icon(http_req_t *req);
+void api_homebrew_js(http_req_t *req);
+void api_homebrew_ls(http_req_t *req);
+void api_homebrew_launch(http_req_t *req);
+/* duplicates and leftovers in the library (api_cleanup.c) */
+void api_library_cleanup(http_req_t *req);
 
 void api_mem_maps(http_req_t *req);
 void api_mem_read(http_req_t *req);
