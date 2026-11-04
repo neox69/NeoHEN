@@ -26,6 +26,9 @@
 
 #define IO_CHUNK (1024 * 1024)
 #define HTTP_PROBE_SECONDS 20
+/* A connection that sends nothing for this long is closed: each one holds a
+ * thread, and a browser or a broken client can leave many of them open. */
+#define HTTP_IDLE_SECONDS 120
 
 typedef struct conn_arg {
   int            fd;
@@ -52,7 +55,9 @@ http_status_text(int status) {
   case 416: return "Range Not Satisfiable";
   case 500: return "Internal Server Error";
   case 501: return "Not Implemented";
+  case 502: return "Bad Gateway";
   case 503: return "Service Unavailable";
+  case 507: return "Insufficient Storage";
   default:  return "Unknown";
   }
 }
@@ -454,8 +459,16 @@ http_send_file(http_req_t *req, const char *path, int as_attachment) {
                     start, end, (int64_t)st.st_size);
     }
     if(as_attachment) {
+      /* a file name may hold anything but '/': a quote or a line break
+       * must not end the header */
+      char name[256];
+      size_t i;
+      for(i = 0; base[i] && i + 1 < sizeof(name); i++) {
+        name[i] = base[i] == '"' || base[i] == '\\' || (unsigned char)base[i] < 0x20 ? '_' : base[i];
+      }
+      name[i] = 0;
       snprintf(extra + n, sizeof(extra) - (size_t)n,
-               "Content-Disposition: attachment; filename=\"%s\"\r\n", base);
+               "Content-Disposition: attachment; filename=\"%s\"\r\n", name);
     }
   }
 
@@ -572,20 +585,31 @@ parse_head(http_req_t *req, size_t head_len) {
   req->content_length = -1;
 
   line = eol + 2;
-  while(line < end - 2 && req->nheaders < HTTP_MAX_HEADERS) {
+  while(line < end - 2) {
     if(!(eol = find_crlf(line, (size_t)(end - line)))) {
       break;
     }
     *eol = 0;
     char *colon = strchr(line, ':');
     if(colon) {
+      /* too many headers is an error, not a cut: the ones dropped could be
+       * Origin or Host, which decide whether the request is let in */
+      if(req->nheaders >= HTTP_MAX_HEADERS) {
+        return -1;
+      }
       *colon = 0;
       char *val = colon + 1;
       while(*val == ' ' || *val == '\t') {
         val++;
       }
-      req->headers[req->nheaders].name = strdup(line);
-      req->headers[req->nheaders].value = strdup(val);
+      char *n = strdup(line), *v = strdup(val);
+      if(!n || !v) {
+        free(n);
+        free(v);
+        return -1;
+      }
+      req->headers[req->nheaders].name = n;
+      req->headers[req->nheaders].value = v;
       req->nheaders++;
     }
     line = eol + 2;
@@ -811,6 +835,9 @@ http_serve(uint16_t port, http_handler_t handler) {
     int bufsz = 1024 * 1024;
     setsockopt(fd, SOL_SOCKET, SO_SNDBUF, &bufsz, sizeof(bufsz));
     setsockopt(fd, SOL_SOCKET, SO_RCVBUF, &bufsz, sizeof(bufsz));
+    struct timeval idle = {HTTP_IDLE_SECONDS, 0};
+    setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &idle, sizeof(idle));
+    setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &idle, sizeof(idle));
 
     conn_arg_t *ca = calloc(1, sizeof(conn_arg_t));
     if(!ca) {

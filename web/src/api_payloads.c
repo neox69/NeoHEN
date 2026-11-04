@@ -266,9 +266,14 @@ write_payload(jw_t *w, const char *name) {
   n = payload_pids(name, pids, MAX_PIDS);
   jw_kbool(w, "running", n > 0);
   if(n > 0) {
-    jw_kint(w, "pid", pids[0]);
-    /* the service cannot stop itself and survive to answer */
-    jw_kbool(w, "self", pids[0] == getpid());
+    int self = 0;
+    for(int i = 0; i < n; i++) {
+      self |= pids[i] == getpid();
+    }
+    jw_kint(w, "pid", self ? getpid() : pids[0]);
+    /* the service cannot stop itself and survive to answer (any of the
+     * processes with this name may be this one: stop refuses them all) */
+    jw_kbool(w, "self", self);
   }
   jw_obj_end(w);
 }
@@ -461,9 +466,11 @@ api_payloads_start(http_req_t *req) {
    * newest process that was not there before. */
   for(int tries = 0; tries < 20 && !started; tries++) {
     pid_t byname[MAX_PIDS];
+    int nbyname;
     usleep(150 * 1000);
-    if(payload_pids(name, byname, MAX_PIDS) > 0) {
-      for(int i = 0; i < MAX_PIDS && !started; i++) {
+    /* only the first nbyname entries are filled in */
+    if((nbyname = payload_pids(name, byname, MAX_PIDS)) > 0) {
+      for(int i = 0; i < nbyname && !started; i++) {
         if(byname[i] && !in_set(before, byname[i])) {
           started = byname[i];
         }

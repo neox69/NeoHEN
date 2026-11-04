@@ -185,6 +185,18 @@ class SafeBuildTest(unittest.TestCase):
                 self.assertEqual(st, 400, f"{route} {bad!r}")
         self.assertFalse(os.path.exists(f"{self.root}/data/neohen/secret.elf"))
 
+    def test_other_pages_cannot_upload_or_start(self):
+        # a page on another site posting to the console: an upload followed by
+        # a start would run its code on the console
+        for hdrs in ({"Origin": "http://evil.example"}, {"Host": "evil.example.com:8686"}):
+            st, _, _ = self.api.req("PUT", "/api/payloads/upload?name=csrf.elf", raw=self.ELF,
+                                    headers=dict(hdrs, **{"Content-Type": "text/plain"}))
+            self.assertEqual(st, 403, hdrs)
+            st, _, _ = self.api.req("POST", "/api/payloads/start",
+                                    raw=json.dumps({"name": "csrf.elf"}).encode(), headers=hdrs)
+            self.assertEqual(st, 403, hdrs)
+        self.assertNotIn("csrf.elf", self.pay())
+
     def test_payload_must_be_an_elf(self):
         st, _ = self.upload("fake.elf", b"MZ not an elf at all")
         self.assertEqual(st, 400)

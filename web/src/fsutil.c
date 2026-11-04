@@ -153,6 +153,16 @@ fs_copy_file(const char *src, const char *dst, job_t *job) {
     free(buf);
     return -1;
   }
+  {
+    /* opening the file itself as the copy would empty it */
+    struct stat dst_st;
+    if(!stat(dst, &dst_st) && dst_st.st_dev == st.st_dev && dst_st.st_ino == st.st_ino) {
+      close(in);
+      free(buf);
+      errno = EINVAL;
+      return -1;
+    }
+  }
   if((out = open(dst, O_WRONLY | O_CREAT | O_TRUNC, 0777)) < 0) {
     close(in);
     free(buf);

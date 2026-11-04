@@ -906,6 +906,71 @@ class PayloadTest(unittest.TestCase):
         self.assertEqual(job["bytesDone"], job["bytesTotal"])
         self.assertTrue(os.path.exists(f"{self.root}/data/copytest/data/big.bin"))
 
+    def test_copy_into_itself(self):
+        os.makedirs(f"{self.root}/data/selfcopy/sub", exist_ok=True)
+        with open(f"{self.root}/data/selfcopy/f.txt", "w") as f:
+            f.write("keep me")
+        for src, dst in (("/data/selfcopy", "/data/selfcopy/sub/x"),
+                         ("/data/selfcopy", "/data/selfcopy/"),
+                         ("/data/selfcopy/f.txt", "/data//selfcopy/./f.txt"),
+                         ("/", "/data/x")):
+            for move in (False, True):
+                st, j = self.api.post("/api/fs/copy", {"from": src, "to": dst, "move": move})
+                self.assertEqual(st, 400, (src, dst, j))
+        with open(f"{self.root}/data/selfcopy/f.txt") as f:
+            self.assertEqual(f.read(), "keep me")
+        # a name that only starts the same is another folder
+        _, j = self.api.post("/api/fs/copy", {"from": "/data/selfcopy", "to": "/data/selfcopy2"})
+        self.assertEqual(self.api.wait_job(j["job"])["state"], "done")
+
+    def test_delete_protected_spellings(self):
+        for p in ("/data/", "//data", "/data/.", "/./data//", "/.", "//", "/user/"):
+            st, _ = self.api.post("/api/fs/delete", {"path": p})
+            self.assertEqual(st, 403, p)
+        self.assertTrue(os.path.isdir(f"{self.root}/data"))
+
+    def test_path_too_long(self):
+        st, j = self.api.get("/api/fs/stat?path=/data/" + "a" * 5000)
+        self.assertEqual(st, 400, j)
+
+    def test_cross_origin_refused(self):
+        host = self.api.base.split("//", 1)[1]
+        mk = json.dumps({"path": "/data/csrf"}).encode()
+        # a page from elsewhere: refused, and nothing is done
+        for hdrs in ({"Origin": "http://evil.example"}, {"Origin": "null"},
+                     {"Origin": "http://" + host + ".evil.example"},
+                     {"Host": "evil.example.com:8686"},
+                     {"Host": "rebind.example.com", "Origin": "http://rebind.example.com"}):
+            st, _, _ = self.api.req("POST", "/api/fs/mkdir", raw=mk,
+                                    headers=dict(hdrs, **{"Content-Type": "text/plain"}))
+            self.assertEqual(st, 403, hdrs)
+        self.assertFalse(os.path.exists(f"{self.root}/data/csrf"))
+        # the page served by NeoWEB itself, and local names, are fine
+        for hdrs in ({"Origin": "http://" + host}, {"Host": "ps5.local:8686"},
+                     {"Host": "ps5:8686", "Origin": "http://ps5:8686"}):
+            st, _, _ = self.api.req("POST", "/api/fs/mkdir", raw=mk, headers=hdrs)
+            self.assertEqual(st, 200, hdrs)
+        self.assertTrue(os.path.isdir(f"{self.root}/data/csrf"))
+        # an Origin header pushed past the headers that are kept is not lost:
+        # too many headers is refused as a whole
+        port = int(host.rsplit(":", 1)[1])
+        with socket.create_connection(("127.0.0.1", port), timeout=5) as s:
+            s.sendall(b"POST /api/fs/mkdir HTTP/1.1\r\nHost: " + host.encode() + b"\r\n" +
+                      b"".join(b"X-%d: y\r\n" % i for i in range(70)) +
+                      b"Origin: http://evil.example\r\nContent-Length: %d\r\n\r\n" % len(mk) + mk)
+            self.assertIn(b" 400 ", s.recv(4096).split(b"\r\n")[0])
+
+    def test_apps_store_install_checked(self):
+        ok = {"action": "install", "url": "https://github.com/a/b/releases/download/v1/PPSA12345.zip",
+              "id": "PPSA12345", "tag": "v1", "sha256": "ab" * 32}
+        for bad in ({"url": "http://evil.example/x.zip"}, {"id": "../x"},
+                    {"sha256": "abc"}, {"sha256": "zz" * 32}):
+            st, _ = self.api.post("/api/apps/store", dict(ok, **bad))
+            self.assertEqual(st, 400, bad)
+        # NeoHEN's service is not there in the tests
+        self.assertEqual(self.api.post("/api/apps/store", ok)[0], 502)
+        self.assertEqual(self.api.post("/api/apps/store", dict(ok, sha256=""))[0], 502)
+
     # ------------------------------------------------------------ apps
     def test_apps_list(self):
         _, j = self.api.get("/api/apps/list")

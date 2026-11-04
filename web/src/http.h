@@ -8,7 +8,7 @@
 
 #include "json.h"
 
-#define HTTP_MAX_HEADERS 32
+#define HTTP_MAX_HEADERS 64
 
 typedef struct http_header {
   char *name;

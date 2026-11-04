@@ -12,19 +12,25 @@
 
 #include "log.h"
 
-static uint32_t g_crc_table[256];
+static uint32_t       g_crc_table[256];
+static pthread_once_t g_crc_once = PTHREAD_ONCE_INIT;
+
+static void
+crc_table_init(void) {
+  for(uint32_t i = 0; i < 256; i++) {
+    uint32_t c = i;
+    for(int k = 0; k < 8; k++) {
+      c = c & 1 ? 0xEDB88320u ^ (c >> 1) : c >> 1;
+    }
+    g_crc_table[i] = c;
+  }
+}
 
 uint32_t
 zip_crc32(uint32_t crc, const unsigned char *p, size_t n) {
-  if(!g_crc_table[1]) {
-    for(uint32_t i = 0; i < 256; i++) {
-      uint32_t c = i;
-      for(int k = 0; k < 8; k++) {
-        c = c & 1 ? 0xEDB88320u ^ (c >> 1) : c >> 1;
-      }
-      g_crc_table[i] = c;
-    }
-  }
+  /* once, before any thread uses it: two threads filling it at the same
+   * time could each see the other's half-made table */
+  pthread_once(&g_crc_once, crc_table_init);
   crc = ~crc;
   while(n--) {
     crc = g_crc_table[(crc ^ *p++) & 0xff] ^ (crc >> 8);
@@ -278,13 +284,19 @@ zip_pass(zentry_t *e, int fd, unsigned char *buf, size_t bufsize) {
 /* Sends the archive as the reply: an attachment called `filename`. */
 void
 zip_send(http_req_t *req, zlist_t *zl, const char *filename) {
-  static unsigned char buf[256 * 1024];
-  static pthread_mutex_t one = PTHREAD_MUTEX_INITIALIZER; /* buf is shared */
+  /* each download its own buffer: one slow client must not hold up the
+   * others */
+  const size_t bufsize = 256 * 1024;
+  unsigned char *buf = malloc(bufsize);
   unsigned char head[PATH_MAX + 128];
   char extra[400];
   uint64_t offset = 0, dir_size = 0;
 #define z (*zl)
 
+  if(!buf) {
+    http_send_error(req, 500, "out of memory");
+    return;
+  }
   /* lay the archive out: every length is known from here */
   for(size_t i = 0; i < z.n; i++) {
     z.v[i].offset = offset;
@@ -300,12 +312,11 @@ zip_send(http_req_t *req, zlist_t *zl, const char *filename) {
   http_send_head(req, 200, "application/zip", (int64_t)total, extra);
   req->keep_alive = 0; /* a file that fails half way ends the connection */
 
-  pthread_mutex_lock(&one);
   int failed = 0;
   for(size_t i = 0; i < z.n && !failed; i++) {
-    zip_pass(&z.v[i], -1, buf, sizeof(buf));
+    zip_pass(&z.v[i], -1, buf, bufsize);
     size_t n = zip_local(&z.v[i], head);
-    failed = http_send_all(req->fd, head, n) || zip_pass(&z.v[i], req->fd, buf, sizeof(buf));
+    failed = http_send_all(req->fd, head, n) || zip_pass(&z.v[i], req->fd, buf, bufsize);
   }
   for(size_t i = 0; i < z.n && !failed; i++) {
     size_t n = zip_central(&z.v[i], head);
@@ -315,7 +326,7 @@ zip_send(http_req_t *req, zlist_t *zl, const char *filename) {
     size_t n = zip_end(z.n, offset, dir_size, head);
     http_send_all(req->fd, head, n);
   }
-  pthread_mutex_unlock(&one);
+  free(buf);
   LOG_INFO("zip: %zu files, %llu bytes%s", z.n, (unsigned long long)total,
            failed ? " (cut short)" : "");
 #undef z

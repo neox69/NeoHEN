@@ -462,6 +462,12 @@ scan_job(job_t *job, void *p) {
   int r;
 
   pthread_mutex_lock(&g_scan_lock);
+  /* two scans asked for at once both pass the check in api_mem_scan: the
+   * second must not free or grow the results the first is working on */
+  if(g_scan.busy) {
+    pthread_mutex_unlock(&g_scan_lock);
+    return job_fail(job, "a scan is running");
+  }
   if(a->first) {
     scan_free_locked();
     g_scan.pid = a->pid;

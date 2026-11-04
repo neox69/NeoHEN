@@ -12,6 +12,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -54,6 +55,11 @@ api_map_path(http_req_t *req, const char *console, char *local, size_t size) {
     }
   }
   plat_path(console, local, size);
+  /* a path cut short by the buffer would name another file */
+  if(strlen(local) >= size - 1) {
+    http_send_error(req, 400, "path too long");
+    return -1;
+  }
   return 0;
 }
 
@@ -810,6 +816,70 @@ authorized(http_req_t *req) {
   return 0;
 }
 
+/* The host part of a Host header or of an origin's authority: "name",
+ * "name:port", "[v6]" or "[v6]:port". */
+static void
+host_part(const char *in, char *out, size_t size) {
+  size_t n;
+  if(in[0] == '[') {
+    const char *close = strchr(in, ']');
+    n = close ? (size_t)(close - in) + 1 : strlen(in);
+  } else {
+    n = strcspn(in, ":");
+  }
+  snprintf(out, size, "%.*s", (int)n, in);
+}
+
+static int
+ends_with_ci(const char *s, const char *tail) {
+  size_t a = strlen(s), b = strlen(tail);
+  return a >= b && !strcasecmp(s + a - b, tail);
+}
+
+/* A name the console can have on a home network: an IP address, localhost,
+ * a bare name or one of the local suffixes. Anything else is a public name,
+ * which is what a DNS rebinding attack points at the console. */
+static int
+local_host(const char *host) {
+  static const char *const suffixes[] = {".local", ".lan", ".home", ".internal", ".home.arpa"};
+  char h[256];
+  size_t i;
+
+  host_part(host, h, sizeof(h));
+  if(!h[0] || h[0] == '[' || !strchr(h, '.')) {
+    return 1;
+  }
+  for(i = 0; h[i] && (isdigit((unsigned char)h[i]) || h[i] == '.'); i++) {
+  }
+  if(!h[i]) {
+    return 1;
+  }
+  for(i = 0; i < sizeof(suffixes) / sizeof(suffixes[0]); i++) {
+    if(ends_with_ci(h, suffixes[i])) {
+      return 1;
+    }
+  }
+  return 0;
+}
+
+/* Without a token anyone on the network may use the API, but a web page
+ * from somewhere else must not: browsers send an Origin header with every
+ * cross-origin request that can change something, and it has to be this
+ * very server. Programs that are not browsers send no Origin at all. */
+static int
+same_origin(http_req_t *req) {
+  const char *host = http_header(req, "Host");
+  const char *origin = http_header(req, "Origin");
+
+  if(host && !local_host(host)) {
+    return 0;
+  }
+  if(!origin) {
+    return 1;
+  }
+  return host && !strncasecmp(origin, "http://", 7) && !strcasecmp(origin + 7, host);
+}
+
 void
 api_dispatch(http_req_t *req) {
   int path_matched = 0;
@@ -821,6 +891,12 @@ api_dispatch(http_req_t *req) {
   }
   if(strcmp(req->path, "/api/ping") && !authorized(req)) {
     http_send_error(req, 401, "invalid or missing token");
+    return;
+  }
+  /* with a token, a page elsewhere cannot get in anyway: it does not know it */
+  if(!g_token[0] && !same_origin(req)) {
+    http_send_error(req, 403, "cross-origin request refused (open NeoWEB at the "
+                    "console's address, or set a token in config.json)");
     return;
   }
 

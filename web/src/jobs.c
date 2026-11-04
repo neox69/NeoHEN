@@ -113,11 +113,17 @@ job_start(const char *type, const char *title, job_fn_t fn, void *arg,
   pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
   pthread_attr_setstacksize(&attr, 1024 * 1024);
   if(pthread_create(&th, &attr, job_thread, job)) {
-    snprintf(job->error, sizeof(job->error), "could not create thread");
-    job->state = JOB_FAILED;
     if(free_arg) {
       free_arg(arg);
     }
+    /* under the lock, as in job_thread: once it is not running, the job
+     * may be freed by jobs_clear() */
+    pthread_mutex_lock(&g_lock);
+    snprintf(job->error, sizeof(job->error), "could not create thread");
+    job->arg = NULL;
+    job->finished = time(NULL);
+    job->state = JOB_FAILED;
+    pthread_mutex_unlock(&g_lock);
   }
   pthread_attr_destroy(&attr);
   return id;

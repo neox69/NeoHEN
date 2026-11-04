@@ -216,6 +216,24 @@ api_apps_store(http_req_t *req) {
       http_send_error(req, 400, "action is install or cancel");
       return;
     }
+    if(!strcmp(action, "install")) {
+      /* What the page sends: a GitHub release file, a title id, and a
+       * SHA-256 that is either 64 hex digits or left out (older releases
+       * have none published). Anything else is refused here, before
+       * NeoHEN's service downloads it. */
+      const char *url = json_get_str(b, "url", ""), *sha = json_get_str(b, "sha256", "");
+      size_t i;
+      for(i = 0; sha[i] && isxdigit((unsigned char)sha[i]); i++) {
+      }
+      if(strncmp(url, "https://github.com/", 19) || strpbrk(url, " \r\n\"") ||
+         !is_title_id(json_get_str(b, "id", "")) || sha[i] || (i && i != 64) ||
+         strlen(json_get_str(b, "tag", "")) > 60) {
+        json_free(b);
+        jw_free(&q);
+        http_send_error(req, 400, "a github.com release file, a title id and a SHA-256 are needed");
+        return;
+      }
+    }
     jw_kstr(&q, "action", action);
     jw_kstr(&q, "url", json_get_str(b, "url", ""));
     jw_kstr(&q, "id", json_get_str(b, "id", ""));

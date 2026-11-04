@@ -174,7 +174,7 @@ emit(unsigned char *rec, uint64_t size, int64_t rowid, sq_row_fn fn, void *arg) 
       static const int widths[] = {0, 1, 2, 3, 4, 6, 8};
       int64_t x = 0;
       len = (uint64_t)widths[type];
-      if(body + len > end) {
+      if(body > end || len > (uint64_t)(end - body)) {
         break;
       }
       x = (body[0] & 0x80) ? -1 : 0;
@@ -191,7 +191,8 @@ emit(unsigned char *rec, uint64_t size, int64_t rowid, sq_row_fn fn, void *arg) 
       v->i = type == 9;
     } else if(type >= 12) {
       len = (type - 12) / 2;
-      if(body + len > end) {
+      /* compared as a count: a huge length must not wrap the pointer */
+      if(body > end || len > (uint64_t)(end - body)) {
         break;
       }
       v->type = (type & 1) ? SQ_TEXT : SQ_BLOB;

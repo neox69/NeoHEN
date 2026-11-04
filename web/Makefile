@@ -35,6 +35,13 @@ LAUNCHER    := launcher/icon0.png launcher/pic1.png
 JXRJS       := jxr/jxr.js
 
 WARN   := -Wall -Wextra -Wno-unused-parameter -Wno-sign-compare -Wno-format-truncation -Werror
+# The build variant (SAFE=1 or not) is kept in a stamp file: the binaries
+# depend on it, so switching variants rebuilds them instead of keeping the
+# other variant's binary. The stamp is only rewritten when the variant changes.
+VARIANT  := $(if $(SAFE),safe,full)
+STAMP    := build/variant-$(VARIANT).stamp
+$(shell mkdir -p build; [ -f $(STAMP) ] || { rm -f build/variant-*.stamp; touch $(STAMP); })
+
 DEFS   := -DLAUNCHER_DIR=\"$(CURDIR)/launcher\" -DWEBUI_PATH=\"$(CURDIR)/$(WEBUI)\" -DJXRJS_PATH=\"$(CURDIR)/$(JXRJS)\" $(FULLDEF)
 
 .PHONY: all host clean test
@@ -56,7 +63,7 @@ build/miniz-ps5.o: $(MINIZ)
 	@mkdir -p build
 	$(CC) -O2 -g -w -c -o $@ $<
 
-$(ELF): $(COMMON_SRCS) src/plat_ps5.c $(HEADERS) $(WEBUI) $(JXRJS) $(LAUNCHER) build/miniz-ps5.o
+$(ELF): $(COMMON_SRCS) src/plat_ps5.c $(HEADERS) $(WEBUI) $(JXRJS) $(LAUNCHER) build/miniz-ps5.o $(STAMP)
 	$(CC) -O2 -g $(WARN) -Isrc $(DEFS) -o $@ $(COMMON_SRCS) src/plat_ps5.c build/miniz-ps5.o \
 	  -lkernel_sys -lSceSystemService -lSceUserService -lSceAppInstUtil
 
@@ -72,7 +79,7 @@ build/miniz-host.o: $(MINIZ)
 	@mkdir -p build
 	$(HOST_CC) -O1 -g -w -c -o $@ $<
 
-$(HOST_BIN): $(COMMON_SRCS) src/plat_host.c $(HEADERS) $(WEBUI) $(JXRJS) $(LAUNCHER) build/miniz-host.o
+$(HOST_BIN): $(COMMON_SRCS) src/plat_host.c $(HEADERS) $(WEBUI) $(JXRJS) $(LAUNCHER) build/miniz-host.o $(STAMP)
 	@mkdir -p build
 	$(HOST_CC) -O1 -g $(WARN) -D_GNU_SOURCE -Isrc $(DEFS) -o $@ \
 	  $(COMMON_SRCS) src/plat_host.c build/miniz-host.o -lpthread -lm

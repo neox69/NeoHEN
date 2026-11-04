@@ -976,6 +976,12 @@ import_job(job_t *job, void *p) {
     uint64_t usize = get32(dir + at + 24);
     char name[PATH_MAX], target[PATH_MAX];
 
+    /* the name and the extra field must be inside the index that was read */
+    if(at + 46 + nlen + xlen + clen > dir_len) {
+      r = job_fail(job, "the index of the ZIP is damaged");
+      break;
+    }
+
     snprintf(name, sizeof(name), "%.*s", (int)nlen, dir + at + 46);
     if(usize == BIG && xlen >= 12) {
       usize = get64(dir + at + 46 + nlen + 4);
@@ -1016,18 +1022,23 @@ import_job(job_t *job, void *p) {
     unsigned char lh[30];
     FILE *out;
 
+    if(at + 46 + nlen + xlen + clen > dir_len) {
+      r = job_fail(job, "the index of the ZIP is damaged");
+      break;
+    }
     snprintf(name, sizeof(name), "%.*s", (int)nlen, dir + at + 46);
-    /* ZIP64: the real numbers follow, in this order, for each that is all ones */
+    /* ZIP64: the real numbers follow, in this order, for each that is all
+     * ones, as far as the extra field goes */
     if(xlen >= 4 && get16(x) == 1) {
-      const unsigned char *v = x + 4;
-      if(get32(dir + at + 24) == BIG) {
+      const unsigned char *v = x + 4, *xend = x + xlen;
+      if(get32(dir + at + 24) == BIG && v + 8 <= xend) {
         usize = get64(v);
         v += 8;
       }
       if(get32(dir + at + 20) == BIG) {
         v += 8;
       }
-      if(get32(dir + at + 42) == BIG) {
+      if(get32(dir + at + 42) == BIG && v + 8 <= xend) {
         off = get64(v);
       }
     }

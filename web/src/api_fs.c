@@ -148,10 +148,11 @@ api_fs_stat(http_req_t *req) {
 
 /* recursive listing of regular files (used by the PC for folder downloads) */
 static void
-walk(jw_t *w, const char *local, const char *rel, size_t *count, size_t max) {
-  DIR *d = opendir(local);
+walk(jw_t *w, const char *local, const char *rel, size_t *count, size_t max, int depth) {
+  DIR *d;
   struct dirent *e;
-  if(!d) {
+  /* each level takes two paths of stack: a very deep tree would overflow it */
+  if(depth > 64 || !(d = opendir(local))) {
     return;
   }
   while((e = readdir(d)) && *count < max) {
@@ -171,7 +172,7 @@ walk(jw_t *w, const char *local, const char *rel, size_t *count, size_t max) {
       jw_kstr(w, "type", "dir");
       jw_obj_end(w);
       (*count)++;
-      walk(w, lchild, rchild, count, max);
+      walk(w, lchild, rchild, count, max, depth + 1);
     } else if(S_ISREG(st.st_mode)) {
       jw_obj(w);
       jw_kstr(w, "path", rchild);
@@ -199,7 +200,7 @@ api_fs_walk(http_req_t *req) {
   jw_kstr(&w, "path", console);
   jw_key(&w, "entries");
   jw_arr(&w);
-  walk(&w, local, "", &count, max);
+  walk(&w, local, "", &count, max, 0);
   jw_arr_end(&w);
   jw_kbool(&w, "truncated", count >= max);
   api_finish(req, &w);
@@ -398,14 +399,45 @@ api_fs_mkdir(http_req_t *req) {
   json_free(b);
 }
 
+/* The path with "//", "/./" and a trailing "/" taken out, so that "/data/"
+ * or "//data/." is seen to be "/data". */
+static void
+clean_path(const char *in, char *out, size_t size) {
+  size_t o = 0;
+
+  for(const char *p = in; *p && o + 2 < size;) {
+    size_t n;
+    while(*p == '/') {
+      p++;
+    }
+    n = strcspn(p, "/");
+    if(!n) {
+      break;
+    }
+    if(!(n == 1 && p[0] == '.')) {
+      if(o + 1 + n >= size) {
+        break;
+      }
+      out[o++] = '/';
+      memcpy(out + o, p, n);
+      o += n;
+    }
+    p += n;
+  }
+  if(!o) {
+    out[o++] = '/';
+  }
+  out[o] = 0;
+}
+
 void
 api_fs_delete(http_req_t *req) {
-  char local[PATH_MAX];
+  char local[PATH_MAX], p[PATH_MAX];
   jval_t *b = api_body(req);
   if(!b) {
     return;
   }
-  const char *p = json_get_str(b, "path", "");
+  clean_path(json_get_str(b, "path", ""), p, sizeof(p));
   if(!strcmp(p, "/") || !strcmp(p, "/user") || !strcmp(p, "/system") ||
      !strcmp(p, "/system_ex") || !strcmp(p, "/data")) {
     http_send_error(req, 403, "refusing to delete %s", p);
@@ -512,6 +544,21 @@ api_fs_copy(http_req_t *req) {
     json_free(b);
     free(a);
     return;
+  }
+  {
+    /* a folder copied into itself would copy its own copy until the disk
+     * is full, and a file copied onto itself is emptied first */
+    char from[PATH_MAX], to[PATH_MAX];
+    size_t n;
+    clean_path(json_get_str(b, "from", ""), from, sizeof(from));
+    clean_path(json_get_str(b, "to", ""), to, sizeof(to));
+    n = strlen(from);
+    if(!strcmp(from, to) || (!strncmp(from, to, n) && (to[n] == '/' || n == 1))) {
+      json_free(b);
+      free(a);
+      http_send_error(req, 400, "cannot copy or move something into itself");
+      return;
+    }
   }
   a->move = json_get_bool(b, "move", 0);
   if(json_get_bool(b, "skipErrors", 0)) {
