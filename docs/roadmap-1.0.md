@@ -124,6 +124,26 @@ Leyenda de esfuerzo: **S** = días, **M** = una o dos semanas, **L** = más.
 7. **Payloads al día** — ftpsrv de octubre, comprobar elfldr ≥0.27 en el
    cargador embebido. **S**
 
+### Extras elegidos para 1.0 (rc16)
+
+8. **Actualizar NeoHEN desde NeoWEB** con un clic: descarga, SHA-256,
+   instala y vuelve atrás si falla. **M**
+9. **Código QR en la pantalla de la PS5** para abrir NeoWEB en el móvil con
+   el token ya puesto. **S**
+10. **NeoWEB como PWA**: instalable en el móvil, pantalla completa, y
+    «compartir con NeoWEB» para subir archivos. **S/M**
+11. **Copia y restauración de la configuración** en un archivo. **S**
+12. **Manejo con el mando** en el navegador de la PS5 (cruceta, foco
+    visible, X/O). **M**
+13. **Modo invitado**: un segundo token de solo lectura. **S**
+14. **Biblioteca**: el tamaño por juego ya existe; añadir duplicados y restos
+    de instalaciones. **S**
+
+Descartados: copias automáticas de saves a USB/SMB (un disco que falla o se
+desconecta durante la lectura ha colgado la PS5), perfiles por juego,
+`neohen.local`, sincronizar capturas, gráfica de temperaturas/ventilador,
+avisos a Discord/Telegram, novedades dentro de NeoWEB.
+
 ---
 
 ## 3. Para 1.x (después de 1.0)
@@ -190,5 +210,6 @@ pasada en hardware (al menos 13.42 y 13.60).
 3. **Firmware**: 1.0 se da por probada de 13.00 a 13.60. Por debajo debería
    funcionar, pero figura como «sin probar» en la matriz hasta que alguien lo
    confirme.
-4. **Aurora del tema Console**: pendiente.
+4. **Aurora del tema Console**: se mantiene animada pero más ligera (menos
+   desenfoque, movimiento con `transform`, capas pre-difuminadas).
 5. **Funciones de §2**: todas entran en 1.0.
