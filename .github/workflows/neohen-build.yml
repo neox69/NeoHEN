@@ -1,6 +1,8 @@
 # Build NeoHEN.elf on every push to neohen-main or a neohen/* branch, and on
 # v* tags, and keep it as a workflow artifact (Actions run page -> Artifacts).
-# No releases are published from here. A tag must match the VERSION file.
+# A v* tag (which must match the VERSION file) also publishes a GitHub
+# release with NeoHEN-<version>.zip, NeoHEN.elf, BUILD_INFO.txt and
+# SHA256SUMS; a version with "-" (an rc) is marked as a pre-release.
 name: neohen-build
 
 on:
@@ -181,3 +183,44 @@ jobs:
           path: dist/
           if-no-files-found: error
           retention-days: 30
+
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Fetch the build
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: NeoHEN-${{ github.ref_name }}-${{ github.sha }}
+          path: dist
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          ver="${TAG#v}"
+          (cd dist && sha256sum -c SHA256SUMS)
+          test -f "dist/NeoHEN-${ver}.zip"
+          # Notes: docs/release-notes-<version>.md, else -<major.minor>.md,
+          # else GitHub's generated notes.
+          notes=""
+          for f in "docs/release-notes-${ver}.md" "docs/release-notes-$(echo "${ver%%-*}" | cut -d. -f1,2).md"; do
+            if [[ -f "$f" ]]; then notes="$f"; break; fi
+          done
+          args=(--title "NeoHEN ${ver}" --verify-tag)
+          if [[ -n "$notes" ]]; then args+=(--notes-file "$notes"); else args+=(--generate-notes); fi
+          if [[ "$ver" == *-* ]]; then args+=(--prerelease); else args+=(--latest); fi
+          gh release create "$TAG" --repo "${GITHUB_REPOSITORY}" "${args[@]}" \
+            "dist/NeoHEN-${ver}.zip" dist/NeoHEN.elf dist/BUILD_INFO.txt dist/SHA256SUMS
