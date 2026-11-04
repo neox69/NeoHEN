@@ -191,7 +191,7 @@ html.plain body::before{display:none}
 .opt{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;padding:12px 0;border-top:1px solid var(--line)}
 .opt:first-of-type{border-top:0}
 .opt .t{flex:1 1 170px;min-width:0}.opt .t b{display:block;font-weight:650}.opt .t small{display:block;color:var(--dim);font-size:12.5px;margin-top:2px}
-.sws{display:flex;gap:8px}.sws button{width:30px;height:30px;border-radius:50%;border:2px solid transparent;padding:0;cursor:pointer}
+.sws{display:flex;flex-wrap:wrap;gap:8px}.sws button{width:30px;height:30px;border-radius:50%;border:2px solid transparent;padding:0;cursor:pointer}
 .sws button.on{border-color:var(--text);box-shadow:0 0 0 2px rgba(0,0,0,.5) inset}
 .hidel{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px 14px;margin-top:10px}
 .game{min-width:0;cursor:pointer}
@@ -1185,6 +1185,8 @@ function api(path,body){
 }
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
 function enc(s){return encodeURIComponent(s)}
+/* a URL from outside, safe inside a CSS url(): no quote or bracket ends it */
+function cssu(u){return String(u==null?"":u).replace(/["'()\\\s]/g,function(c){return "%"+("0"+c.charCodeAt(0).toString(16)).slice(-2)})}
 function num(v,d){return v.toFixed(d).replace(".",ES?",":".")}
 function size(b){b=+b||0;return b>=1e12?num(b/1e12,2)+" TB":b>=1e9?num(b/1e9,b>=1e11?0:1)+" GB":b>=1048576?num(b/1048576,b>=1e8?0:1)+" MB":b>=1024?Math.round(b/1024)+" KB":b+" B"}
 function dur(s){s=Math.max(0,s|0);var d=Math.floor(s/86400),h=Math.floor(s%86400/3600),m=Math.floor(s%3600/60);
@@ -1284,7 +1286,7 @@ $("nav").onclick=function(e){var p=e.target.closest("[data-pin]"),f=e.target.clo
   if(f){k=f.getAttribute("data-fold");var fs=CFG.fold.filter(function(x){return x!==k});if(CFG.fold.indexOf(k)<0)fs.push(k);cfgSet("fold",fs);return}
   var b=e.target.closest("button[data-v]");if(b)show(b.getAttribute("data-v"),true)};
 window.addEventListener("hashchange",function(){var h=location.hash.slice(1);if(h!==S.view&&h!=="game="+S.gp.id)show(h)});
-$("burger").innerHTML=ic("menu");$("reload").innerHTML=ic("refresh");
+$("burger").innerHTML=ic("menu");$("reload").innerHTML=ic("refresh");$("reload").title=L("Actualizar","Refresh");
 $("burger").onclick=function(){$("side").className="side open"};
 $("view").addEventListener("click",function(){$("side").className="side"});
 $("reload").onclick=function(){fast();slow();show(S.view);toast(L("Actualizado","Refreshed"))};
@@ -1608,7 +1610,7 @@ setTimeout(function(){if(S.full)api("/api/store").then(function(j){storeNews(j.u
 S.jobSeen={};
 function evJobs(list){(list||[]).forEach(function(j){var was=S.jobSeen[j.id];S.jobSeen[j.id]=j.state;
   if(was==="running"&&j.state!=="running")note(j.state==="done"?"ok":j.state==="cancelled"?"warn":"bad",(j.state==="done"?L("Terminado: ","Done: "):j.state==="cancelled"?L("Cancelado: ","Cancelled: "):L("Falló: ","Failed: "))+(j.title||j.type),j.error||"")})}
-setInterval(function(){if(S.full&&S.online)api("/api/jobs").then(function(j){evJobs(j.jobs)}).catch(function(){})},10000);
+setInterval(function(){if(S.full&&S.online&&!document.hidden)api("/api/jobs").then(function(j){evJobs(j.jobs)}).catch(function(){})},10000);
 
 /* ------------------------------------------------------------ NEO v2 effects
  * All of it stands down with Settings > Animations off or reduced motion. */
@@ -1637,13 +1639,13 @@ function decode(el,text){if(!fxOn()||!text){el.textContent=text;return}
   document.addEventListener("pointermove",function(e){if(e.pointerType==="touch"||S.lite)return;ev=e;if(!raf)raf=requestAnimationFrame(frame)},{passive:true})})();
 /* the particle field behind everything */
 (function(){var cv=$("fx"),cx=cv.getContext&&cv.getContext("2d");if(!cx)return;
-  var W=0,H=0,dpr=1,pts=[],mx=-1e4,my=-1e4,last=0,col=["#4DD0FF","#8E7BFF"];
+  var W=0,H=0,dpr=1,pts=[],mx=-1e4,my=-1e4,last=0,idle=false,col=["#4DD0FF","#8E7BFF"];
   function colors(){var cs=getComputedStyle(document.documentElement);col=[cs.getPropertyValue("--cyan").trim()||"#4DD0FF",cs.getPropertyValue("--violet").trim()||"#8E7BFF"]}
   function size(){dpr=Math.min(2,window.devicePixelRatio||1);W=innerWidth;H=innerHeight;cv.width=W*dpr;cv.height=H*dpr;cv.style.width=W+"px";cv.style.height=H+"px";cx.setTransform(dpr,0,0,dpr,0,0);
     var n=Math.round(Math.min(S.tv?40:90,W*H/16000));pts=[];for(var i=0;i<n;i++)pts.push({x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-.5)*.25,vy:(Math.random()-.5)*.25,r:Math.random()*1.6+.4,c:Math.random()<.5?0:1,z:Math.random()*.8+.2});colors()}
   function hex(c,a){var m=/^#([0-9a-f]{6})$/i.exec(c);if(!m)return "rgba(77,208,255,"+a+")";var v=parseInt(m[1],16);return "rgba("+(v>>16)+","+(v>>8&255)+","+(v&255)+","+a+")"}
-  function draw(now){if(document.documentElement.classList.contains("lite")){if(W)cx.clearRect(0,0,W,H);return}requestAnimationFrame(draw);if(document.hidden||!fxOn()||document.documentElement.classList.contains("plain")||document.documentElement.getAttribute("data-bg")!=="particles"){if(W)cx.clearRect(0,0,W,H);return}
-    if(now-last<33)return;last=now;cx.clearRect(0,0,W,H);
+  function draw(now){if(document.documentElement.classList.contains("lite")){if(W)cx.clearRect(0,0,W,H);return}requestAnimationFrame(draw);if(document.hidden||!fxOn()||document.documentElement.classList.contains("plain")||document.documentElement.getAttribute("data-bg")!=="particles"){if(W&&!idle){cx.clearRect(0,0,W,H);idle=true}return}
+    if(now-last<33)return;last=now;idle=false;cx.clearRect(0,0,W,H);
     for(var i=0;i<pts.length;i++){var p=pts[i];p.x+=p.vx*p.z;p.y+=p.vy*p.z;
       var dx=p.x-mx,dy=p.y-my,d2=dx*dx+dy*dy;if(d2<16000){var f=(16000-d2)/16000*.6;p.x+=dx/Math.sqrt(d2+1)*f;p.y+=dy/Math.sqrt(d2+1)*f}
       if(p.x<-20)p.x=W+20;if(p.x>W+20)p.x=-20;if(p.y<-20)p.y=H+20;if(p.y>H+20)p.y=-20}
@@ -1733,7 +1735,7 @@ function loadRemote(){
     if(rp.busy&&rp.st&&rp.st.updated>=rp.asked)rp.busy="";
     if(S.view==="remote")paintRemote();
     clearTimeout(rp.tm);
-    if(S.view==="remote")rp.tm=setTimeout(loadRemote,rp.busy||(rp.st&&rp.st.state==="waiting")?1500:6000)}).catch(function(){});
+    if(S.view==="remote"&&!document.hidden)rp.tm=setTimeout(loadRemote,rp.busy||(rp.st&&rp.st.state==="waiting")?1500:6000)}).catch(function(){});
 }
 function rpAsk(op,slot){
   var rp=S.rp;rp.busy=op;rp.asked=Math.floor(Date.now()/1000)-2;paintRemote();
@@ -1870,7 +1872,7 @@ function paintFixes(){
     var acts=st[0]==="on"?'<button class="btn sm danger" data-fx="unfix" data-id="'+g.id+'"'+dis+'>'+L("Quitar","Remove")+'</button>'
       :st[0]==="can"?'<button class="btn sm pri" data-fx="fix" data-id="'+g.id+'"'+dis+'>'+L("Aplicar","Apply")+" ("+g.playgo.chunks+"/"+g.playgo.scenarios+')</button>'
       :st[0]==="peek"?'<button class="btn sm pri" data-fx="peek" data-id="'+g.id+'"'+(dis||(S.running?" disabled":""))+' title="'+L("Monta la imagen un momento para ver qué librerías trae","Mounts the image for a moment to see which libraries it brings")+'">'+L("Mirar y aplicar","Look and apply")+'</button><button class="btn sm ghost" data-fx="force" data-id="'+g.id+'"'+dis+'>'+L("Aplicar sin mirar","Apply without looking")+'</button>':"";
-    return '<div class="item">'+(a&&a.hasIcon?'<img class="svi" style="width:38px;height:38px" alt="" src="/apps/icon?id='+g.id+'">':'<div class="av">'+g.id.slice(0,1)+'</div>')+
+    return '<div class="item">'+(a&&a.hasIcon?'<img class="svi" loading="lazy" style="width:38px;height:38px" alt="" src="/apps/icon?id='+g.id+'">':'<div class="av">'+g.id.slice(0,1)+'</div>')+
       '<div class="t"><b>'+esc(title(g.id))+'</b><small>'+g.id+" · "+(r?rootName(r):whereName(g.where))+(g.running?" · "+L("abierto ahora","open now"):"")+'</small></div>'+
       '<div class="acts"><span class="chip '+st[1]+'">'+(b?L("Trabajando…","Working…"):esc(st[2]))+'</span>'+acts+'<button class="btn sm ghost" data-fx="page" data-id="'+g.id+'" title="'+L("Página del juego","Game page")+'">'+ic("game")+'</button></div></div>'}).join("")
     :'<div class="empty">'+L("Ningún juego de ShadowMount+ usa PlayGo: no hay nada que arreglar aquí.","No ShadowMount+ game uses PlayGo: nothing to fix here.")+'</div>')+'</div>'+
@@ -1888,7 +1890,7 @@ function fixSmp(){
   var h='<div class="card pad" style="margin:28px 0 16px"><h3 class="h">'+L("Fakelib por juego","Fakelib per game")+' <em>'+fl.length+'</em></h3>'+
     '<p style="margin:0;color:var(--dim)">'+L("Las librerías de reemplazo (backport y fakelib) hacen que muchos juegos funcionen, pero alguno se cierra al abrirlo o se queda en negro por culpa de ellas. Si te pasa, prueba «Solo emuladores» y, si sigue igual, «Desactivado». «Por defecto» sigue el ajuste general de ShadowMount+.","Replacement libraries (backport and fakelib) make many games work, but some close on launch or stay black because of them. If that happens, try “Emulators only” and, if it still fails, “Disabled”. “Default” follows ShadowMount+’s general setting.")+'</p></div>'+
     '<div class="card">'+(fl.length?fl.map(function(x){var id=esc(x.title_id),a=app(x.title_id);
-      return '<div class="item">'+(a&&a.hasIcon?'<img class="svi" style="width:38px;height:38px" alt="" src="/apps/icon?id='+id+'">':'<div class="av">'+id.slice(0,1)+'</div>')+
+      return '<div class="item">'+(a&&a.hasIcon?'<img class="svi" loading="lazy" style="width:38px;height:38px" alt="" src="/apps/icon?id='+id+'">':'<div class="av">'+id.slice(0,1)+'</div>')+
         '<div class="t"><b>'+esc(x.title_name||x.title_id)+'</b><small>'+id+(x.fakelib_mode?" · "+L("ahora: ","now: ")+esc(x.fakelib_mode):"")+'</small></div><div class="acts">'+smFlSel(x,id)+'</div></div>'}).join("")
       :'<div class="empty">'+L("Ningún juego tiene fakelib que se pueda cambiar.","No game has a fakelib that can be changed.")+'</div>')+'</div>';
   h+='<div class="card pad" style="margin:28px 0 16px"><h3 class="h">'+L("Juegos que no aparecen","Games that do not show up")+(gone.length?' <em>'+gone.length+" "+L("sin origen","without source")+'</em>':"")+'</h3>'+
@@ -2049,14 +2051,23 @@ function pump(){
   if(!u){if(S.view==="files")loadDir(S.cwd);paintNav();return}
   upBusy=true;runUp(u).then(function(){upBusy=false;tick();pump()});
 }
-function tick(){if(raf)return;raf=setTimeout(function(){raf=0;paintNav();if(S.view==="transfers")paintTr();else if(S.view==="panel")paintPanel()},400)}
+/* not while a button is held down: rebuilt under the pointer, its click would be lost */
+var held=false;["pointerdown","pointerup","pointercancel"].forEach(function(n){document.addEventListener(n,function(){held=n==="pointerdown"},true)});
+function tick(){if(raf)return;raf=setTimeout(function(){raf=0;if(held){tick();return}paintNav();if(S.view==="transfers")paintTr();else if(S.view==="panel")paintPanel()},400)}
 function stat(p){return api("/api/fs/stat?path="+enc(p))}
 function runUp(u){
   u.st="run";u.t0=Date.now();
+  function from(n){u.done=u.base=n;u.resumed=n>0;return true}
+  function replace(){return ask(L("Ya existe ","Already there: ")+u.name,L("¿Sustituirlo por el que estás subiendo?","Replace it with the one you are uploading?"),L("Sustituir","Replace"),true).then(function(go){return go&&from(0)})}
   return stat(u.dest).then(function(s){
-    if(s.exists&&s.type==="file"&&s.size>0&&s.size<u.size){u.done=u.base=s.size;u.resumed=true;return true}
-    if(s.exists)return ask(L("Ya existe ","Already there: ")+u.name,L("¿Sustituirlo por el que estás subiendo?","Replace it with the one you are uploading?"),L("Sustituir","Replace"),true);
-    return true},function(){return true})
+    /* a smaller file there is this upload's own part only once this upload
+     * has sent to it (its first PUT truncates); otherwise it may be another
+     * file, and appending to it would corrupt both */
+    if(s.exists&&s.type==="file"&&s.size<u.size&&u.xhr)return from(s.size);
+    if(s.exists&&s.type==="file"&&s.size>0&&s.size<u.size)return ask(L("Ya hay una parte de ","Part of it is already there: ")+u.name,size(s.size)+" / "+size(u.size)+". "+
+      L("¿Seguir la subida donde se quedó? Si es otro fichero, elige Cancelar para sustituirlo.","Continue the upload where it stopped? If it is a different file, choose Cancel to replace it."),L("Seguir","Continue")).then(function(go){return go?from(s.size):replace()});
+    if(s.exists)return replace();
+    return from(0)},function(){return true})
   .then(function(go){if(!go){u.st="skip";return}u.t0=Date.now();return loop(u,0).then(function(){if(u.st==="run"){u.st="ok";if(!u.b)note("ok",L("Subido: ","Uploaded: ")+u.name,u.dest);if(u.after)u.after();batDone(u.b)}})})
   .catch(function(e){u.st="err";u.err=e.message;note("bad",L("Subida fallida: ","Upload failed: ")+u.name,e.message)});
 }
@@ -2500,7 +2511,7 @@ function chRead(name){
 function chGroup(id,inst){
   var ch=S.ch,fs=(ch.by[id]||[]).slice().sort(function(a,b){return a.name<b.name?1:-1}),open=!!ch.open[id],a=app(id);
   var nm=a&&a.title&&a.title!==id?a.title:"";if(!nm)fs.some(function(f){var i=ch.info[f.name];if(i&&i.game){nm=i.game;return true}});
-  var h='<div class="card svu"><div class="svh" data-ch="'+id+'">'+(a&&a.hasIcon?'<img class="svi" style="width:38px;height:38px" alt="" src="/apps/icon?id='+id+'">':'<div class="av">'+id.slice(0,1)+'</div>')+
+  var h='<div class="card svu"><div class="svh" data-ch="'+id+'">'+(a&&a.hasIcon?'<img class="svi" loading="lazy" style="width:38px;height:38px" alt="" src="/apps/icon?id='+id+'">':'<div class="av">'+id.slice(0,1)+'</div>')+
     '<div><b>'+esc(nm||id)+'</b><small>'+id+" · "+fs.length+" "+L("ficheros de trucos","cheat files")+(inst?"":" · "+L("no instalado","not installed"))+'</small></div><span class="sp"></span><span class="chev">'+(open?"▾":"▸")+'</span></div>';
   if(open){h+='<table class="t"><thead><tr><th>'+L("Versión del juego","Game version")+'</th><th>'+L("Formato","Format")+'</th><th>'+L("Trucos que trae","Cheats inside")+'</th><th></th></tr></thead><tbody>'+
     fs.map(function(f){var p=chParts(f.name),i=ch.info[f.name],url="/fs/get?path="+enc(CDIR+"/"+f.name);
@@ -2596,8 +2607,11 @@ var cfgT=0;
 function cfgSet(k,v,reload){
   CFG[k]=v;try{localStorage.setItem("neoweb_ui",JSON.stringify(CFG))}catch(e){}
   cfgApply();clock();paintNav();
-  clearTimeout(cfgT);cfgT=setTimeout(function(){if(S.full)api("/api/fs/text",{path:CFG_FILE,content:JSON.stringify(CFG,null,1)}).catch(function(){})},600);
-  if(reload){toast(L("Recargando…","Reloading…"));setTimeout(function(){location.reload()},700)}else if(S.view==="settings")paintCfg();
+  function save(){return S.full?api("/api/fs/text",{path:CFG_FILE,content:JSON.stringify(CFG,null,1)}).catch(function(){}):Promise.resolve()}
+  clearTimeout(cfgT);
+  /* before a reload the console must have it: what it keeps wins on the next load */
+  if(reload){toast(L("Recargando…","Reloading…"));Promise.all([save(),wait(700)]).then(function(){location.reload()})}
+  else{cfgT=setTimeout(save,600);if(S.view==="settings")paintCfg()}
 }
 /* what the console keeps wins over what this browser remembers */
 function cfgPull(){
@@ -3043,9 +3057,9 @@ function psLoad(){
   var ap=S.ap;if(!S.full)return Promise.resolve();
   return fetch(PSAPI+"index.json",{cache:"no-cache"}).then(function(r){if(!r.ok)throw new Error("ProsperoStore "+r.status);return r.json()}).then(function(j){
     if(!j||!Array.isArray(j.apps))throw new Error(L("ProsperoStore devolvió algo que no es su catálogo","ProsperoStore answered with something that is not its catalog"));
-    ap.cat=j.apps.filter(function(a){return a&&typeof a.id==="string"&&/^[A-Z]{4}\d{5}$/.test(a.id)&&a.name});ap.err="";
+    ap.cat=j.apps.filter(function(a){return a&&typeof a.id==="string"&&/^[A-Z]{4}\d{5}$/.test(a.id)&&a.name&&typeof a.name==="string"});ap.err="";
     paintNav();if(S.view==="panel")paintPanel();else if(S.view==="apps")paintApps();
-  },function(e){ap.err=e.message||String(e);if(!ap.cat)ghLoad();if(S.view==="apps")paintApps()});
+  },function(e){ap.err=e.message||String(e);if(S.view==="apps"){if(!ap.cat)ghLoad();paintApps()}});
 }
 function psDet(id){
   var ap=S.ap;if(ap.det[id])return Promise.resolve(ap.det[id]);
@@ -3162,7 +3176,7 @@ function psDetail(id){
   function draw(d){
     var x=d||a,icon=psIcon(x),st=psState(a),have=app(id),soon=a.status!=="available",page=psUrl(x.page,["prosperostore.net"]),src=psUrl(x.source_repo,["github.com","gitlab.com","codeberg.org"]),
       sb=d&&d.safety&&d.safety.sandbox,busy=apBusy()||S.ro;
-    $("drawer-p").innerHTML='<div class="art ps">'+(icon?'<i style="background-image:url(&quot;'+esc(icon)+'&quot;)"></i>':"")+'<button class="btn ic" data-x>'+ic("x")+'</button></div>'+
+    $("drawer-p").innerHTML='<div class="art ps">'+(icon?'<i style="background-image:url(&quot;'+esc(cssu(icon))+'&quot;)"></i>':"")+'<button class="btn ic" data-x>'+ic("x")+'</button></div>'+
       '<div class="bd">'+(icon?'<img alt="" src="'+esc(icon)+'">':"")+'<h2>'+esc(x.name)+'</h2>'+
       '<div class="apm">'+(psNew(a)&&!soon?'<span class="chip new">'+L("nueva","new")+'</span>':psUpd(a)?'<span class="chip new">'+L("actualizada","updated")+'</span>':"")+
         '<span class="chip">'+esc(PSCAT[a.category]||a.category||"")+'</span>'+(st==="ok"?'<span class="chip ok">'+L("al día","up to date")+'</span>':st==="old"?'<span class="chip warn">'+L("hay versión nueva","newer version")+'</span>':"")+'</div>'+
@@ -3407,6 +3421,8 @@ $("pick-tz").onchange=function(){
  * background for all apps) is left out: NeoHEN's themes never change the
  * console's files. */
 var TSTORE="https://themes.darkatek7.com";
+/* the store's paths are its own: one not starting with "/" ("@host/...") must not change the host */
+function tsu(u){u=String(u||"");return TSTORE+(u.charAt(0)==="/"?u:"/"+u)}
 var TCATS=[["","Todas","All"],["anime","Anime","Anime"],["games","Juegos","Games"],["movies-tv","Cine y TV","Movies & TV"],["cartoon","Dibujos","Cartoon"],["nature","Naturaleza","Nature"],["space","Espacio","Space"],["fantasy","Fantasía","Fantasy"],["sci-fi","Ciencia ficción","Sci-Fi"],["pixel-art","Pixel art","Pixel art"],["minimal","Minimalista","Minimal"],["abstract","Abstracto","Abstract"],["seasonal","Temporada","Seasonal"]];
 S.tc={tab:"mine",sort:"top",cat:"",page:1,items:[],total:0,loading:false,err:"",busy:{}};
 function tName(n){return String(n||"").replace(/[^A-Za-z0-9 ._()-]/g,"_").replace(/^[. ]+|[. ]+$/g,"").slice(0,60)}
@@ -3418,8 +3434,8 @@ function paintCommunity(){
   var c=S.tc,have={};S.themes.forEach(function(t){have[t.name]=1});
   function card(it){var n=tName(it.name),got=have[n],b=c.busy[it.id],sm=it.summary||{};
     var what=[sm.fallback?L("fondo","background"):"",sm.icons?sm.icons+" "+L("iconos","icons"):"",sm.tiles?sm.tiles+" "+L("mosaicos","tiles"):""].filter(Boolean).join(" · ");
-    return '<div class="card theme'+(S.tactive===n?" on":"")+'"><div class="pv" data-tcview="'+esc(it.id)+'" tabindex="0"><img loading="lazy" referrerpolicy="no-referrer" alt="" src="'+esc(TSTORE+it.previewUrl)+'">'+(got?'<div class="tag">'+L("EN LA CONSOLA","ON THE CONSOLE")+'</div>':"")+'</div>'+
-      '<div class="bd"><b>'+esc(it.name)+'</b><small>'+esc(it.author||"")+" · "+size(it.size)+" · ♥ "+(it.likes||0)+" · ⬇ "+(it.downloads||0)+'</small><small class="desc">'+esc(what)+'</small>'+
+    return '<div class="card theme'+(S.tactive===n?" on":"")+'"><div class="pv" data-tcview="'+esc(it.id)+'" tabindex="0"><img loading="lazy" referrerpolicy="no-referrer" alt="" src="'+esc(tsu(it.previewUrl))+'">'+(got?'<div class="tag">'+L("EN LA CONSOLA","ON THE CONSOLE")+'</div>':"")+'</div>'+
+      '<div class="bd"><b>'+esc(it.name)+'</b><small>'+esc(it.author||"")+" · "+size(it.size)+" · ♥ "+(+it.likes||0)+" · ⬇ "+(+it.downloads||0)+'</small><small class="desc">'+esc(what)+'</small>'+
       '<div class="acts">'+(b?'<span class="chip">'+esc(b)+'</span>':'<button class="btn pri sm" data-tcget="'+esc(it.id)+'"'+(S.ro?" disabled":"")+'>'+(got?L("Descargar de nuevo y aplicar","Download again and apply"):L("Descargar y aplicar","Download and apply"))+'</button>')+'</div></div></div>'}
   $("v-themes").innerHTML=themeTabs()+
     '<div class="note" style="border-color:rgba(77,163,255,.4);background:rgba(77,163,255,.08);color:#CFE4FF">'+L("Temas de la comunidad de ProsperoThemes (themes.darkatek7.com, de Darkatek7). Se instalan como cualquier tema de NeoHEN: fondo, iconos de los mosaicos y del menú. El «fondo de todas las apps» de algunos temas no se aplica, porque escribiría en la carpeta de cada juego.","Community themes from ProsperoThemes (themes.darkatek7.com, by Darkatek7). They install like any NeoHEN theme: background, tile and menu icons. The “background for every app” some bring is left out, since it would write into every game's folder.")+'</div>'+
@@ -3441,12 +3457,12 @@ function viewCommunity(id){
   ov.onclick=function(e){if(e.target===ov||e.target.closest("[data-tcclose]"))close();else if(e.target.closest("[data-tcget2]")){close();getCommunity(id)}};
   document.addEventListener("keydown",key,true);
   function paint(d){var a=d&&d.assets||{},tiles=a.tiles||[],sy={};(a.symbols||[]).forEach(function(x){sy[x.name]=x.url});
-    var img=function(u){return '<img referrerpolicy="no-referrer" alt="" src="'+esc(TSTORE+u)+'">'};
-    ov.innerHTML='<div class="box"><div class="tmock" style="background-image:url(\''+esc(TSTORE+it.previewUrl)+'\')">'+
+    var img=function(u){return '<img referrerpolicy="no-referrer" alt="" src="'+esc(tsu(u))+'">'};
+    ov.innerHTML='<div class="box"><div class="tmock" style="background-image:url(\''+esc(cssu(tsu(it.previewUrl)))+'\')">'+
       '<div class="nav">'+L("Juegos","Games")+'<i>'+L("Multimedia","Media")+'</i></div>'+
       '<div class="top">'+(sy.iconid_search?img(sy.iconid_search):"")+(sy.iconid_settings?img(sy.iconid_settings):"")+'<b></b>'+new Date().toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})+'</div>'+
       '<div class="row">'+tiles.map(function(t){return img(t.url)}).join("")+'</div><div class="bars"><i></i><i></i></div></div>'+
-      '<h3 class="h" style="margin:14px 0 4px">'+esc(it.name)+'</h3><p style="margin:0 0 8px;color:var(--dim)">'+esc(it.author||"")+" · v"+esc(it.version||"")+" · "+size(it.size)+" · ♥ "+(it.likes||0)+" · ⬇ "+(it.downloads||0)+'</p>'+
+      '<h3 class="h" style="margin:14px 0 4px">'+esc(it.name)+'</h3><p style="margin:0 0 8px;color:var(--dim)">'+esc(it.author||"")+" · v"+esc(it.version||"")+" · "+size(it.size)+" · ♥ "+(+it.likes||0)+" · ⬇ "+(+it.downloads||0)+'</p>'+
       '<p style="margin:0">'+esc(it.description||"")+'</p>'+
       ((a.symbols||[]).length?'<div class="syms">'+a.symbols.map(function(x){return img(x.url)}).join("")+'</div>':"")+
       '<div class="row" style="margin-top:14px"><button class="btn pri" data-tcget2'+(S.ro?" disabled":"")+'>'+L("Descargar y aplicar","Download and apply")+'</button><button class="btn" data-tcclose>'+L("Cerrar","Close")+'</button></div></div>';
@@ -3483,7 +3499,7 @@ function askApply(name){ask(L("Tema instalado: ","Theme installed: ")+name,L("¿
 function getCommunity(id){
   var c=S.tc,it=c.items.filter(function(x){return x.id===id})[0];if(!it||c.busy[id])return;
   c.busy[id]=L("Descargando…","Downloading…");paintThemes();
-  fetch(TSTORE+it.downloadUrl,{referrerPolicy:"no-referrer"}).then(function(r){if(!r.ok)throw new Error(L("Descarga fallida (","Download failed (")+r.status+")");return r.arrayBuffer()}).then(function(buf){
+  fetch(tsu(it.downloadUrl),{referrerPolicy:"no-referrer"}).then(function(r){if(!r.ok)throw new Error(L("Descarga fallida (","Download failed (")+r.status+")");return r.arrayBuffer()}).then(function(buf){
     return p5Install(buf,it.name,it,function(t){c.busy[id]=t||L("Instalado","Installed");if(S.view==="themes"&&S.tc.tab==="community")paintThemes()})}).then(function(name){
     delete c.busy[id];paintThemes();return setTheme(name)}).catch(function(e){delete c.busy[id];paintThemes();fail(e)})}
 function setTheme(n){
@@ -3715,7 +3731,7 @@ function fast(){
     if(ch&&S.runKnown){if(S.running)note("",L("Cerrado: ","Closed: ")+title(S.running),S.running);if(r)note("",L("Abierto: ","Opened: ")+title(r),r)}
     S.runKnown=true;S.running=r;
     var hot=Math.max(i.cpuTemp|0,i.socTemp|0);if(hot>=85&&Date.now()-(S.hotAt||0)>6e5){S.hotAt=Date.now();note("warn",L("Consola caliente: ","Console running hot: ")+hot+" °C",L("Mira el ventilador en Sistema","Check the fan in System"))}
-    $("mini").hidden=!r;if(r){$("mini-i").src="/apps/icon?id="+r;$("mini-k").textContent=L("Jugando","Playing");$("mini-t").textContent=title(r)}
+    $("mini").hidden=!r;if(r){var ms="/apps/icon?id="+enc(r);if($("mini-i").getAttribute("src")!==ms)$("mini-i").src=ms;$("mini-k").textContent=L("Jugando","Playing");$("mini-t").textContent=title(r)}
     if(S.view==="panel")paintPanel();else if(ch&&S.view==="library")paintGrid();
   }).catch(function(){online(false)});
 }
@@ -3739,7 +3755,7 @@ probe().then(function(){show(location.hash.slice(1)||CFG.start||"panel");return 
     if(S.view==="transfers"||S.jobs.some(function(j){return j.state==="running"}))loadJobs()}
   tickFast()},Math.max(S.lite?10:2,CFG.refresh)*1000)})();
 setInterval(function(){if(!document.hidden){slow();loadPay()}},60000);
-document.addEventListener("visibilitychange",function(){if(!document.hidden){fast();slow();loadPay()}});
+document.addEventListener("visibilitychange",function(){if(!document.hidden){fast();slow();loadPay();if(S.view==="remote")loadRemote()}});
 document.addEventListener("keydown",function(e){
   if(e.key==="Escape"){$("drawer").className="drawer";$("menu").hidden=true;$("side").className="side"}
   if(e.key==="/"&&!/INPUT|TEXTAREA/.test(document.activeElement.tagName)){var q=$(S.view==="library"?"lib-q":S.view==="files"?"f-q":S.view==="procs"?"p-q":"");if(q){e.preventDefault();q.focus()}}
