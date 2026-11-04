@@ -197,7 +197,13 @@ python3 scripts/neohen_ctl.py shutdown <PS5_IP>   # stop NeoHEN, kstuff stays
 python3 scripts/neohen_ctl.py menu     <PS5_IP>   # restart the home menu only
 ```
 
-Updating: send the new `NeoHEN.elf` to 9021 with the old one still loaded.
+Updating from NeoWEB (from 0.1.0-rc16 on): System > NeoHEN update downloads
+the release `update.channel` picks, checks GitHub's SHA-256, and keeps it on
+the console; the next `NeoHEN.elf` you send hands off to it, or "Restart
+NeoHEN" uses it at once. One that does not finish starting twice goes back
+to the previous one by itself (`docs/robustness.md`).
+
+Updating by hand: send the new `NeoHEN.elf` to 9021 with the old one still loaded.
 The new one shuts the old stack down (the same as `shutdown` above), waits for
 the home menu to come back, and starts. kstuff is not loaded twice, and the
 payloads bundled with NeoHEN are replaced when their version differs

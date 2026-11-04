@@ -27,6 +27,7 @@ extern "C" {
 #include "cheats/sync/cheat_sync_service.hpp"
 #include "cheats/sync/http_transport_ps5.hpp"
 #include "app_store.hpp"
+#include "neohen_update.hpp"
 #include <cstdio>
 #include <cerrno>
 #include <cstdlib>
@@ -438,6 +439,12 @@ void handleIPC(clientArgs *client, std::string &inputStr,
   case BREW_UTIL_APP_STORE: {
     std::string out;
     const bool ok = util_app_store(my_json.get(), out);
+    reply(sender_app, !ok, out);
+    break;
+  }
+  case BREW_UTIL_NEOHEN_UPDATE: {
+    std::string out;
+    const bool ok = util_neohen_update(my_json.get(), out);
     reply(sender_app, !ok, out);
     break;
   }

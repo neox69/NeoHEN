@@ -14,6 +14,8 @@
 #include <onion/conflict.h>
 #include <onion/log.h>
 #include <onion/notify.h>
+#include <onion/update_state.h>
+#include <onion/version.h>
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -23,7 +25,15 @@
 int32_t sceKernelSendNotificationRequest(int32_t device, void *req, size_t size,
                                          int32_t blocking);
 
+/* NeoHEN: the release number in plain text. Every other copy of it is in
+ * the LZMA-compressed bootstrapper; NeoWEB's updater reads this one to check
+ * that the NeoHEN.elf it downloaded is the release it asked for. */
+__attribute__((used)) static const char g_release_marker[] =
+    ONION_UPDATE_MARKER ONIONHEN_VERSION;
+
 int main(void) {
+  /* kept in the file whatever the linker and optimiser think of it */
+  __asm__ volatile("" : : "r"(g_release_marker) : "memory");
   onion_notify_set_send(sceKernelSendNotificationRequest);
 
   const char *conflict = onion_conflict_detect();

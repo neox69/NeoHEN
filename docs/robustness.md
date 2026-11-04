@@ -1,4 +1,4 @@
-# Robustness: safe mode, watchdog, store integrity, diagnostics
+# Robustness: safe mode, updates, watchdog, store integrity, diagnostics
 
 What NeoHEN does so that one bad payload, a dead NeoWEB or a broken download
 does not leave the console in a bad state. Paths are on the console; the
@@ -37,6 +37,91 @@ Code: `source/include/onion/safe_mode.h`,
 
 To force safe mode, create an empty `safe_mode` file. Kstuff, the Toolbox,
 the daemon and util start as always in every mode.
+
+## NeoHEN update and rollback
+
+Code: `source/include/onion/update_state.h` (the rules, shared),
+`source/util/source/neohen_update.cpp` (download and install),
+`source/bootstrapper/source/bootstrap_update.c` (hand-off and automatic
+rollback), NeoWEB `GET/POST /api/update` (`web/src/api_update.c`) and the
+"NeoHEN update" card in System. Host tests: `source/util/tests/test_update_state.c`.
+
+NeoHEN.elf is not installed on the console: it is sent to the exploit's
+loader (9021) on every boot, from wherever the user keeps it. So an update
+keeps the new release on the console and the next NeoHEN.elf that starts
+hands off to it:
+
+| Path (`/data/neohen/update/`) | Meaning |
+|---|---|
+| `current/` | the release installed from NeoWEB: `NeoHEN.elf`, `LEEME.txt`, `TERCEROS.txt`, ..., plus `version.txt` and `sha256.txt` (of `NeoHEN.elf`) |
+| `previous/` | the one installed before it; only one is kept |
+| `state.json` | `status` (`trial`, `ok`, `rolled_back`), `current`, `previous`, `from`, `trial_starts`, `installed_at`, `confirmed_at`, `rolled_back_from`, `rolled_back_at`, `reason` (`auto`, `manual`) |
+| `available.json` | what the last check found: `channel`, `running`, `newer`, `release` (`tag`, `date`, `prerelease`, `notes`, `asset`, `size`, `sha256`, `installable`, `why`) |
+
+**Check.** util asks GitHub for the releases of `neox69/NeoHEN` and picks
+one with `update.channel` exactly as the TV notice does (`prerelease`: the
+newest of all; `stable`: the newest final release, or the newest
+pre-release for whoever already runs one).
+
+**Install** (`POST /api/update {"action":"install","tag":"v..."}`; NeoWEB
+sends only the tag, util looks the release up on GitHub itself):
+
+1. the tag must be newer than the running NeoHEN and allowed by the channel;
+2. the asset must be `NeoHEN-<version>.zip` under
+   `github.com/neox69/NeoHEN/releases/download/`, and GitHub must publish a
+   `sha256:` digest for it (no digest, no install);
+3. free space on `/data`: three times the zip's size plus 64 MB before the
+   download, and what the zip unpacks to plus 64 MB before unpacking;
+4. the download (`update/download.zip`) must match the digest, or it is
+   thrown away;
+5. it is unpacked into `update/staging`: only one `NeoHEN-<version>/`
+   folder of plain files, with `NeoHEN.elf`, `LEEME.txt` and `TERCEROS.txt`;
+6. `NeoHEN.elf` must be a 64-bit little-endian x86-64 ELF and carry the
+   marker `NEOHEN-RELEASE-VERSION:<version>` (written in plain text by the
+   unpacker, `source/unpacker/source/main.c`, since 0.1.0-rc16; every other
+   copy of the version is LZMA-compressed). Older releases cannot be
+   installed this way;
+7. the swap, by directory renames on the same mount: `previous/` to
+   `trash/`, `current/` to `previous/`, `staging/` to `current/` (each step
+   undone if the next fails), then `trash/` is deleted and `state.json`
+   says `trial`. A notification says it is installed.
+
+**When it takes effect.** At the next start of NeoHEN: whatever NeoHEN.elf
+is sent, its bootstrapper (after replacing a running NeoHEN, before it
+counts itself in `boot_attempts`) sees a newer release in `current/`,
+checks it against `sha256.txt`, sends it to 9021 and ends. That one starts
+as usual. Or at once with **Restart NeoHEN with ...** (`"action":"apply"`):
+util sends `current/NeoHEN.elf` to 9021 and the documented replace path
+(`replace_running.c`) stops the running stack and starts the new one (not
+with a game open; the home screen restarts).
+
+What is sent still wins when it is newer than what is installed, and so
+does a developer build (`dirty-...`). Anything wrong with the installed
+copy (missing, bad hash, 9021 not answering) starts the NeoHEN.elf that
+was sent.
+
+**Trial and automatic rollback.** A new release is `trial` until one of its
+starts reaches boot OK (safe mode's rule: the daemon removes
+`boot_attempts` 60 s after `boot_autostart_done`); util then writes `ok`
+(and the bootstrapper does too at the next start if util did not get to).
+Each start of the trial release adds one to `trial_starts`. When a start
+finds `trial_starts >= 2` and `boot_attempts >= 2` (its last two starts
+both failed), it moves `current/` out and `previous/` back (or, with no
+`previous/`, just takes `current/` away so the NeoHEN.elf that is sent
+runs), deletes the failed release, writes `boot_attempts` back to 0 (so the
+restored one does not go into safe mode for the other's failures; a
+`safe_mode` file stays), notifies "NeoHEN X did not finish starting twice:
+going back to Y" and decides again. Rollback comes at the second failed
+start, safe mode at the third, so a broken update is rolled back before
+safe mode would hide it.
+
+**Manual rollback.** **Go back to the previous one** (`"action":"rollback"`)
+does the same by hand. It holds from the next start; the running NeoHEN
+keeps running. By FTP: delete `update/current` (and `update/state.json`).
+
+Not covered: a new release whose bootstrapper crashes before it counts
+itself is never counted, so it is never rolled back by itself; delete
+`update/current` by FTP or roll back from NeoWEB if it came up.
 
 ## NeoWEB watchdog
 
@@ -120,7 +205,8 @@ in System > NeoWEB log. One ZIP with:
 - `NeoHEN.log`, `NeoHEN.log.1`, `NeoHEN_util_daemon.log`,
   `NeoHEN_crash.log`, `neoweb.log`, `neoweb.log.1`, the themes service's
   log and state, `version.txt`, `safe_mode.txt`, `boot_attempts.txt`;
-- `config.ini`, `neoweb-config.json`, `store.json`, `apps.json` with any
+- `config.ini`, `neoweb-config.json`, `store.json`, `apps.json`,
+  `update-state.json` (the NeoHEN update's `state.json`) with any
   value whose key looks secret (token, pass, secret, key, auth, pin,
   cookie, account) replaced by `(removed)`;
 - `console.json`: model, firmware, sensors, volumes, processes, safe mode

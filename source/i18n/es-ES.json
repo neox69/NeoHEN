@@ -521,6 +521,8 @@
     "notify.neo.no_title": "No se sabe de qué juego es este menú",
     "notify.update.available_fmt": "NeoHEN %s ya está disponible. Más información en NeoWEB o en github.com/neox69/NeoHEN",
     "notify.store.updated_fmt": "Payload %s actualizado a %s. Se usa la próxima vez que arranque",
+    "notify.update.installed_fmt": "NeoHEN %s instalado. Se usa la próxima vez que arranque NeoHEN (o reinícialo ya desde NeoWEB)",
+    "notify.update.rolled_back_fmt": "NeoHEN %s no terminó de arrancar dos veces: se vuelve a %s",
     "notify.usb.ejecting": "Soltando %s…",
     "notify.usb.ejected": "Ya puedes quitar %s",
     "notify.disk.fixing": "%s: aplicando el arreglo PlayGo…",

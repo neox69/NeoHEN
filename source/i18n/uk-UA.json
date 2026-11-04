@@ -521,6 +521,8 @@
     "notify.neo.no_title": "Cannot tell which game this menu belongs to",
     "notify.update.available_fmt": "NeoHEN %s is out. See NeoWEB or github.com/neox69/NeoHEN",
     "notify.store.updated_fmt": "Payload %s updated to %s. It is used the next time it starts",
+    "notify.update.installed_fmt": "NeoHEN %s installed. It is used the next time NeoHEN starts (or restart it now from NeoWEB)",
+    "notify.update.rolled_back_fmt": "NeoHEN %s did not finish starting twice: going back to %s",
     "notify.usb.ejecting": "Letting go of %s…",
     "notify.usb.ejected": "%s can be unplugged now",
     "notify.disk.fixing": "%s: applying the PlayGo fix…",

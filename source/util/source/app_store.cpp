@@ -1,7 +1,8 @@
 /* NeoHEN: homebrew apps from GitHub releases, for NeoWEB's app store.
  *
  * A release zip holds one app folder, PPSA12345/ with eboot.bin and
- * sce_sys/param.json. util downloads it, unpacks it beside its final place
+ * sce_sys/param.json, at its top or one folder down (files beside it are
+ * left out). util downloads it, unpacks it beside its final place
  * and swaps it into /data/homebrew, where ShadowMount+ registers it like any
  * game folder. One job at a time, in its own thread; NeoWEB asks how it goes.
  * A download that differs from the zip's SHA-256 is thrown away before
@@ -180,7 +181,31 @@ void remember(const std::string &id, const std::string &tag, const std::string &
   cJSON_Delete(root);
 }
 
-/* Unpack zip into stage; every entry must sit under "<id>/". */
+/* Where the app folder sits in the zip: "<id>/" at the top, or one folder
+ * down ("PS5SX2-1.0/<id>/"), as some releases pack it beside their license
+ * files. "" when the zip holds no "<id>/eboot.bin" at either place. */
+std::string app_prefix(mz_zip_archive *zip, mz_uint n, const std::string &id) {
+  const std::string tail = id + "/eboot.bin";
+  std::string found;
+  for (mz_uint i = 0; i < n; ++i) {
+    mz_zip_archive_file_stat st;
+    if (!mz_zip_reader_file_stat(zip, i, &st) || !safe_path(st.m_filename))
+      continue;
+    const std::string name(st.m_filename);
+    if (name.size() < tail.size() || name.compare(name.size() - tail.size(), tail.size(), tail) != 0)
+      continue;
+    const std::string above = name.substr(0, name.size() - tail.size());
+    if (!above.empty() && (above.back() != '/' || above.find('/') != above.size() - 1))
+      continue; /* deeper than one folder, or "XPPSA12345/" */
+    if (!found.empty() && found != above + id + "/")
+      return ""; /* two app folders: not one app */
+    found = above + id + "/";
+  }
+  return found;
+}
+
+/* Unpack zip into stage: the "<id>/" folder only, wherever app_prefix found
+ * it. Files beside it (a readme, the license) are left out. */
 std::string unpack(const std::string &zip_path, const std::string &id,
                    const std::string &stage) {
   mz_zip_archive zip;
@@ -189,11 +214,13 @@ std::string unpack(const std::string &zip_path, const std::string &id,
     return "not a zip file";
   std::string err;
   const mz_uint n = mz_zip_reader_get_num_files(&zip);
-  const std::string prefix = id + "/";
   bool eboot = false, param = false;
   mz_uint64 total = 0;
   if (n == 0 || n > kMaxEntries)
     err = "too many or no files in the zip";
+  const std::string prefix = err.empty() ? app_prefix(&zip, n, id) : "";
+  if (err.empty() && prefix.empty())
+    err = "the zip holds no " + id + " folder with an eboot.bin";
   for (mz_uint i = 0; err.empty() && i < n; ++i) {
     mz_zip_archive_file_stat st;
     if (!mz_zip_reader_file_stat(&zip, i, &st)) {
@@ -201,10 +228,12 @@ std::string unpack(const std::string &zip_path, const std::string &id,
       break;
     }
     const std::string name(st.m_filename);
-    if (!safe_path(st.m_filename) || name.compare(0, prefix.size(), prefix) != 0) {
-      err = "the zip is not one " + id + " folder";
+    if (!safe_path(st.m_filename)) {
+      err = "the zip has an unsafe path";
       break;
     }
+    if (name.compare(0, prefix.size(), prefix) != 0)
+      continue; /* beside the app folder */
     eboot = eboot || name == prefix + "eboot.bin";
     param = param || name == prefix + "sce_sys/param.json";
     total += st.m_uncomp_size;
@@ -229,7 +258,10 @@ std::string unpack(const std::string &zip_path, const std::string &id,
     }
     mz_zip_archive_file_stat st;
     mz_zip_reader_file_stat(&zip, i, &st);
-    const std::string rel(st.m_filename + prefix.size());
+    const std::string name(st.m_filename);
+    if (name.compare(0, prefix.size(), prefix) != 0)
+      continue;
+    const std::string rel(name.substr(prefix.size()));
     if (rel.empty())
       continue;
     const std::string dest = stage + "/" + rel;

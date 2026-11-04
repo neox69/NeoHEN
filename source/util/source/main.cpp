@@ -98,6 +98,7 @@ bool LoadSettings() {
 }
 
 void util_update_check_start();
+void util_neohen_update_start();
 
 int main(void) {
     /* Raw elfldr uploads default to "payload.elf"; publish our stable name. */
@@ -156,6 +157,8 @@ int main(void) {
 
     /* NeoHEN: a notice on the TV when a newer release is out */
     util_update_check_start();
+    /* NeoHEN: an update installed from NeoWEB is kept once this start holds */
+    util_neohen_update_start();
 
     LOG_INFO("Initializing cheat engine...");
     onion::cheats::CheatService::instance().ensureDir();

@@ -81,6 +81,9 @@ enum DaemonCommands : unsigned int {
   // NeoHEN: install a homebrew app (a release zip with one PPSA folder) from
   // GitHub into /data/homebrew, in the background; NeoWEB's app store.
   BREW_UTIL_APP_STORE = 0x800001Bu,
+  // NeoHEN: check for, install, apply or roll back a NeoHEN release from
+  // NeoWEB (util's neohen_update.cpp); same JSON-in, JSON-out as the store.
+  BREW_UTIL_NEOHEN_UPDATE = 0x8000030u,
 
   // Crit daemon plugin management. Payloads contain only validated plugin IDs;
   // filesystem paths never cross the IPC boundary.

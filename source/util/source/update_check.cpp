@@ -8,7 +8,9 @@
  * newer pre-release when no newer final is out (a final always comes first). Each new version is announced once: the
  * tag shown last is kept in update_seen.txt. An "update_check_off" file in
  * the data folder (NeoWEB > Settings switches it) turns it off. Nothing is
- * downloaded for NeoHEN itself: the notice only says which version there is.
+ * downloaded for NeoHEN itself here: the notice only says which version
+ * there is; installing it is NeoWEB's System > NeoHEN update
+ * (neohen_update.cpp, same channel rule).
  * The same thread keeps the payloads installed from NeoWEB's store up to date. */
 #include "cheats/sync/http_transport_ps5.hpp"
 #include "cheats/sync/types.hpp"

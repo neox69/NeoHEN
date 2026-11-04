@@ -58,7 +58,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 	"${PROJECT_ROOT}/libonion_platform/include"
 )
 target_link_libraries(${PROJECT_NAME} PRIVATE onion_platform onion_conflict)
-add_dependencies(${PROJECT_NAME} onion_platform onion_conflict)
+add_dependencies(${PROJECT_NAME} onion_platform onion_conflict onion_version)
 set_target_properties(${PROJECT_NAME} PROPERTIES LINKER_LANGUAGE CXX)
 target_compile_definitions(${PROJECT_NAME} PRIVATE
 	ONIONHEN_BOOTSTRAPPER_LZMA="${ONIONHEN_OUT_BIN}/bootstrapper.elf.lzma"
