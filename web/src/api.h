@@ -6,7 +6,7 @@
 #include "json.h"
 
 #define PS5AIO_NAME      "NeoWEB"
-#define PS5AIO_VERSION   "0.9.0"
+#define PS5AIO_VERSION   "1.0.0"
 /* The NeoHEN release this NeoWEB was built with: the Makefile passes it from
  * the repo's VERSION file. */
 #ifndef NEOHEN_VERSION

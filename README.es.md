@@ -21,12 +21,11 @@ Casi todo lo que hace la Toolbox es trabajo suyo. NeoHEN añade las piezas de
 la tabla de abajo y arregla lo que falló en la consola de su autor. Licencia
 GPLv3.
 
-> **Estado: 0.1.0-rc16, versión candidata camino de la 1.0, probada en una
-> sola consola.** NeoHEN se ha ejecutado en una única PS5 (CFI-7021,
-> firmware 13.42). Todo lo que sigue indica si se vio funcionar ahí o si
-> solo está compilado. La última versión preliminar publicada es la
-> 0.1.0-rc14; la rc15 y la rc16 de momento solo se han compilado y probado
-> en un PC. Úsalo en una consola que puedas permitirte reiniciar.
+> **Estado: 1.0.0, primera versión estable.** NeoHEN se ha ejecutado en
+> una única PS5 (CFI-7021, firmware 13.42). Todo lo que sigue indica si se
+> vio funcionar ahí o si solo está compilado. Lo nuevo desde la 0.1.0-rc13
+> está compilado para PS5 en CI y probado en un PC, todavía no en consola.
+> Úsalo en una consola que puedas permitirte reiniciar.
 
 ## Qué cambia NeoHEN respecto a OnionHEN
 
@@ -110,12 +109,15 @@ no hay ningún resultado en consola anotado.
 
 ## Versiones
 
-Versión actual en este árbol: **0.1.0-rc16**. Las versiones anteriores y el
-texto de estado de antes están en [docs/CHANGELOG.md](docs/CHANGELOG.md); un
-borrador de las notas de la 1.0, en
-[docs/release-notes-1.0.md](docs/release-notes-1.0.md).
+Versión actual: **1.0.0**. Las versiones anteriores y el texto de estado de
+antes están en [docs/CHANGELOG.md](docs/CHANGELOG.md); las notas de la
+1.0.0, en [docs/release-notes-1.0.md](docs/release-notes-1.0.md).
 
-- **0.1.0-rc16** (aún sin publicar) — NeoHEN se actualiza desde NeoWEB:
+- **1.0.0** — primera versión estable: todo lo de la 0.1.0-rc15 y la rc16,
+  más OffAct y los zips de homebrew en la tienda, el interruptor «Bloquear
+  actualizaciones del sistema» de nanoDNS, un `autoload.txt` para el
+  autoloader unificado en el zip y los textos de licencia en el zip.
+- **0.1.0-rc16** (sin publicar) — NeoHEN se actualiza desde NeoWEB:
   SHA-256 comprobado, se guarda la versión anterior, vuelta atrás automática
   tras dos arranques fallidos, vuelta atrás a mano, y el ajuste «usar la
   actualización al arrancar», apagado por defecto. NeoWEB: lanzador de

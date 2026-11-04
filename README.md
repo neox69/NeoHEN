@@ -21,12 +21,11 @@ Almost everything the Toolbox does comes from their work. NeoHEN adds the
 pieces listed below and fixes what broke on the author's own console.
 Licensed under GPLv3.
 
-> **Status: 0.1.0-rc16, release candidate on the way to 1.0, tested on one
-> console.** NeoHEN has been run on a single PS5 (CFI-7021, firmware 13.42).
-> Everything below says whether it was seen working there or only compiled.
-> The newest published pre-release is 0.1.0-rc14; rc15 and rc16 have only
-> been built and tested on a PC so far. Use it on a console you can afford
-> to reboot.
+> **Status: 1.0.0, first stable release.** NeoHEN has been run on a single
+> PS5 (CFI-7021, firmware 13.42). Everything below says whether it was seen
+> working there or only compiled. What is new since 0.1.0-rc13 is built for
+> the PS5 in CI and tested on a PC, not yet on a console. Use it on a
+> console you can afford to reboot.
 
 ## What NeoHEN changes over OnionHEN
 
@@ -109,12 +108,15 @@ Nothing from rc13 on has a recorded console result yet.
 
 ## Releases
 
-Current version in this tree: **0.1.0-rc16**. Older releases and the
-previous status text are in [docs/CHANGELOG.md](docs/CHANGELOG.md); a
-draft of the 1.0 notes is in
-[docs/release-notes-1.0.md](docs/release-notes-1.0.md).
+Current version: **1.0.0**. Older releases and the
+previous status text are in [docs/CHANGELOG.md](docs/CHANGELOG.md); the
+1.0.0 notes are in [docs/release-notes-1.0.md](docs/release-notes-1.0.md).
 
-- **0.1.0-rc16** (not released yet) — NeoHEN updates itself from NeoWEB:
+- **1.0.0** — first stable release: everything from 0.1.0-rc15 and rc16
+  below, plus OffAct and homebrew-folder zips in the store, the "Block
+  system updates" switch for nanoDNS, an `autoload.txt` for the unified
+  autoloader in the zip, and the licence texts in the zip.
+- **0.1.0-rc16** (not released) — NeoHEN updates itself from NeoWEB:
   SHA-256 checked, one previous release kept, automatic rollback after two
   failed starts, manual rollback, and an "apply at start" setting that is
   off by default. NeoWEB: homebrew launcher in websrv's layout, library
